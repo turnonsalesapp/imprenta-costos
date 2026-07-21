@@ -43,7 +43,7 @@ export async function guardarConfigAction(
   await actualizarConfig({
     merma: f("merma"), margen: f("margen"), comision: f("comision"), ml: f("ml"),
     tasaBCV: f("tasaBCV"), binCompra: f("binCompra"), binVenta: f("binVenta"),
-    pinza: f("pinza"), sep: f("sep"), margenMin: f("margenMin"),
+    pinza: f("pinza"), sep: f("sep"), margenMin: f("margenMin"), iva: f("iva"),
   });
   revalidatePath("/variables");
   return { error: null, ok: true };
@@ -61,6 +61,8 @@ export async function guardarMembreteAction(
     empresaRif: s("empresaRif"),
     empresaTelefono: s("empresaTelefono"),
     empresaDireccion: s("empresaDireccion"),
+    empresaEmail: s("empresaEmail"),
+    empresaWeb: s("empresaWeb"),
   });
   revalidatePath("/variables");
   return { error: null, ok: true };

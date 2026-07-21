@@ -74,7 +74,7 @@ const SELECT_PROD = {
   creadaEn: true,
   cotizacion: {
     select: {
-      clienteNombre: true, titulo: true, descripcion: true, cantidad: true,
+      numero: true, clienteNombre: true, titulo: true, descripcion: true, cantidad: true,
       papelNombre: true, tamano: true, ancho: true, alto: true, capacidad: true,
       pliegos: true,
     },
@@ -82,20 +82,21 @@ const SELECT_PROD = {
   etapas: {
     orderBy: { orden: "asc" },
     select: {
-      id: true, nombre: true, orden: true, estado: true, responsable: true,
+      id: true, clave: true, nombre: true, orden: true, estado: true, responsable: true,
       terminadaEn: true,
     },
   },
 } satisfies Prisma.OrdenSelect;
 
 export type Etapa = {
-  id: string; nombre: string; orden: number; estado: EstadoEtapa;
+  id: string; clave: string; nombre: string; orden: number; estado: EstadoEtapa;
   responsable: string | null; terminadaEn: Date | null;
 };
 
 export type OrdenProd = {
   id: string;
   numero: number;
+  cotizacionNumero: number;
   estado: EstadoOrden;
   fechaEntrega: Date | null;
   prioridad: number;
@@ -120,6 +121,7 @@ function aVista(o: FilaProd): OrdenProd {
   return {
     id: o.id,
     numero: o.numero,
+    cotizacionNumero: o.cotizacion.numero,
     estado: o.estado,
     fechaEntrega: o.fechaEntrega,
     prioridad: o.prioridad,

@@ -15,6 +15,19 @@ export type DatosCliente = {
 
 export type ClienteSimple = { id: string; nombre: string };
 
+export type ClienteContacto = {
+  nombre: string; rif: string | null; telefono: string | null;
+  email: string | null; direccion: string | null;
+};
+
+/** Datos de contacto de un cliente, para la cotización imprimible. */
+export async function obtenerClienteContacto(id: string): Promise<ClienteContacto | null> {
+  return db.cliente.findUnique({
+    where: { id },
+    select: { nombre: true, rif: true, telefono: true, email: true, direccion: true },
+  });
+}
+
 /** Lista corta para selectores (solo activos). */
 export async function listarClientesSimple(): Promise<ClienteSimple[]> {
   return db.cliente.findMany({

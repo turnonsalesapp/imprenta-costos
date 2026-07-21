@@ -28,6 +28,7 @@ export function Calculadora({
 }) {
   const [form, setForm] = useState<FormCotizacion>(() => formInicial);
   const [escalas, setEscalas] = useState("500, 1000, 3000, 5000, 10000");
+  const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
   const [error, setError] = useState<string | null>(null);
   const [pendiente, startTransition] = useTransition();
 
@@ -86,6 +87,19 @@ export function Calculadora({
       };
     });
   }, [escalas, form, cfg]);
+
+  // Comparador por margen: mismo trabajo, distintos márgenes de rentabilidad.
+  const ptsMargen = useMemo(() => {
+    const ms = margenes.split(/[,;\s]+/).map((v) => n(v)).filter((v) => v > 0)
+      .filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).slice(0, 8);
+    return ms.map((mg) => {
+      const c = calcular({ ...form, margen: mg }, cfg);
+      return {
+        margen: mg, costoUnit: c.costoUnit, precioUnit: c.precioUnit,
+        ventaTotal: c.ventaTotal, gananciaTotal: c.gananciaTotal,
+      };
+    });
+  }, [margenes, form, cfg]);
 
   // Sugeridor: compara los 4 tamaños de corte para este mismo trabajo.
   const opcionesTamano = useMemo(() => {
@@ -371,6 +385,57 @@ export function Calculadora({
               )}
             </div>
           </section>
+
+          {ptsMargen.length >= 1 && r.precioUnit > 0 ? (
+            <section className="card">
+              <div className="ch">
+                <b>Comparador por margen</b>
+                <span className="mt">mismo trabajo, distinta rentabilidad</span>
+              </div>
+              <div className="cb">
+                <F l="Márgenes a comparar (%)" hint="Separados por coma. Máximo 8.">
+                  <input className="in mono" type="text" value={margenes} onChange={(e) => setMargenes(e.target.value)} />
+                </F>
+                <div className="tw" style={{ marginTop: 12 }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th className="ta-r">Margen</th>
+                        <th className="ta-r">Costo unit.</th>
+                        <th className="ta-r">Precio unit.</th>
+                        <th className="ta-r">Venta total</th>
+                        <th className="ta-r">Ganancia</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ptsMargen.map((p) => {
+                        const actual = n(form.margen) === p.margen;
+                        return (
+                          <tr key={p.margen} className="rw"
+                            style={actual ? { background: "#FDF0F7", boxShadow: "inset 3px 0 0 #C4177C" } : undefined}>
+                            <td className="ta-r mono">
+                              <b>{fmtNum(p.margen, 0)}%</b>
+                              {actual ? <span style={{ color: "#C4177C", fontSize: 9.5, marginLeft: 5 }}>ACTUAL</span> : null}
+                            </td>
+                            <td className="ta-r mono" style={{ color: "#767D76" }}>{usd(p.costoUnit, 4)}</td>
+                            <td className="ta-r mono"><b>{usd(p.precioUnit, 4)}</b></td>
+                            <td className="ta-r mono">{usd(p.ventaTotal)}</td>
+                            <td className="ta-r mono" style={{ color: "#15794F" }}>{usd(p.gananciaTotal)}</td>
+                            <td className="ta-r">
+                              {!actual ? (
+                                <button type="button" className="btn g sm" onClick={() => up("margen", p.margen)}>Usar</button>
+                              ) : <span style={{ fontSize: 10, color: "#767D76" }}>actual</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           {opcionesTamano.length ? (
             <section className="card">

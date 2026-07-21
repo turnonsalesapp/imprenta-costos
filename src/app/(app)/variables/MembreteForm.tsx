@@ -28,6 +28,14 @@ export function MembreteForm({ m }: { m: DatosMembrete }) {
           <span className="text-[11px] text-kraft">Dirección</span>
           <input name="empresaDireccion" defaultValue={m.empresaDireccion ?? ""} className={inCls} />
         </label>
+        <label className="block">
+          <span className="text-[11px] text-kraft">Correo</span>
+          <input name="empresaEmail" defaultValue={m.empresaEmail ?? ""} className={inCls} />
+        </label>
+        <label className="block">
+          <span className="text-[11px] text-kraft">Sitio web</span>
+          <input name="empresaWeb" defaultValue={m.empresaWeb ?? ""} className={inCls} />
+        </label>
       </div>
       {estado.ok && (
         <p className="mt-3 rounded-sm border border-[#B4E0C6] bg-[#EDF9F1] px-3 py-2 text-sm text-exito">Membrete guardado.</p>

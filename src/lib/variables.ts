@@ -20,7 +20,7 @@ const num = (v: unknown): number => (v == null ? 0 : Number(v));
 export type DatosConfig = {
   merma: number; margen: number; comision: number; ml: number;
   tasaBCV: number; binCompra: number; binVenta: number;
-  pinza: number; sep: number; margenMin: number;
+  pinza: number; sep: number; margenMin: number; iva: number;
 };
 
 export async function obtenerConfig(): Promise<DatosConfig> {
@@ -29,7 +29,7 @@ export async function obtenerConfig(): Promise<DatosConfig> {
     merma: num(c?.merma), margen: num(c?.margen), comision: num(c?.comision),
     ml: num(c?.ml), tasaBCV: num(c?.tasaBCV), binCompra: num(c?.binCompra),
     binVenta: num(c?.binVenta), pinza: num(c?.pinza), sep: num(c?.sep),
-    margenMin: c ? num(c.margenMin) : 15,
+    margenMin: c ? num(c.margenMin) : 15, iva: c ? num(c.iva) : 16,
   };
 }
 
@@ -38,6 +38,8 @@ export type DatosMembrete = {
   empresaRif: string | null;
   empresaTelefono: string | null;
   empresaDireccion: string | null;
+  empresaEmail: string | null;
+  empresaWeb: string | null;
 };
 
 export async function obtenerMembrete(): Promise<DatosMembrete> {
@@ -47,6 +49,8 @@ export async function obtenerMembrete(): Promise<DatosMembrete> {
     empresaRif: c?.empresaRif ?? null,
     empresaTelefono: c?.empresaTelefono ?? null,
     empresaDireccion: c?.empresaDireccion ?? null,
+    empresaEmail: c?.empresaEmail ?? null,
+    empresaWeb: c?.empresaWeb ?? null,
   };
 }
 
@@ -59,6 +63,8 @@ export async function actualizarMembrete(d: DatosMembrete): Promise<void> {
       empresaRif: limpio(d.empresaRif),
       empresaTelefono: limpio(d.empresaTelefono),
       empresaDireccion: limpio(d.empresaDireccion),
+      empresaEmail: limpio(d.empresaEmail),
+      empresaWeb: limpio(d.empresaWeb),
     },
   });
 }

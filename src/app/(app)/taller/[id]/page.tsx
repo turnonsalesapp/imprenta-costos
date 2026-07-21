@@ -23,6 +23,13 @@ export default async function OrdenPage({
   const gestiona = usuario.rol !== "TALLER"; // ADMIN o VENDEDOR
   const fechaValor = o.fechaEntrega ? o.fechaEntrega.toISOString().slice(0, 10) : "";
 
+  // Técnica de impresión, deducida de las etapas de la orden.
+  const tecnica = o.etapas.some((e) => e.clave === "impRetiro")
+    ? "Tiro y retiro (T+R)"
+    : o.etapas.some((e) => e.clave === "impTiro")
+      ? "Solo tiro (T)"
+      : "—";
+
   return (
     <>
       <div className="no-print flex items-center justify-between gap-4">
@@ -47,7 +54,7 @@ export default async function OrdenPage({
             <div>
               <h1 className="text-lg font-bold tracking-tight">Orden de producción</h1>
               <p className="text-xs uppercase tracking-widest text-kraft">
-                N° {o.numero} · {o.creadaEn.toLocaleDateString("es-VE")}
+                N° {o.numero} · Cotización {o.cotizacionNumero} · {o.creadaEn.toLocaleDateString("es-VE")}
               </p>
             </div>
             <div className="text-right">
@@ -65,9 +72,10 @@ export default async function OrdenPage({
             <Dato k="Cantidad" v={`${fmtNum(o.cantidad, 0)} pzs`} />
             <Dato k="Medida" v={`${fmtNum(o.ancho, 0)}×${fmtNum(o.alto, 0)} mm`} />
             <Dato k="Papel" v={o.papelNombre} />
+            <Dato k="Técnica" v={tecnica} />
             <Dato k="Tamaño de corte" v={o.tamano} />
-            <Dato k="Montaje" v={`${fmtNum(o.capacidad, 0)} pzs por corte`} />
-            <Dato k="Cortes" v={`${fmtNum(o.pliegos, 2)} (con merma)`} />
+            <Dato k="Montaje (arte por corte)" v={`${fmtNum(o.capacidad, 0)} pzs`} />
+            <Dato k="Cuartos a imprimir (con merma)" v={fmtNum(o.pliegos, 2)} />
           </dl>
 
           {o.descripcion ? (
@@ -92,6 +100,16 @@ export default async function OrdenPage({
               <p className="whitespace-pre-wrap text-sm">{o.instrucciones}</p>
             </div>
           ) : null}
+
+          {/* Empaque y cierre — se llenan a mano en el taller */}
+          <div className="mt-6 grid grid-cols-2 gap-x-8 gap-y-5 border-t border-regla pt-5 sm:grid-cols-3">
+            <FirmaLinea k="N° de bultos" />
+            <FirmaLinea k="Unidades por bulto" />
+            <FirmaLinea k="Cuartos dañados" />
+            <FirmaLinea k="Recibe conforme" />
+            <FirmaLinea k="Autorizado por" />
+            <FirmaLinea k="Fecha de entrega" />
+          </div>
         </div>
       </article>
 
@@ -145,6 +163,16 @@ function Dato({ k, v }: { k: string; v: string }) {
     <div>
       <dt className="text-[10px] font-bold uppercase tracking-widest text-kraft">{k}</dt>
       <dd className="mt-0.5 text-sm font-medium">{v}</dd>
+    </div>
+  );
+}
+
+/** Línea en blanco para llenar a mano (empaque, firmas). */
+function FirmaLinea({ k }: { k: string }) {
+  return (
+    <div>
+      <div className="h-6 border-b border-tinta/40" />
+      <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-kraft">{k}</div>
     </div>
   );
 }

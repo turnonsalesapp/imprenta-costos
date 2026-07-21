@@ -23,10 +23,11 @@ export function ConfigForm({ cfg }: { cfg: DatosConfig }) {
         <Campo l="Binance compra" name="binCompra" v={cfg.binCompra} />
         <Campo l="Binance venta" name="binVenta" v={cfg.binVenta} />
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-3 sm:max-w-xl">
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:max-w-2xl sm:grid-cols-4">
         <Campo l="Pinza (mm)" name="pinza" v={cfg.pinza} />
         <Campo l="Separación (mm)" name="sep" v={cfg.sep} />
         <Campo l="Margen mínimo (%)" name="margenMin" v={cfg.margenMin} />
+        <Campo l="IVA (%)" name="iva" v={cfg.iva} />
       </div>
 
       {estado.error && (

@@ -222,6 +222,7 @@ export type CotizacionDetalle = {
   numero: number;
   creadaEn: Date;
   estado: EstadoCotizacion;
+  clienteId: string | null;
   clienteNombre: string | null;
   titulo: string;
   descripcion: string | null;
@@ -261,6 +262,7 @@ export async function obtenerCotizacion(id: string): Promise<CotizacionDetalle |
     numero: c.numero,
     creadaEn: c.creadaEn,
     estado: c.estado,
+    clienteId: c.clienteId,
     clienteNombre: c.clienteNombre,
     titulo: c.titulo,
     descripcion: c.descripcion,

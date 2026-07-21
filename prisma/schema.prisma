@@ -105,11 +105,14 @@ model Config {
   pinza         Decimal  @db.Decimal(6, 2) @default(5)
   sep           Decimal  @db.Decimal(6, 2) @default(3)
   margenMin     Decimal  @db.Decimal(6, 2) @default(15) // avisa si el margen baja de aquí
+  iva           Decimal  @db.Decimal(6, 2) @default(16) // % de IVA en la cotización al cliente
   // Membrete para la cotización que se envía al cliente.
   empresaNombre    String?
   empresaRif       String?
   empresaTelefono  String?
   empresaDireccion String?
+  empresaEmail     String?
+  empresaWeb       String?
   actualizadoEn DateTime @updatedAt
 }
 

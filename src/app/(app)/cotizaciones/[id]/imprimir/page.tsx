@@ -2,16 +2,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRol } from "@/lib/auth";
 import { obtenerCotizacion } from "@/lib/cotizaciones";
-import { obtenerMembrete } from "@/lib/variables";
+import { obtenerMembrete, obtenerConfig } from "@/lib/variables";
+import { obtenerClienteContacto } from "@/lib/clientes";
 import { fmtNum, usd } from "@/lib/calculo";
 import { BotonImprimir } from "@/app/(app)/taller/[id]/BotonImprimir";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Cotización imprimible con membrete, para enviar al cliente. A diferencia de la
- * hoja de taller, ESTA sí muestra precios (es la cara al cliente). Se imprime o
- * se guarda como PDF desde el diálogo del navegador.
+ * Cotización imprimible con membrete, para enviar al cliente. Muestra precios
+ * (es la cara al cliente), con Subtotal / IVA / Total. Se guarda como PDF desde
+ * el diálogo del navegador.
  */
 export default async function ImprimirCotizacion({
   params,
@@ -20,10 +21,18 @@ export default async function ImprimirCotizacion({
 }) {
   await requireRol("ADMIN", "VENDEDOR");
   const { id } = await params;
-  const [c, m] = await Promise.all([obtenerCotizacion(id), obtenerMembrete()]);
+  const [c, m, dc] = await Promise.all([
+    obtenerCotizacion(id), obtenerMembrete(), obtenerConfig(),
+  ]);
   if (!c) notFound();
 
+  const cliente = c.clienteId ? await obtenerClienteContacto(c.clienteId) : null;
   const empresa = m.empresaNombre ?? "Imprenta";
+
+  const subtotal = c.ventaTotal;
+  const ivaMonto = subtotal * (dc.iva / 100);
+  const total = subtotal + ivaMonto;
+  const totalBs = total * c.tasaBCV;
 
   return (
     <>
@@ -48,10 +57,14 @@ export default async function ImprimirCotizacion({
               <div className="mt-0.5 text-[12px] leading-relaxed text-kraft">
                 {m.empresaRif && <div>RIF: {m.empresaRif}</div>}
                 {m.empresaDireccion && <div>{m.empresaDireccion}</div>}
-                {m.empresaTelefono && <div>Tel: {m.empresaTelefono}</div>}
+                <div>
+                  {m.empresaTelefono && <span>Tel: {m.empresaTelefono} </span>}
+                  {m.empresaEmail && <span>· {m.empresaEmail}</span>}
+                </div>
+                {m.empresaWeb && <div>{m.empresaWeb}</div>}
               </div>
             </div>
-            <div className="text-right">
+            <div className="shrink-0 text-right">
               <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">Cotización</div>
               <div className="font-mono text-xl font-bold">N° {c.numero}</div>
               <div className="font-mono text-[12px] text-kraft">{c.creadaEn.toLocaleDateString("es-VE")}</div>
@@ -61,7 +74,17 @@ export default async function ImprimirCotizacion({
           {/* Cliente */}
           <div className="mt-4">
             <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">Cliente</div>
-            <div className="text-sm font-medium">{c.clienteNombre ?? "—"}</div>
+            <div className="text-sm font-medium">{cliente?.nombre ?? c.clienteNombre ?? "—"}</div>
+            {cliente && (
+              <div className="text-[12px] leading-relaxed text-kraft">
+                {cliente.rif && <div>RIF: {cliente.rif}</div>}
+                <div>
+                  {cliente.telefono && <span>Tel: {cliente.telefono} </span>}
+                  {cliente.email && <span>· {cliente.email}</span>}
+                </div>
+                {cliente.direccion && <div>{cliente.direccion}</div>}
+              </div>
+            )}
           </div>
 
           {/* Detalle */}
@@ -85,33 +108,43 @@ export default async function ImprimirCotizacion({
                 </td>
                 <td className="py-3 text-right font-mono">{fmtNum(c.cantidad, 0)}</td>
                 <td className="py-3 text-right font-mono">{usd(c.precioUnit, 4)}</td>
-                <td className="py-3 text-right font-mono">{usd(c.ventaTotal)}</td>
+                <td className="py-3 text-right font-mono">{usd(subtotal)}</td>
               </tr>
             </tbody>
           </table>
 
-          {/* Totales */}
+          {/* Totales con IVA */}
           <div className="mt-4 flex justify-end">
-            <div className="w-64">
-              <div className="flex justify-between border-t border-regla py-2 text-sm font-bold">
-                <span>Total USD</span>
-                <span className="font-mono">{usd(c.ventaTotal)}</span>
+            <div className="w-72">
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-kraft">Subtotal</span>
+                <span className="font-mono">{usd(subtotal)}</span>
+              </div>
+              {dc.iva > 0 && (
+                <div className="flex justify-between py-1 text-sm">
+                  <span className="text-kraft">IVA ({fmtNum(dc.iva, 0)}%)</span>
+                  <span className="font-mono">{usd(ivaMonto)}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-regla py-2 text-base font-bold">
+                <span>Total</span>
+                <span className="font-mono">{usd(total)}</span>
               </div>
               <div className="flex justify-between py-1 text-[12px] text-kraft">
-                <span>Equivalente en Bs</span>
-                <span className="font-mono">{fmtNum(c.precioBs * c.cantidad, 2)} Bs</span>
-              </div>
-              <div className="flex justify-between py-1 text-[12px] text-kraft">
-                <span>Tasa BCV</span>
-                <span className="font-mono">{fmtNum(c.tasaBCV, 2)}</span>
+                <span>Equivalente en Bs (BCV {fmtNum(c.tasaBCV, 2)})</span>
+                <span className="font-mono">{fmtNum(totalBs, 2)} Bs</span>
               </div>
             </div>
           </div>
 
-          <p className="mt-6 border-t border-regla pt-3 text-[11px] leading-relaxed text-kraft">
-            Precios en dólares; el equivalente en bolívares se calcula a la tasa BCV del día de la cotización.
-            Válida por 15 días. Sujeta a disponibilidad de material.
-          </p>
+          <div className="mt-6 border-t border-regla pt-3 text-[11px] leading-relaxed text-kraft">
+            <p><b>Forma de pago:</b> Bs a la tasa BCV del día del pago.</p>
+            <p className="mt-1">
+              Precios en dólares; el equivalente en bolívares se calcula a la tasa BCV.
+              Cotización válida por 15 días, sujeta a disponibilidad de material.
+            </p>
+            <p className="mt-2">Gracias por su preferencia. Esperamos seguir haciendo negocios con usted.</p>
+          </div>
         </div>
       </article>
     </>
