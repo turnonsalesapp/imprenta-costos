@@ -4,11 +4,31 @@ import { revalidatePath } from "next/cache";
 import { requireRol } from "@/lib/auth";
 import { n } from "@/lib/calculo";
 import {
-  actualizarConfig, crearPapel, editarPapel, alternarPapel,
+  obtenerConfig, actualizarConfig, crearPapel, editarPapel, alternarPapel,
   crearAcabado, editarAcabado, alternarAcabado,
 } from "@/lib/variables";
+import { fetchTasasExternas } from "@/lib/tasas";
 
-export type EstadoVar = { error: string | null; ok?: boolean };
+export type EstadoVar = { error: string | null; ok?: boolean; msg?: string };
+
+/** Trae las tasas de la fuente externa y las guarda. Si falla, no cambia nada. */
+export async function actualizarTasasAction(
+  _prev: EstadoVar,
+  _formData: FormData,
+): Promise<EstadoVar> {
+  await requireRol("ADMIN");
+  const t = await fetchTasasExternas();
+  if (!t) {
+    return { error: "No se pudo leer la fuente externa. Se mantiene la última tasa registrada." };
+  }
+  const cfg = await obtenerConfig();
+  await actualizarConfig({ ...cfg, tasaBCV: t.bcv, binCompra: t.binCompra, binVenta: t.binVenta });
+  revalidatePath("/variables");
+  return {
+    error: null, ok: true,
+    msg: `Tasas actualizadas desde ${t.fuente}: BCV ${t.bcv} · Binance ${t.binCompra}.`,
+  };
+}
 
 /* ─────────────────────────── configuración ─────────────────────────── */
 
@@ -85,6 +105,7 @@ export async function crearAcabadoAction(
     unidad: String(formData.get("unidad") ?? "pliego"),
     escala: String(formData.get("escala") ?? "area"),
     orden: Math.round(n(formData.get("orden"))),
+    grupo: String(formData.get("grupo") ?? "").trim() || null,
   });
   if (!r.ok) return { error: r.error ?? "No se pudo crear." };
   revalidatePath("/variables");
@@ -101,6 +122,7 @@ export async function editarAcabadoAction(formData: FormData): Promise<void> {
     unidad: String(formData.get("unidad") ?? "pliego"),
     escala: String(formData.get("escala") ?? "area"),
     orden: Math.round(n(formData.get("orden"))),
+    grupo: String(formData.get("grupo") ?? "").trim() || null,
   });
   revalidatePath("/variables");
 }

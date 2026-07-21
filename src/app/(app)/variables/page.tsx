@@ -9,6 +9,7 @@ import {
 import { ConfigForm } from "./ConfigForm";
 import { CrearPapelForm } from "./CrearPapelForm";
 import { CrearAcabadoForm } from "./CrearAcabadoForm";
+import { BotonTasas } from "./BotonTasas";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export default async function VariablesPage() {
       {/* Valores por defecto */}
       <section className="mt-6">
         <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">Valores por defecto</h2>
+        <BotonTasas />
         <ConfigForm cfg={cfg} />
       </section>
 
@@ -78,7 +80,8 @@ export default async function VariablesPage() {
             <span className="w-20 text-right">Costo</span>
             <span className="w-24">Se cobra</span>
             <span className="w-28">Al cambiar tamaño</span>
-            <span className="w-16 text-right">Orden</span>
+            <span className="w-14 text-right">Orden</span>
+            <span className="w-20">Grupo</span>
             <span className="w-32" />
           </div>
           {acabados.map((a) => (
@@ -98,7 +101,8 @@ export default async function VariablesPage() {
                 <option value="min">Nunca baja</option>
                 <option value="fija">Siempre igual</option>
               </select>
-              <input name="orden" defaultValue={String(a.orden)} inputMode="numeric" className={`w-16 text-right font-mono ${inCls}`} />
+              <input name="orden" defaultValue={String(a.orden)} inputMode="numeric" className={`w-14 text-right font-mono ${inCls}`} />
+              <input name="grupo" defaultValue={a.grupo ?? ""} placeholder="—" className={`w-20 ${inCls}`} />
               <span className="flex w-32 justify-end gap-1.5">
                 <button type="submit" className={btnGuardar}>Guardar</button>
                 <button type="submit" formAction={alternarAcabadoAction} className={btnAlt}>

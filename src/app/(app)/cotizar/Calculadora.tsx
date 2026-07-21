@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { Save, RotateCcw, Check } from "lucide-react";
 import {
   calcular, calcCapacidad, medidaCorte, TAMANOS, n, fmtNum, usd,
-  type Config, type Montaje as MontajeInfo,
+  type Config, type Acabado, type Montaje as MontajeInfo,
 } from "@/lib/calculo";
 import { nuevoForm, type FormCotizacion } from "@/lib/cotizacion-form";
 import type { ClienteSimple } from "@/lib/clientes";
@@ -38,6 +38,26 @@ export function Calculadora({
     const c = clientes.find((x) => x.id === id);
     setForm((f) => ({ ...f, clienteId: id, cliente: c?.nombre ?? f.cliente }));
   };
+
+  // Acabados sueltos (casillas) vs. agrupados (un selector por grupo, excluyentes).
+  const { sueltos, grupos } = useMemo(() => {
+    const sueltos: Acabado[] = [];
+    const grupos: Record<string, Acabado[]> = {};
+    for (const a of cfg.acabados) {
+      if (a.grupo) (grupos[a.grupo] ??= []).push(a);
+      else sueltos.push(a);
+    }
+    // Orden estable dentro del grupo: por costo (Básico < Medio < Complejo).
+    for (const g of Object.values(grupos)) g.sort((x, y) => x.costo - y.costo);
+    return { sueltos, grupos };
+  }, [cfg.acabados]);
+
+  const elegirGrupo = (opciones: Acabado[], id: string) =>
+    setForm((f) => {
+      const ac = { ...f.acabados };
+      for (const o of opciones) ac[o.id] = { on: o.id === id, q: 1 };
+      return { ...f, acabados: ac };
+    });
 
   const papel = cfg.papeles.find((p) => p.id === form.papelId) ?? null;
   const frac = (TAMANOS.find((t) => t.id === form.tamano) ?? TAMANOS[2]).frac;
@@ -176,11 +196,11 @@ export function Calculadora({
             <div className="ch"><b>Acabados</b><span className="mt">marca lo que lleva el trabajo</span></div>
             <div className="cb">
               <div className="acs">
-                {cfg.acabados.map((a) => {
+                {sueltos.map((a) => {
                   const st = form.acabados[a.id] || { on: false, q: 1 };
                   const u = a.unidad === "pliego" ? "por corte"
                     : a.unidad === "elemento" ? "por pieza"
-                    : a.unidad === "millar" ? "por millar" : "por trabajo";
+                    : a.unidad === "millar" ? "por millar de cortes" : "por trabajo";
                   return (
                     <div key={a.id} className={st.on ? "ac on" : "ac"}>
                       <button type="button" className={st.on ? "chk on" : "chk"} aria-label={a.label}
@@ -195,6 +215,29 @@ export function Calculadora({
                         <input type="text" inputMode="decimal" value={st.q}
                           onChange={(e) => setAcabado(a.id, true, e.target.value)} />
                       ) : null}
+                    </div>
+                  );
+                })}
+
+                {Object.entries(grupos).map(([g, opciones]) => {
+                  const sel = opciones.find((o) => form.acabados[o.id]?.on) ?? null;
+                  const titulo = g.charAt(0).toUpperCase() + g.slice(1);
+                  return (
+                    <div key={g} className={sel ? "ac on" : "ac"}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="nm">{titulo}</div>
+                        <div className="un mono">
+                          {sel ? `${usd(sel.costo, n(sel.costo) < 1 ? 3 : 2)} por trabajo` : "sin " + titulo.toLowerCase()}
+                        </div>
+                      </div>
+                      <select
+                        value={sel?.id ?? ""}
+                        onChange={(e) => elegirGrupo(opciones, e.target.value)}
+                        style={{ width: 128, border: "1px solid var(--rule)", borderRadius: 2, padding: "3px 5px", fontSize: 11.5, background: "#fff" }}
+                      >
+                        <option value="">Ninguno</option>
+                        {opciones.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                      </select>
                     </div>
                   );
                 })}

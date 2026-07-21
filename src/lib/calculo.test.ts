@@ -37,21 +37,21 @@ describe("caso real Jugarte (3.000 stickers)", () => {
     const m = Object.fromEntries(r.lineas.map((l) => [l.k, l.monto]));
     expect(m.papel).toBeCloseTo(125.53, 2);
     expect(m.impTiro).toBeCloseTo(203.94, 2);
-    expect(m.troquelado).toBeCloseTo(60, 2);   // 4 millares × $15
+    expect(m.troquelado).toBeCloseTo(15, 2);   // 1 millar de cortes (772,5) × $15
     expect(m.pegado).toBeCloseTo(180, 2);      // 3.000 pzs × $0,03 × 2
     expect(m.acetato).toBeCloseTo(150, 2);     // 3.000 pzs × $0,05
     expect(m.guillotina).toBeCloseTo(5, 2);
   });
 
   it("llega al costo y al precio esperados", () => {
-    expect(r.costoTotal).toBeCloseTo(724.47, 2);
-    expect(r.costoUnit).toBeCloseTo(0.2415, 4);
+    expect(r.costoTotal).toBeCloseTo(679.47, 2);
+    expect(r.costoUnit).toBeCloseTo(0.2265, 4);
     expect(r.dif).toBeCloseTo(1.3929, 4);
-    expect(r.costoProt).toBeCloseTo(0.3364, 4);
-    expect(r.utilProt).toBeCloseTo(0.2008, 4);
-    expect(r.precioUnit).toBeCloseTo(0.5372, 4);
-    expect(r.ventaTotal).toBeCloseTo(1611.58, 1);
-    expect(r.precioML * 3000).toBeCloseTo(1804.97, 1);
+    expect(r.costoProt).toBeCloseTo(0.3155, 4);
+    expect(r.utilProt).toBeCloseTo(0.1883, 4);
+    expect(r.precioUnit).toBeCloseTo(0.5038, 4);
+    expect(r.ventaTotal).toBeCloseTo(1511.47, 1);
+    expect(r.precioML * 3000).toBeCloseTo(1692.85, 1);
   });
 });
 

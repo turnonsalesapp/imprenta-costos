@@ -15,6 +15,7 @@ const PAGINAS_PUBLICAS = new Set(["/login"]);
 function esPublica(pathname: string): boolean {
   if (PAGINAS_PUBLICAS.has(pathname)) return true;
   if (pathname === "/api/health") return true;
+  if (pathname === "/api/tasas/refresh") return true; // se protege con token propio
   return false;
 }
 

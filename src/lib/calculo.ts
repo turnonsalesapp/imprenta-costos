@@ -5,8 +5,9 @@
  * Toda la aplicación (UI, API, PDF, órdenes) debe calcular a través de aquí.
  *
  * Verificado contra el trabajo real de Jugarte Venezuela (3.000 stickers):
- * 772,5 cortes · $724,47 costo · $0,2415 unitario · diferencial 1,3929 ·
- * $0,5372 precio unitario · $1.611,58 venta. Ver calculo.test.ts.
+ * 772,5 cortes · $679,47 costo · $0,2265 unitario · diferencial 1,3929 ·
+ * $0,5038 precio unitario · $1.511,47 venta. Ver calculo.test.ts.
+ * (El troquelado se cobra por millar de cortes, no de piezas.)
  */
 
 export type Unidad = "pliego" | "elemento" | "millar" | "trabajo";
@@ -27,6 +28,12 @@ export interface Acabado {
   costo: number;   // tarifa base, referida a 1/4 de pliego
   unidad: Unidad;
   escala: Escala;  // solo aplica cuando unidad === "pliego"
+  /**
+   * Acabados que comparten `grupo` son mutuamente excluyentes en la
+   * calculadora (se eligen con un selector, no con casillas). Ej.: los tres
+   * niveles de troquel. El motor lo ignora: cada acabado se cobra igual.
+   */
+  grupo?: string | null;
 }
 
 export interface Config {
@@ -166,7 +173,9 @@ export function calcular(f: Entrada, cfg: Config): Resultado {
   const pliegosBase = cant > 0 ? Math.ceil(cant / cap) : 0;
   const pliegos = pliegosBase * (1 + merma);
   const piezas = pliegos * cap;
-  const millares = piezas > 0 ? Math.ceil(piezas / 1000) : 0;
+  // La unidad "millar" (troquelado) se cobra por millar de CORTES de papel,
+  // no de piezas: el troquel procesa el pliego, no cada pieza suelta.
+  const millares = pliegos > 0 ? Math.ceil(pliegos / 1000) : 0;
 
   const lineas: LineaCosto[] = [];
   if (pliegos > 0 && precioCorte > 0) {
@@ -198,7 +207,7 @@ export function calcular(f: Entrada, cfg: Config): Resultado {
       detalle = `${fmtNum(cant, 0)} pzs x ${usd(unit, 4)}${mult}`;
     } else if (a.unidad === "millar") {
       monto = millares * unit * q;
-      detalle = `${millares} ${millares === 1 ? "millar" : "millares"} x ${usd(unit, 2)}`;
+      detalle = `${millares} ${millares === 1 ? "millar de cortes" : "millares de cortes"} x ${usd(unit, 2)}`;
     } else {
       monto = unit * q;
       detalle = `${fmtNum(q, 0)} x ${usd(unit, 2)}`;

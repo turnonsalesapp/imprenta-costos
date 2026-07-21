@@ -108,19 +108,20 @@ export async function alternarPapel(id: string): Promise<void> {
 
 export type AcabadoFila = {
   id: string; clave: string; label: string; costo: number;
-  unidad: string; escala: string; orden: number; activo: boolean;
+  unidad: string; escala: string; orden: number; activo: boolean; grupo: string | null;
 };
 
 export async function listarAcabados(): Promise<AcabadoFila[]> {
   const filas = await db.acabado.findMany({ orderBy: [{ activo: "desc" }, { orden: "asc" }] });
   return filas.map((a) => ({
     id: a.id, clave: a.clave, label: a.label, costo: num(a.costo),
-    unidad: a.unidad, escala: a.escala, orden: a.orden, activo: a.activo,
+    unidad: a.unidad, escala: a.escala, orden: a.orden, activo: a.activo, grupo: a.grupo,
   }));
 }
 
 export type DatosAcabado = {
   label: string; costo: number; unidad: string; escala: string; orden: number;
+  grupo?: string | null;
 };
 
 function slug(s: string): string {

@@ -71,8 +71,8 @@ describe("lista de papeles precargada", () => {
 });
 
 describe("acabados precargados", () => {
-  it("trae los 11 de la hoja VARIABLES", () => {
-    expect(ACABADOS_BASE).toHaveLength(11);
+  it("trae los 11 de la hoja VARIABLES más los dos niveles extra de troquel", () => {
+    expect(ACABADOS_BASE).toHaveLength(13);
   });
 
   it("no tiene claves repetidas y usa unidades y escalas válidas", () => {
@@ -98,7 +98,15 @@ describe("acabados precargados", () => {
     expect(c.prueba).toBe(5);
     // Estas dos venían duplicadas y en conflicto en la hoja original.
     // Se resolvieron así; confirmar con el taller.
-    expect(c.troquel).toBe(100);   // VARIABLES decía 100, la calculadora 50
+    expect(c.troquel).toBe(100);   // Troquel Básico (VARIABLES decía 100, la calculadora 50)
     expect(c.acetato).toBe(0.05);  // VARIABLES decía 0,03; el cálculo real usa 0,05
+    // Troquel en tres niveles configurables.
+    expect(c.troquelMedio).toBe(150);
+    expect(c.troquelComplejo).toBe(200);
+  });
+
+  it("los tres niveles de troquel comparten el grupo 'troquel'", () => {
+    const troqueles = ACABADOS_BASE.filter((a) => a.grupo === "troquel").map((a) => a.id);
+    expect(troqueles).toEqual(["troquel", "troquelMedio", "troquelComplejo"]);
   });
 });

@@ -43,6 +43,7 @@ export async function cargarConfig(): Promise<Config> {
         costo: num(a.costo),
         unidad: a.unidad as Unidad,
         escala: a.escala as Escala,
+        grupo: a.grupo,
       }),
     ),
     merma: cfg ? num(cfg.merma) : CONFIG_BASE.merma,

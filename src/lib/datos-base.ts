@@ -66,7 +66,7 @@ export const PAPELES_BASE: Papel[] = [
  * unidad -> cómo se cobra:
  *   pliego   = por cada corte procesado
  *   elemento = por cada pieza terminada
- *   millar   = por cada mil piezas (se redondea hacia arriba)
+ *   millar   = por cada mil CORTES de papel (troquelado; se redondea hacia arriba)
  *   trabajo  = una sola vez, sin importar el tiraje
  *
  * escala -> qué pasa con la tarifa al cambiar de tamaño de corte
@@ -86,7 +86,9 @@ export const ACABADOS_BASE: Acabado[] = [
   { id: "lamTiro", label: "Laminado Tiro", costo: 0.33, unidad: "pliego", escala: "area" },
   { id: "lamRetiro", label: "Laminado Retiro", costo: 0.33, unidad: "pliego", escala: "area" },
   { id: "troqDig", label: "Troquelado Digital", costo: 0.5, unidad: "pliego", escala: "min" },
-  { id: "troquel", label: "Troquel", costo: 100, unidad: "trabajo", escala: "fija" },
+  { id: "troquel", label: "Troquel Básico", costo: 100, unidad: "trabajo", escala: "fija", grupo: "troquel" },
+  { id: "troquelMedio", label: "Troquel Medio", costo: 150, unidad: "trabajo", escala: "fija", grupo: "troquel" },
+  { id: "troquelComplejo", label: "Troquel Complejo", costo: 200, unidad: "trabajo", escala: "fija", grupo: "troquel" },
   { id: "troquelado", label: "Troquelado", costo: 15, unidad: "millar", escala: "fija" },
   { id: "pegado", label: "Pegado", costo: 0.03, unidad: "elemento", escala: "fija" },
   { id: "acetato", label: "Acetato Dangler", costo: 0.05, unidad: "elemento", escala: "fija" },

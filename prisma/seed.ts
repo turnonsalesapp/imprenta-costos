@@ -32,7 +32,7 @@ async function main() {
     await db.acabado.upsert({
       where: { clave: a.id },
       update: {},
-      create: { clave: a.id, label: a.label, costo: a.costo, unidad: a.unidad, escala: a.escala, orden: i },
+      create: { clave: a.id, label: a.label, costo: a.costo, unidad: a.unidad, escala: a.escala, orden: i, grupo: a.grupo ?? null },
     });
   }
 

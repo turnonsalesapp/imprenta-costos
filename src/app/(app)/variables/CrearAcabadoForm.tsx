@@ -38,6 +38,10 @@ export function CrearAcabadoForm() {
           <option value="fija">Siempre igual</option>
         </select>
       </label>
+      <label className="block">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Grupo (opcional)</span>
+        <input name="grupo" className={`mt-1 block w-28 ${inCls}`} placeholder="ej. troquel" />
+      </label>
       <button type="submit" disabled={pend} className="rounded-sm bg-tinta px-3 py-1.5 text-sm font-bold text-hoja hover:opacity-90 disabled:opacity-50">
         Agregar acabado
       </button>
