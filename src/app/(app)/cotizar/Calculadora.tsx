@@ -6,16 +6,25 @@ import {
   calcular, calcCapacidad, medidaCorte, TAMANOS, n, fmtNum, usd,
   type Config, type Montaje as MontajeInfo,
 } from "@/lib/calculo";
-import {
-  nuevoForm, type FormCotizacion,
-} from "@/lib/cotizacion-form";
+import { nuevoForm, type FormCotizacion } from "@/lib/cotizacion-form";
+import type { ClienteSimple } from "@/lib/clientes";
 import { guardarCotizacionAction } from "@/app/actions/cotizaciones";
 import "./calc.css";
 
 const TINTAS = ["#0B8FA8", "#C4177C", "#C79400", "#171B19", "#5B8C5A", "#8A5FBF", "#C0563B"];
 
-export function Calculadora({ cfg }: { cfg: Config }) {
-  const [form, setForm] = useState<FormCotizacion>(() => nuevoForm(cfg));
+export function Calculadora({
+  cfg,
+  clientes,
+  formInicial,
+  recotizado,
+}: {
+  cfg: Config;
+  clientes: ClienteSimple[];
+  formInicial: FormCotizacion;
+  recotizado?: boolean;
+}) {
+  const [form, setForm] = useState<FormCotizacion>(() => formInicial);
   const [escalas, setEscalas] = useState("500, 1000, 3000, 5000, 10000");
   const [error, setError] = useState<string | null>(null);
   const [pendiente, startTransition] = useTransition();
@@ -24,6 +33,11 @@ export function Calculadora({ cfg }: { cfg: Config }) {
     setForm((f) => ({ ...f, [k]: v }));
   const setAcabado = (id: string, on: boolean, q: number | string) =>
     setForm((f) => ({ ...f, acabados: { ...f.acabados, [id]: { on, q } } }));
+  const elegirCliente = (id: string) => {
+    if (!id) { setForm((f) => ({ ...f, clienteId: "" })); return; }
+    const c = clientes.find((x) => x.id === id);
+    setForm((f) => ({ ...f, clienteId: id, cliente: c?.nombre ?? f.cliente }));
+  };
 
   const papel = cfg.papeles.find((p) => p.id === form.papelId) ?? null;
   const frac = (TAMANOS.find((t) => t.id === form.tamano) ?? TAMANOS[2]).frac;
@@ -67,10 +81,22 @@ export function Calculadora({ cfg }: { cfg: Config }) {
         {/* ─────────────────────── columna izquierda ─────────────────────── */}
         <div>
           <section className="card">
-            <div className="ch"><b>Datos del trabajo</b></div>
+            <div className="ch">
+              <b>Datos del trabajo</b>
+              {recotizado ? <span className="mt">recotización · receta cargada, tasas de hoy</span> : null}
+            </div>
             <div className="cb">
               <div className="rowg c2">
-                <T l="Cliente" v={form.cliente} set={(v) => up("cliente", v)} ph="Ej. Jugarte Venezuela" />
+                <F l="Cliente">
+                  <select className="in" value={form.clienteId} onChange={(e) => elegirCliente(e.target.value)}>
+                    <option value="">— A mano / sin registrar —</option>
+                    {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </select>
+                  {form.clienteId === "" ? (
+                    <input className="in" style={{ marginTop: 6 }} type="text" value={form.cliente}
+                      placeholder="Nombre del cliente" onChange={(e) => up("cliente", e.target.value)} />
+                  ) : null}
+                </F>
                 <T l="Trabajo" v={form.trabajo} set={(v) => up("trabajo", v)} ph="Ej. Stickers motivacionales" />
               </div>
               <div style={{ marginTop: 10 }}>
@@ -344,6 +370,21 @@ export function Calculadora({ cfg }: { cfg: Config }) {
             </div>
           </div>
           <div className="tear" />
+
+          {!form.trabajoId ? (
+            <div className="hint" style={{ marginTop: 12, cursor: "pointer" }}
+              onClick={() => up("guardarComoTrabajo", !form.guardarComoTrabajo)}>
+              <button type="button" className={form.guardarComoTrabajo ? "chk on" : "chk"}
+                aria-label="Guardar como trabajo repetido">
+                {form.guardarComoTrabajo ? <Check size={10} strokeWidth={4} /> : null}
+              </button>
+              <span>Guardar también como trabajo repetido</span>
+            </div>
+          ) : (
+            <div className="hint" style={{ marginTop: 12 }}>
+              Esta cotización queda enlazada al trabajo repetido.
+            </div>
+          )}
 
           {error ? (
             <div className="warn" style={{ marginTop: 10 }}>{error}</div>

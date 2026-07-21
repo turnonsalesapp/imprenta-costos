@@ -8,11 +8,16 @@ import type { Config, Entrada, AcabadoSel } from "./calculo";
 export type FormCotizacion = {
   // Meta (no entra al motor)
   cliente: string;
+  clienteId: string; // "" si es cliente a mano / sin registrar
   trabajo: string;
   descripcion: string;
   ancho: number | string; // mm, para el montaje
   alto: number | string;
   capAuto: boolean;
+
+  // Origen y destino de la receta (trabajos repetidos)
+  trabajoId: string; // "" si no viene de un trabajo repetido
+  guardarComoTrabajo: boolean; // guardar también la receta como trabajo
 
   // Entradas del motor
   cantidad: number | string;
@@ -35,11 +40,14 @@ export type FormCotizacion = {
 export function nuevoForm(cfg: Config): FormCotizacion {
   return {
     cliente: "",
+    clienteId: "",
     trabajo: "",
     descripcion: "",
     ancho: "",
     alto: "",
     capAuto: true,
+    trabajoId: "",
+    guardarComoTrabajo: false,
     cantidad: "",
     tamano: "1/4 Pliego",
     papelId: "",

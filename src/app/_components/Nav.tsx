@@ -34,6 +34,9 @@ export function Nav({ usuario }: { usuario: Sesion }) {
               <Link href="/cotizaciones" className="text-kraft hover:text-tinta">
                 Cotizaciones
               </Link>
+              <Link href="/clientes" className="text-kraft hover:text-tinta">
+                Clientes
+              </Link>
             </>
           )}
           {puedeAdministrar(usuario.rol) && (

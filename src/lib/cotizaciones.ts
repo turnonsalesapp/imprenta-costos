@@ -4,6 +4,7 @@ import { db } from "./db";
 import { cargarConfig, snapshot } from "./config";
 import { calcular, n, type LineaCosto } from "./calculo";
 import { formAEntrada, type FormCotizacion } from "./cotizacion-form";
+import { crearTrabajoDesdeForm } from "./trabajos";
 
 /**
  * Guardar, listar y leer cotizaciones.
@@ -57,10 +58,21 @@ export async function crearCotizacion(
 
   const papel = cfg.papeles.find((p) => p.id === entrada.papelId) ?? null;
 
+  const clienteId = form.clienteId?.trim() || null;
+
+  // Si viene de un trabajo repetido, se enlaza; si se pidió guardar la receta y
+  // no venía de uno, se crea ahora y se enlaza la cotización a ese trabajo.
+  let trabajoId = form.trabajoId?.trim() || null;
+  if (form.guardarComoTrabajo && !trabajoId) {
+    trabajoId = await crearTrabajoDesdeForm(form, clienteId);
+  }
+
   const cot = await db.cotizacion.create({
     data: {
       estado: "BORRADOR",
       usuarioId,
+      clienteId,
+      trabajoId,
       clienteNombre: cliente || null,
       titulo: trabajo || "Sin título",
       descripcion: form.descripcion?.trim() || null,
