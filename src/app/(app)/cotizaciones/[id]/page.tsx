@@ -36,6 +36,10 @@ export default async function DetalleCotizacion({
             className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
             Usar como base
           </Link>
+          <Link href={`/cotizaciones/${c.id}/imprimir`}
+            className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
+            Imprimir / PDF
+          </Link>
           <EstadoBadge estado={c.estado} />
         </div>
       </div>

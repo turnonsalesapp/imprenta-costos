@@ -47,6 +47,9 @@ export function Nav({ usuario }: { usuario: Sesion }) {
               <Link href="/variables" className="text-kraft hover:text-tinta">
                 Variables
               </Link>
+              <Link href="/consumo" className="text-kraft hover:text-tinta">
+                Consumo
+              </Link>
               <Link href="/usuarios" className="text-kraft hover:text-tinta">
                 Usuarios
               </Link>
