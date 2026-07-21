@@ -160,6 +160,9 @@ model Cotizacion {
   numero    Int              @unique @default(autoincrement())
   estado    EstadoCotizacion @default(BORRADOR)
   clienteId String?
+  /// Nombre de cliente en texto libre (Fase 3). En la Fase 4, con el CRUD de
+  /// clientes, se enlaza `clienteId` y este queda como respaldo de lo escrito.
+  clienteNombre String?
   trabajoId String?
   usuarioId String?
 

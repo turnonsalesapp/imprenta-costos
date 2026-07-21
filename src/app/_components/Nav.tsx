@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Sesion } from "@/lib/auth";
-import { ETIQUETA_ROL, puedeAdministrar } from "@/lib/roles";
+import { ETIQUETA_ROL, puedeAdministrar, puedeVerPrecios } from "@/lib/roles";
 import { logoutAction } from "@/app/actions/auth";
 
 /**
@@ -26,6 +26,16 @@ export function Nav({ usuario }: { usuario: Sesion }) {
           <Link href="/" className="text-kraft hover:text-tinta">
             Inicio
           </Link>
+          {puedeVerPrecios(usuario.rol) && (
+            <>
+              <Link href="/cotizar" className="text-kraft hover:text-tinta">
+                Cotizar
+              </Link>
+              <Link href="/cotizaciones" className="text-kraft hover:text-tinta">
+                Cotizaciones
+              </Link>
+            </>
+          )}
           {puedeAdministrar(usuario.rol) && (
             <Link href="/usuarios" className="text-kraft hover:text-tinta">
               Usuarios
