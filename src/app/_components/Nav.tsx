@@ -10,7 +10,7 @@ import { logoutAction } from "@/app/actions/auth";
  */
 export function Nav({ usuario }: { usuario: Sesion }) {
   return (
-    <header className="border-b border-regla bg-hoja">
+    <header className="no-print border-b border-regla bg-hoja">
       <div className="mx-auto flex max-w-4xl items-center gap-4 px-6 py-3">
         <Link href="/" className="flex items-center gap-2">
           <span className="flex h-4 w-4 overflow-hidden rounded-[2px]">
@@ -25,6 +25,9 @@ export function Nav({ usuario }: { usuario: Sesion }) {
         <nav className="flex items-center gap-3 text-sm">
           <Link href="/" className="text-kraft hover:text-tinta">
             Inicio
+          </Link>
+          <Link href="/taller" className="text-kraft hover:text-tinta">
+            Taller
           </Link>
           {puedeVerPrecios(usuario.rol) && (
             <>

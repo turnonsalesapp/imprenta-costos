@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUsuario } from "@/lib/auth";
 import { cargarResumen } from "@/lib/resumen";
 import { ETIQUETA_ROL } from "@/lib/roles";
@@ -34,8 +35,13 @@ export default async function Inicio() {
             <Tarjeta k="En proceso" v={fmtNum(resumen.ordenes.enProceso, 0)} />
             <Tarjeta k="Terminadas" v={fmtNum(resumen.ordenes.terminadas, 0)} />
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-kraft">
-            El tablero del taller con las órdenes por entregar llega en la Fase 5.
+          <Link
+            href="/taller"
+            className="mt-4 inline-block rounded-sm bg-tinta px-4 py-2 text-sm font-bold text-hoja hover:opacity-90"
+          >
+            Abrir tablero del taller →
+          </Link>
+          <p className="mt-3 text-xs leading-relaxed text-kraft">
             Tu usuario nunca ve costos, márgenes ni precios.
           </p>
         </section>

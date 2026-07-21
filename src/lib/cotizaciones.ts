@@ -172,12 +172,16 @@ export type CotizacionDetalle = {
   precioML: number;
   tasaBCV: number;
   precioBs: number;
+  orden: { id: string; numero: number } | null;
 };
 
 export async function obtenerCotizacion(id: string): Promise<CotizacionDetalle | null> {
   const c = await db.cotizacion.findUnique({
     where: { id },
-    include: { usuario: { select: { nombre: true } } },
+    include: {
+      usuario: { select: { nombre: true } },
+      orden: { select: { id: true, numero: true } },
+    },
   });
   if (!c) return null;
 
@@ -207,6 +211,7 @@ export async function obtenerCotizacion(id: string): Promise<CotizacionDetalle |
     precioML: num(c.precioML),
     tasaBCV: num(c.tasaBCV),
     precioBs: num(c.precioBs),
+    orden: c.orden,
   };
 }
 

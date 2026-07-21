@@ -12,3 +12,10 @@ body {
 
 /* Números alineados en columna, como en una hoja de cálculo. */
 .tabular { font-variant-numeric: tabular-nums; }
+
+/* Impresión: se oculta todo lo marcado no-print (nav, botones) y se limpia el fondo. */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .hoja-orden { border: none !important; }
+}

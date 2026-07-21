@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireRol } from "@/lib/auth";
 import { obtenerCotizacion, ESTADOS, ETIQUETA_ESTADO } from "@/lib/cotizaciones";
 import { cambiarEstadoAction } from "@/app/actions/cotizaciones";
+import { generarOrdenAction } from "@/app/actions/ordenes";
 import { fmtNum, usd } from "@/lib/calculo";
 import { EstadoBadge } from "../EstadoBadge";
 
@@ -117,6 +118,32 @@ export default async function DetalleCotizacion({
                 Guardar
               </button>
             </form>
+          </section>
+
+          {/* Orden de producción */}
+          <section className="rounded-sm border border-regla bg-hoja p-4">
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+              Orden de producción
+            </div>
+            {c.orden ? (
+              <Link
+                href={`/taller/${c.orden.id}`}
+                className="inline-block rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta"
+              >
+                Ver orden N° {c.orden.numero} →
+              </Link>
+            ) : c.estado === "APROBADA" ? (
+              <form action={generarOrdenAction}>
+                <input type="hidden" name="cotizacionId" value={c.id} />
+                <button type="submit" className="w-full rounded-sm bg-cian px-3 py-2 text-sm font-bold text-hoja hover:opacity-90">
+                  Generar orden de producción
+                </button>
+              </form>
+            ) : (
+              <p className="text-[11px] text-kraft">
+                Aprueba la cotización (arriba) para poder generar su orden de producción.
+              </p>
+            )}
           </section>
 
           <p className="text-[11px] leading-relaxed text-kraft">
