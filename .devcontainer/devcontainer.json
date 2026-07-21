@@ -1,0 +1,40 @@
+{
+  "name": "Imprenta — costos y producción",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "postCreateCommand": "npm install",
+
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Sistema de imprenta",
+      "onAutoForward": "openPreview"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Prisma.prisma",
+        "bradlc.vscode-tailwindcss",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "files.eol": "\n"
+      }
+    }
+  },
+
+  "remoteEnv": {
+    "DATABASE_URL": "${localEnv:DATABASE_URL}",
+    "AUTH_SECRET": "${localEnv:AUTH_SECRET}",
+    "ADMIN_EMAIL": "${localEnv:ADMIN_EMAIL}",
+    "ADMIN_PASSWORD": "${localEnv:ADMIN_PASSWORD}"
+  }
+}
