@@ -17,11 +17,12 @@ export async function GET(req: NextRequest) {
     return new NextResponse("No autorizado", { status: 403 });
   }
 
-  const t = await fetchTasasExternas();
-  if (!t) {
-    return NextResponse.json({ ok: false, error: "fuente no disponible" }, { status: 502 });
+  const r = await fetchTasasExternas();
+  if (!r.ok) {
+    return NextResponse.json({ ok: false, error: r.detalle }, { status: 502 });
   }
 
+  const t = r.tasas;
   const cfg = await obtenerConfig();
   await actualizarConfig({ ...cfg, tasaBCV: t.bcv, binCompra: t.binCompra, binVenta: t.binVenta });
   return NextResponse.json({ ok: true, ...t });

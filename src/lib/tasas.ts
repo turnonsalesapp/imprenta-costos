@@ -3,10 +3,11 @@ import "server-only";
 /**
  * Consulta de tasas a una fuente externa (best-effort).
  *
- * Por defecto usa pydolarve.org, que publica BCV y Binance. Se puede cambiar la
- * base con la variable de entorno TASAS_API. Si la fuente no responde o el
- * formato no calza, devuelve null y el sistema se queda con la última tasa
- * registrada (el respaldo). Nunca lanza.
+ * Por defecto usa dolarapi (ve.dolarapi.com): sin token, formato estable. Da
+ * "oficial" (BCV) y "paralelo" (referencia tipo Binance). Se puede cambiar con
+ * la variable de entorno TASAS_API. Si la fuente no responde o el formato no
+ * calza, devuelve un detalle del porqué y el sistema se queda con la última
+ * tasa registrada. Nunca lanza.
  */
 
 export type TasasExternas = {
@@ -16,38 +17,78 @@ export type TasasExternas = {
   fuente: string;
 };
 
-const URL_BASE = process.env.TASAS_API ?? "https://pydolarve.org/api/v1/dollar";
+export type ResultadoTasas =
+  | { ok: true; tasas: TasasExternas }
+  | { ok: false; detalle: string };
 
-async function precioDe(pagina: string, claves: string[]): Promise<number | null> {
+const FUENTE = process.env.TASAS_API ?? "https://ve.dolarapi.com/v1/dolares";
+
+export async function fetchTasasExternas(): Promise<ResultadoTasas> {
+  let data: unknown;
   try {
-    const res = await fetch(`${URL_BASE}?page=${pagina}`, {
+    const res = await fetch(FUENTE, {
       headers: { accept: "application/json" },
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) return null;
-    const data: unknown = await res.json();
-    const mons = (data as { monitors?: Record<string, unknown> })?.monitors ?? data;
-    for (const k of claves) {
-      const nodo = (mons as Record<string, unknown>)?.[k];
-      const p = Number(
-        (nodo as { price?: unknown })?.price ?? nodo,
-      );
-      if (isFinite(p) && p > 0) return p;
-    }
-    return null;
-  } catch {
-    return null;
+    if (!res.ok) return { ok: false, detalle: `la fuente respondió HTTP ${res.status}` };
+    data = await res.json();
+  } catch (e) {
+    return { ok: false, detalle: `no se pudo conectar (${e instanceof Error ? e.message : "error"})` };
   }
+
+  const bcv = extraer(data, ["oficial", "bcv", "usd"]);
+  const par = extraer(data, ["paralelo", "binance", "enparalelovzla", "bitcoin"]);
+  if (bcv == null || par == null) {
+    return {
+      ok: false,
+      detalle: `formato inesperado (BCV=${bcv ?? "?"}, paralelo=${par ?? "?"}). Revisa /api/tasas/debug`,
+    };
+  }
+  return { ok: true, tasas: { bcv, binCompra: par, binVenta: par, fuente: host(FUENTE) } };
 }
 
-export async function fetchTasasExternas(): Promise<TasasExternas | null> {
-  const [bcv, binance] = await Promise.all([
-    precioDe("bcv", ["usd", "bcv", "oficial"]),
-    precioDe("criptodolar", ["binance", "enparalelovzla", "paralelo"]),
-  ]);
-  if (!bcv || !binance) return null;
-  // La fuente da un solo valor Binance; compra y venta quedan iguales (su
-  // promedio, que es lo que usa el diferencial, coincide con ese valor).
-  return { bcv, binCompra: binance, binVenta: binance, fuente: "pydolarve" };
+/** Saca un número de un nodo, probando los campos usuales de cada API. */
+function valor(nodo: unknown): number | null {
+  if (nodo == null) return null;
+  if (typeof nodo === "number") return isFinite(nodo) && nodo > 0 ? nodo : null;
+  const o = nodo as Record<string, unknown>;
+  const p = Number(o.promedio ?? o.venta ?? o.compra ?? o.price);
+  return isFinite(p) && p > 0 ? p : null;
+}
+
+/**
+ * Busca la tasa por sus posibles claves, tanto si la respuesta es un arreglo
+ * (dolarapi: [{fuente, promedio}]) como un objeto (pydolarve: {monitors:{...}}).
+ */
+function extraer(data: unknown, claves: string[]): number | null {
+  const arr = Array.isArray(data)
+    ? data
+    : (data as { monitors?: unknown })?.monitors ?? data;
+
+  if (Array.isArray(arr)) {
+    for (const k of claves) {
+      const item = arr.find(
+        (x) => String((x as { fuente?: unknown })?.fuente ?? "").toLowerCase() === k,
+      );
+      const v = valor(item);
+      if (v != null) return v;
+    }
+    return null;
+  }
+  if (arr && typeof arr === "object") {
+    for (const k of claves) {
+      const v = valor((arr as Record<string, unknown>)[k]);
+      if (v != null) return v;
+    }
+  }
+  return null;
+}
+
+function host(u: string): string {
+  try {
+    return new URL(u).host;
+  } catch {
+    return "la fuente";
+  }
 }

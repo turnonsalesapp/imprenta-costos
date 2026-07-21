@@ -17,16 +17,17 @@ export async function actualizarTasasAction(
   _formData: FormData,
 ): Promise<EstadoVar> {
   await requireRol("ADMIN");
-  const t = await fetchTasasExternas();
-  if (!t) {
-    return { error: "No se pudo leer la fuente externa. Se mantiene la última tasa registrada." };
+  const r = await fetchTasasExternas();
+  if (!r.ok) {
+    return { error: `No se actualizó: ${r.detalle}. Se mantiene la última tasa registrada.` };
   }
+  const t = r.tasas;
   const cfg = await obtenerConfig();
   await actualizarConfig({ ...cfg, tasaBCV: t.bcv, binCompra: t.binCompra, binVenta: t.binVenta });
   revalidatePath("/variables");
   return {
     error: null, ok: true,
-    msg: `Tasas actualizadas desde ${t.fuente}: BCV ${t.bcv} · Binance ${t.binCompra}.`,
+    msg: `Tasas actualizadas desde ${t.fuente}: BCV ${t.bcv} · paralelo ${t.binCompra}.`,
   };
 }
 
