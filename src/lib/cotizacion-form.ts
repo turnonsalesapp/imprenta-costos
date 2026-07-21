@@ -19,6 +19,9 @@ export type FormCotizacion = {
   trabajoId: string; // "" si no viene de un trabajo repetido
   guardarComoTrabajo: boolean; // guardar también la receta como trabajo
 
+  // Si viene de editar un borrador, el id de la cotización a actualizar ("" = nueva).
+  editarId: string;
+
   // Entradas del motor
   cantidad: number | string;
   tamano: string;
@@ -48,6 +51,7 @@ export function nuevoForm(cfg: Config): FormCotizacion {
     capAuto: true,
     trabajoId: "",
     guardarComoTrabajo: false,
+    editarId: "",
     cantidad: "",
     tamano: "1/4 Pliego",
     papelId: "",

@@ -20,7 +20,7 @@ const num = (v: unknown): number => (v == null ? 0 : Number(v));
 export type DatosConfig = {
   merma: number; margen: number; comision: number; ml: number;
   tasaBCV: number; binCompra: number; binVenta: number;
-  pinza: number; sep: number;
+  pinza: number; sep: number; margenMin: number;
 };
 
 export async function obtenerConfig(): Promise<DatosConfig> {
@@ -29,7 +29,38 @@ export async function obtenerConfig(): Promise<DatosConfig> {
     merma: num(c?.merma), margen: num(c?.margen), comision: num(c?.comision),
     ml: num(c?.ml), tasaBCV: num(c?.tasaBCV), binCompra: num(c?.binCompra),
     binVenta: num(c?.binVenta), pinza: num(c?.pinza), sep: num(c?.sep),
+    margenMin: c ? num(c.margenMin) : 15,
   };
+}
+
+export type DatosMembrete = {
+  empresaNombre: string | null;
+  empresaRif: string | null;
+  empresaTelefono: string | null;
+  empresaDireccion: string | null;
+};
+
+export async function obtenerMembrete(): Promise<DatosMembrete> {
+  const c = await db.config.findUnique({ where: { id: "global" } });
+  return {
+    empresaNombre: c?.empresaNombre ?? null,
+    empresaRif: c?.empresaRif ?? null,
+    empresaTelefono: c?.empresaTelefono ?? null,
+    empresaDireccion: c?.empresaDireccion ?? null,
+  };
+}
+
+export async function actualizarMembrete(d: DatosMembrete): Promise<void> {
+  const limpio = (v: string | null) => (v && v.trim() ? v.trim() : null);
+  await db.config.update({
+    where: { id: "global" },
+    data: {
+      empresaNombre: limpio(d.empresaNombre),
+      empresaRif: limpio(d.empresaRif),
+      empresaTelefono: limpio(d.empresaTelefono),
+      empresaDireccion: limpio(d.empresaDireccion),
+    },
+  });
 }
 
 export async function actualizarConfig(d: DatosConfig): Promise<void> {

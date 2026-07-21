@@ -1,7 +1,7 @@
 import { requireRol } from "@/lib/auth";
 import { MEDIDAS, fmtNum, usd } from "@/lib/calculo";
 import {
-  obtenerConfig, listarPapeles, listarAcabados, historicoTasas,
+  obtenerConfig, obtenerMembrete, listarPapeles, listarAcabados, historicoTasas,
 } from "@/lib/variables";
 import {
   editarPapelAction, alternarPapelAction, editarAcabadoAction, alternarAcabadoAction,
@@ -10,6 +10,7 @@ import { ConfigForm } from "./ConfigForm";
 import { CrearPapelForm } from "./CrearPapelForm";
 import { CrearAcabadoForm } from "./CrearAcabadoForm";
 import { BotonTasas } from "./BotonTasas";
+import { MembreteForm } from "./MembreteForm";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +21,8 @@ const btnAlt = "rounded-sm border border-regla px-2.5 py-1 text-xs font-medium t
 
 export default async function VariablesPage() {
   await requireRol("ADMIN");
-  const [cfg, papeles, acabados, tasas] = await Promise.all([
-    obtenerConfig(), listarPapeles(), listarAcabados(), historicoTasas(8),
+  const [cfg, membrete, papeles, acabados, tasas] = await Promise.all([
+    obtenerConfig(), obtenerMembrete(), listarPapeles(), listarAcabados(), historicoTasas(8),
   ]);
 
   return (
@@ -36,6 +37,12 @@ export default async function VariablesPage() {
         <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">Valores por defecto</h2>
         <BotonTasas />
         <ConfigForm cfg={cfg} />
+      </section>
+
+      {/* Membrete */}
+      <section className="mt-6">
+        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">Membrete de la cotización</h2>
+        <MembreteForm m={membrete} />
       </section>
 
       {/* Histórico de tasas */}

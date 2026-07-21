@@ -2,7 +2,7 @@ import "server-only";
 import { Prisma, type EstadoCotizacion } from "@prisma/client";
 import { db } from "./db";
 import { cargarConfig, snapshot } from "./config";
-import { calcular, n, type LineaCosto } from "./calculo";
+import { calcular, n, type LineaCosto, type Entrada, type Config } from "./calculo";
 import { formAEntrada, type FormCotizacion } from "./cotizacion-form";
 import { crearTrabajoDesdeForm } from "./trabajos";
 
@@ -37,6 +37,45 @@ export type ResultadoGuardar =
   | { ok: true; id: string }
   | { ok: false; error: string };
 
+/**
+ * Construye las columnas de la cotización a partir del formulario y la config.
+ * Lo comparten crear y actualizar, para que la cotización se congele igual en
+ * ambos casos (snapshot de papeles, acabados y variables del momento).
+ */
+function datosCotizacion(form: FormCotizacion, cfg: Config) {
+  const entrada = formAEntrada(form);
+  const r = calcular(entrada, cfg);
+  const papel = cfg.papeles.find((p) => p.id === entrada.papelId) ?? null;
+  return {
+    r,
+    data: {
+      clienteId: form.clienteId?.trim() || null,
+      clienteNombre: (form.cliente ?? "").trim() || null,
+      titulo: (form.trabajo ?? "").trim() || "Sin título",
+      descripcion: form.descripcion?.trim() || null,
+      cantidad: r.cant,
+      ancho: Math.round(n(form.ancho)),
+      alto: Math.round(n(form.alto)),
+      tamano: entrada.tamano,
+      papelNombre: papel?.nombre ?? "—",
+      capacidad: Math.round(n(form.capacidad)) || 0,
+      entrada: entrada as unknown as Prisma.InputJsonValue,
+      snapshot: snapshot(cfg) as unknown as Prisma.InputJsonValue,
+      lineas: r.lineas as unknown as Prisma.InputJsonValue,
+      pliegos: r.pliegos,
+      costoTotal: r.costoTotal,
+      costoUnit: r.costoUnit,
+      diferencial: r.dif,
+      margen: num(entrada.margen),
+      precioUnit: r.precioUnit,
+      ventaTotal: r.ventaTotal,
+      precioML: r.precioML,
+      tasaBCV: num(entrada.tasaBCV),
+      precioBs: r.precioBs,
+    },
+  };
+}
+
 /** Crea la cotización recalculando y congelando en el servidor. */
 export async function crearCotizacion(
   form: FormCotizacion,
@@ -49,61 +88,93 @@ export async function crearCotizacion(
   }
 
   const cfg = await cargarConfig();
-  const entrada = formAEntrada(form);
-  const r = calcular(entrada, cfg);
-
-  if (r.cant <= 0) {
-    return { ok: false, error: "Indica la cantidad de piezas." };
-  }
-
-  const papel = cfg.papeles.find((p) => p.id === entrada.papelId) ?? null;
-
-  const clienteId = form.clienteId?.trim() || null;
+  const { r, data } = datosCotizacion(form, cfg);
+  if (r.cant <= 0) return { ok: false, error: "Indica la cantidad de piezas." };
 
   // Si viene de un trabajo repetido, se enlaza; si se pidió guardar la receta y
   // no venía de uno, se crea ahora y se enlaza la cotización a ese trabajo.
   let trabajoId = form.trabajoId?.trim() || null;
   if (form.guardarComoTrabajo && !trabajoId) {
-    trabajoId = await crearTrabajoDesdeForm(form, clienteId);
+    trabajoId = await crearTrabajoDesdeForm(form, data.clienteId);
   }
 
   const cot = await db.cotizacion.create({
-    data: {
-      estado: "BORRADOR",
-      usuarioId,
-      clienteId,
-      trabajoId,
-      clienteNombre: cliente || null,
-      titulo: trabajo || "Sin título",
-      descripcion: form.descripcion?.trim() || null,
-      cantidad: r.cant,
-      ancho: Math.round(n(form.ancho)),
-      alto: Math.round(n(form.alto)),
-      tamano: entrada.tamano,
-      papelNombre: papel?.nombre ?? "—",
-      capacidad: Math.round(n(form.capacidad)) || 0,
-
-      // Copias inmutables del momento del cálculo.
-      entrada: entrada as unknown as Prisma.InputJsonValue,
-      snapshot: snapshot(cfg) as unknown as Prisma.InputJsonValue,
-      lineas: r.lineas as unknown as Prisma.InputJsonValue,
-
-      // Cifras congeladas.
-      pliegos: r.pliegos,
-      costoTotal: r.costoTotal,
-      costoUnit: r.costoUnit,
-      diferencial: r.dif,
-      margen: num(entrada.margen),
-      precioUnit: r.precioUnit,
-      ventaTotal: r.ventaTotal,
-      precioML: r.precioML,
-      tasaBCV: num(entrada.tasaBCV),
-      precioBs: r.precioBs,
-    },
+    data: { estado: "BORRADOR", usuarioId, trabajoId, ...data },
     select: { id: true },
   });
-
   return { ok: true, id: cot.id };
+}
+
+/** Actualiza una cotización, solo si sigue en BORRADOR. Vuelve a congelar. */
+export async function actualizarCotizacion(
+  id: string,
+  form: FormCotizacion,
+): Promise<ResultadoGuardar> {
+  const existente = await db.cotizacion.findUnique({ where: { id }, select: { estado: true } });
+  if (!existente) return { ok: false, error: "La cotización no existe." };
+  if (existente.estado !== "BORRADOR") {
+    return { ok: false, error: "Solo se pueden editar cotizaciones en borrador." };
+  }
+
+  const cliente = (form.cliente ?? "").trim();
+  const trabajo = (form.trabajo ?? "").trim();
+  if (!cliente && !trabajo) {
+    return { ok: false, error: "Falta el cliente o el nombre del trabajo." };
+  }
+
+  const cfg = await cargarConfig();
+  const { r, data } = datosCotizacion(form, cfg);
+  if (r.cant <= 0) return { ok: false, error: "Indica la cantidad de piezas." };
+
+  await db.cotizacion.update({ where: { id }, data });
+  return { ok: true, id };
+}
+
+/**
+ * Carga una cotización guardada en un formulario, para duplicarla ("copia",
+ * cotización nueva) o editarla ("editar", si es borrador). Trae la estructura y
+ * las variables tal cual se guardaron (desde su `entrada`).
+ */
+export async function cargarCotizacionEnForm(
+  id: string,
+  modo: "copia" | "editar",
+): Promise<Partial<FormCotizacion> | null> {
+  const c = await db.cotizacion.findUnique({
+    where: { id },
+    select: {
+      entrada: true, titulo: true, descripcion: true, ancho: true, alto: true,
+      tamano: true, capacidad: true, clienteNombre: true, clienteId: true,
+    },
+  });
+  if (!c) return null;
+
+  const e = (c.entrada as unknown as Entrada) ?? ({} as Entrada);
+  return {
+    cliente: c.clienteNombre ?? "",
+    clienteId: c.clienteId ?? "",
+    trabajo: modo === "copia" ? `${c.titulo} (copia)` : c.titulo,
+    descripcion: c.descripcion ?? "",
+    ancho: c.ancho || "",
+    alto: c.alto || "",
+    capAuto: false, // preservamos la capacidad exacta guardada
+    cantidad: e.cantidad ?? "",
+    tamano: c.tamano,
+    papelId: e.papelId ?? "",
+    capacidad: c.capacidad || "",
+    merma: e.merma ?? "",
+    margen: e.margen ?? "",
+    comision: e.comision ?? "",
+    ml: e.ml ?? "",
+    tasaBCV: e.tasaBCV ?? "",
+    binCompra: e.binCompra ?? "",
+    binVenta: e.binVenta ?? "",
+    difManual: e.difManual ?? false,
+    dif: e.dif ?? "",
+    acabados: e.acabados ?? {},
+    trabajoId: "",
+    guardarComoTrabajo: false,
+    editarId: modo === "editar" ? id : "",
+  };
 }
 
 export type FiltroLista = { q?: string; estado?: EstadoCotizacion | "" };

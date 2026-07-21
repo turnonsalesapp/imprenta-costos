@@ -6,6 +6,7 @@ import type { EstadoCotizacion } from "@prisma/client";
 import { requireRol } from "@/lib/auth";
 import {
   crearCotizacion,
+  actualizarCotizacion,
   cambiarEstadoCotizacion,
   ESTADOS,
 } from "@/lib/cotizaciones";
@@ -19,7 +20,10 @@ export async function guardarCotizacionAction(
 ): Promise<EstadoGuardar> {
   const usuario = await requireRol("ADMIN", "VENDEDOR");
 
-  const r = await crearCotizacion(form, usuario.id);
+  const editarId = form.editarId?.trim();
+  const r = editarId
+    ? await actualizarCotizacion(editarId, form)
+    : await crearCotizacion(form, usuario.id);
   if (!r.ok) return { error: r.error };
 
   redirect(`/cotizaciones/${r.id}`);

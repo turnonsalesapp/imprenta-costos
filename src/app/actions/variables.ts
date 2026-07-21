@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireRol } from "@/lib/auth";
 import { n } from "@/lib/calculo";
 import {
-  obtenerConfig, actualizarConfig, crearPapel, editarPapel, alternarPapel,
-  crearAcabado, editarAcabado, alternarAcabado,
+  obtenerConfig, actualizarConfig, actualizarMembrete, crearPapel, editarPapel,
+  alternarPapel, crearAcabado, editarAcabado, alternarAcabado,
 } from "@/lib/variables";
 import { fetchTasasExternas } from "@/lib/tasas";
 
@@ -43,7 +43,24 @@ export async function guardarConfigAction(
   await actualizarConfig({
     merma: f("merma"), margen: f("margen"), comision: f("comision"), ml: f("ml"),
     tasaBCV: f("tasaBCV"), binCompra: f("binCompra"), binVenta: f("binVenta"),
-    pinza: f("pinza"), sep: f("sep"),
+    pinza: f("pinza"), sep: f("sep"), margenMin: f("margenMin"),
+  });
+  revalidatePath("/variables");
+  return { error: null, ok: true };
+}
+
+/** Guarda el membrete (datos de la empresa) para la cotización al cliente. */
+export async function guardarMembreteAction(
+  _prev: EstadoVar,
+  formData: FormData,
+): Promise<EstadoVar> {
+  await requireRol("ADMIN");
+  const s = (k: string) => String(formData.get(k) ?? "");
+  await actualizarMembrete({
+    empresaNombre: s("empresaNombre"),
+    empresaRif: s("empresaRif"),
+    empresaTelefono: s("empresaTelefono"),
+    empresaDireccion: s("empresaDireccion"),
   });
   revalidatePath("/variables");
   return { error: null, ok: true };

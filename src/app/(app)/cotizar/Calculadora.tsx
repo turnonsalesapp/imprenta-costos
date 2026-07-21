@@ -17,12 +17,14 @@ export function Calculadora({
   cfg,
   clientes,
   formInicial,
-  recotizado,
+  banner,
+  margenMin,
 }: {
   cfg: Config;
   clientes: ClienteSimple[];
   formInicial: FormCotizacion;
-  recotizado?: boolean;
+  banner?: string;
+  margenMin?: number;
 }) {
   const [form, setForm] = useState<FormCotizacion>(() => formInicial);
   const [escalas, setEscalas] = useState("500, 1000, 3000, 5000, 10000");
@@ -85,6 +87,26 @@ export function Calculadora({
     });
   }, [escalas, form, cfg]);
 
+  // Sugeridor: compara los 4 tamaños de corte para este mismo trabajo.
+  const opcionesTamano = useMemo(() => {
+    if (!papel || n(form.ancho) <= 0 || n(form.alto) <= 0 || n(form.cantidad) <= 0) return [];
+    return TAMANOS.map((t) => {
+      const [W, H] = medidaCorte(papel.med, t.frac);
+      const cap = calcCapacidad(n(form.ancho), n(form.alto), W, H, n(cfg.pinza), n(cfg.sep)).cap;
+      if (cap <= 0) return { id: t.id, cap: 0, precioUnit: Infinity, costoTotal: 0, entra: false };
+      const c = calcular({ ...form, tamano: t.id, capacidad: cap }, cfg);
+      return { id: t.id, cap, precioUnit: c.precioUnit, costoTotal: c.costoTotal, entra: true };
+    });
+  }, [papel, form, cfg]);
+
+  const mejorTamano = useMemo(() => {
+    const validos = opcionesTamano.filter((o) => o.entra && o.precioUnit > 0);
+    if (!validos.length) return null;
+    return validos.reduce((a, b) => (b.precioUnit < a.precioUnit ? b : a)).id;
+  }, [opcionesTamano]);
+
+  const usarTamano = (id: string) => setForm((f) => ({ ...f, tamano: id, capAuto: true }));
+
   function guardar() {
     setError(null);
     if (!form.cliente.trim() && !form.trabajo.trim()) { setError("Falta el cliente o el trabajo."); return; }
@@ -97,14 +119,16 @@ export function Calculadora({
 
   return (
     <div className="pr">
+      {banner ? (
+        <div className="warn" style={{ marginBottom: 14, background: "#E6F4F8", borderColor: "#9AD3E0", color: "#0B5C6E" }}>
+          {banner}
+        </div>
+      ) : null}
       <div className="grid">
         {/* ─────────────────────── columna izquierda ─────────────────────── */}
         <div>
           <section className="card">
-            <div className="ch">
-              <b>Datos del trabajo</b>
-              {recotizado ? <span className="mt">recotización · receta cargada, tasas de hoy</span> : null}
-            </div>
+            <div className="ch"><b>Datos del trabajo</b></div>
             <div className="cb">
               <div className="rowg c2">
                 <F l="Cliente">
@@ -347,6 +371,55 @@ export function Calculadora({
               )}
             </div>
           </section>
+
+          {opcionesTamano.length ? (
+            <section className="card">
+              <div className="ch">
+                <b>Sugeridor de tamaño de corte</b>
+                <span className="mt">el más barato para este trabajo</span>
+              </div>
+              <div className="cb">
+                <div className="tw">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Tamaño</th>
+                        <th className="ta-r">Pzs por corte</th>
+                        <th className="ta-r">Costo total</th>
+                        <th className="ta-r">Precio unit.</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {opcionesTamano.map((o) => {
+                        const actual = o.id === form.tamano;
+                        const mejor = o.id === mejorTamano;
+                        return (
+                          <tr key={o.id} className="rw"
+                            style={mejor ? { background: "#EDF9F1", boxShadow: "inset 3px 0 0 #15794F" } : undefined}>
+                            <td className="mono">
+                              <b>{o.id}</b>
+                              {mejor ? <span style={{ color: "#15794F", fontSize: 9.5, marginLeft: 5 }}>MÁS BARATO</span> : null}
+                            </td>
+                            <td className="ta-r mono">{o.entra ? fmtNum(o.cap, 0) : "—"}</td>
+                            <td className="ta-r mono" style={{ color: "#767D76" }}>{o.entra ? usd(o.costoTotal) : "no entra"}</td>
+                            <td className="ta-r mono"><b>{o.entra ? usd(o.precioUnit, 4) : "—"}</b></td>
+                            <td className="ta-r">
+                              {o.entra && !actual ? (
+                                <button type="button" className="btn g sm" onClick={() => usarTamano(o.id)}>Usar</button>
+                              ) : actual ? (
+                                <span style={{ fontSize: 10, color: "#767D76" }}>actual</span>
+                              ) : null}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          ) : null}
         </div>
 
         {/* ───────────────────────── ticket / desglose ───────────────────────── */}
@@ -414,6 +487,13 @@ export function Calculadora({
           </div>
           <div className="tear" />
 
+          {margenMin != null && r.cant > 0 && n(form.margen) < margenMin ? (
+            <div className="warn" style={{ marginTop: 10 }}>
+              El margen ({fmtNum(n(form.margen), 0)}%) está por debajo del mínimo del taller
+              ({fmtNum(margenMin, 0)}%). Revisa antes de enviar.
+            </div>
+          ) : null}
+
           {!form.trabajoId ? (
             <div className="hint" style={{ marginTop: 12, cursor: "pointer" }}
               onClick={() => up("guardarComoTrabajo", !form.guardarComoTrabajo)}>
@@ -434,7 +514,8 @@ export function Calculadora({
           ) : null}
 
           <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
-            <Save size={14} />{pendiente ? "Guardando…" : "Guardar cotización"}
+            <Save size={14} />
+            {pendiente ? "Guardando…" : form.editarId ? "Guardar cambios" : "Guardar cotización"}
           </button>
           <button type="button" className="btn g w" onClick={() => { setForm(nuevoForm(cfg)); setError(null); }}>
             <RotateCcw size={13} />Limpiar y empezar otra

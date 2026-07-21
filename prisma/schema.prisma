@@ -104,6 +104,12 @@ model Config {
   binVenta      Decimal  @db.Decimal(14, 4)
   pinza         Decimal  @db.Decimal(6, 2) @default(5)
   sep           Decimal  @db.Decimal(6, 2) @default(3)
+  margenMin     Decimal  @db.Decimal(6, 2) @default(15) // avisa si el margen baja de aquí
+  // Membrete para la cotización que se envía al cliente.
+  empresaNombre    String?
+  empresaRif       String?
+  empresaTelefono  String?
+  empresaDireccion String?
   actualizadoEn DateTime @updatedAt
 }
 
