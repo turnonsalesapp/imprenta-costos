@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+
+body {
+  background: theme("colors.plancha");
+  color: theme("colors.tinta");
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Números alineados en columna, como en una hoja de cálculo. */
+.tabular { font-variant-numeric: tabular-nums; }

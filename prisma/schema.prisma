@@ -1,0 +1,260 @@
+// Sistema de costos y producción — Imprenta
+// PostgreSQL (Neon / Supabase). Correr: npx prisma migrate dev
+
+generator client {
+  provider = "prisma-client-js"
+  // Railway construye sobre Debian con OpenSSL 3. Sin esto, el despliegue
+  // falla con "Prisma Client could not locate the Query Engine".
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── usuarios y acceso ───────────────────────────
+
+enum Rol {
+  ADMIN     // ve costos y márgenes, edita variables y papeles
+  VENDEDOR  // cotiza y ve precios; no edita las variables del negocio
+  TALLER    // solo ve órdenes de producción, sin precios ni costos
+}
+
+model Usuario {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  nombre       String
+  passwordHash String
+  rol          Rol      @default(VENDEDOR)
+  activo       Boolean  @default(true)
+  creadoEn     DateTime @default(now())
+
+  cotizaciones Cotizacion[]
+  ordenes      Orden[]
+  sesiones     Sesion[]
+}
+
+model Sesion {
+  id        String   @id @default(cuid())
+  usuarioId String
+  token     String   @unique
+  expiraEn  DateTime
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+}
+
+// ──────────────────────────────── clientes ────────────────────────────────
+
+model Cliente {
+  id        String   @id @default(cuid())
+  nombre    String
+  rif       String?
+  contacto  String?
+  telefono  String?
+  email     String?
+  direccion String?
+  notas     String?
+  activo    Boolean  @default(true)
+  creadoEn  DateTime @default(now())
+
+  trabajos     Trabajo[]
+  cotizaciones Cotizacion[]
+
+  @@index([nombre])
+}
+
+// ─────────────────────── catálogo: papeles y acabados ───────────────────────
+
+model Papel {
+  id      String  @id @default(cuid())
+  clave   String  @unique  // "Litho Autoadhesivo-200", estable para el motor
+  nombre  String
+  hojas   Int                        // hojas por resma o paquete
+  precio  Decimal @db.Decimal(12, 4) // precio USD de la resma completa
+  medida  String                     // "66x96" | "68x96" | "70x100"
+  activo  Boolean @default(true)
+
+  trabajos Trabajo[]
+}
+
+model Acabado {
+  id     String  @id @default(cuid())
+  clave  String  @unique  // "impTiro", "troquel"...  la usa el motor de cálculo
+  label  String
+  costo  Decimal @db.Decimal(12, 4) // tarifa base, referida a 1/4 de pliego
+  unidad String  // pliego | elemento | millar | trabajo
+  escala String  // area | min | fija   (solo aplica a unidad "pliego")
+  orden  Int     @default(0)
+  activo Boolean @default(true)
+}
+
+/// Variables del negocio. Fila única con id = "global".
+model Config {
+  id            String   @id @default("global")
+  merma         Decimal  @db.Decimal(6, 2) @default(3)
+  margen        Decimal  @db.Decimal(6, 2) @default(30)
+  comision      Decimal  @db.Decimal(6, 2) @default(3)
+  ml            Decimal  @db.Decimal(6, 2) @default(12)
+  tasaBCV       Decimal  @db.Decimal(14, 4)
+  binCompra     Decimal  @db.Decimal(14, 4)
+  binVenta      Decimal  @db.Decimal(14, 4)
+  pinza         Decimal  @db.Decimal(6, 2) @default(5)
+  sep           Decimal  @db.Decimal(6, 2) @default(3)
+  actualizadoEn DateTime @updatedAt
+}
+
+/// Histórico de tasas, para saber con qué cambio se cotizó cada trabajo.
+model Tasa {
+  id        String   @id @default(cuid())
+  fecha     DateTime @default(now())
+  bcv       Decimal  @db.Decimal(14, 4)
+  binCompra Decimal  @db.Decimal(14, 4)
+  binVenta  Decimal  @db.Decimal(14, 4)
+
+  @@index([fecha])
+}
+
+// ───────────────────── trabajos repetidos (plantillas) ─────────────────────
+
+/// Un trabajo que el cliente vuelve a pedir: guarda la receta, no el precio.
+/// Recotizar = cargar el trabajo + tasas de hoy y volver a calcular.
+model Trabajo {
+  id          String   @id @default(cuid())
+  clienteId   String?
+  nombre      String
+  descripcion String?
+  ancho       Int      // mm
+  alto        Int      // mm
+  tamano      String   // "1/4 Pliego"...
+  papelId     String?
+  capacidad   Int      // piezas por corte
+  capAuto     Boolean  @default(true)
+  acabados    Json     // { "impTiro": { "on": true, "q": 1 }, ... }
+  archivado   Boolean  @default(false)
+  creadoEn    DateTime @default(now())
+
+  cliente      Cliente?     @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  papel        Papel?       @relation(fields: [papelId], references: [id], onDelete: SetNull)
+  cotizaciones Cotizacion[]
+
+  @@index([clienteId])
+}
+
+// ──────────────────────────────── cotización ────────────────────────────────
+
+enum EstadoCotizacion {
+  BORRADOR
+  ENVIADA
+  APROBADA
+  RECHAZADA
+  VENCIDA
+}
+
+/// Una cotización es inmutable: guarda copia de TODO lo que se usó para
+/// calcularla (papeles, acabados, tasas). Si mañana sube el papel, la
+/// cotización de ayer sigue mostrando lo que se le prometió al cliente.
+model Cotizacion {
+  id        String           @id @default(cuid())
+  numero    Int              @unique @default(autoincrement())
+  estado    EstadoCotizacion @default(BORRADOR)
+  clienteId String?
+  trabajoId String?
+  usuarioId String?
+
+  titulo      String
+  descripcion String?
+  cantidad    Int
+  ancho       Int
+  alto        Int
+  tamano      String
+  papelNombre String
+  capacidad   Int
+
+  entrada   Json // Entrada exacta que recibió el motor
+  snapshot  Json // { papeles, acabados, config } del momento del cálculo
+  lineas    Json // desglose línea por línea
+
+  pliegos    Decimal @db.Decimal(14, 4)
+  costoTotal Decimal @db.Decimal(14, 4)
+  costoUnit  Decimal @db.Decimal(14, 6)
+  diferencial Decimal @db.Decimal(10, 6)
+  margen     Decimal @db.Decimal(6, 2)
+  precioUnit Decimal @db.Decimal(14, 6)
+  ventaTotal Decimal @db.Decimal(14, 4)
+  precioML   Decimal @db.Decimal(14, 6)
+  tasaBCV    Decimal @db.Decimal(14, 4)
+  precioBs   Decimal @db.Decimal(16, 4)
+
+  validaHasta DateTime?
+  notas       String?
+  creadaEn    DateTime @default(now())
+
+  cliente Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  trabajo Trabajo? @relation(fields: [trabajoId], references: [id], onDelete: SetNull)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  orden   Orden?
+
+  @@index([clienteId])
+  @@index([estado])
+  @@index([creadaEn])
+}
+
+// ─────────────────────────── orden de producción ───────────────────────────
+
+enum EstadoOrden {
+  PENDIENTE
+  EN_PROCESO
+  TERMINADA
+  ENTREGADA
+  ANULADA
+}
+
+/// Se genera desde una cotización aprobada. Es el papel que va al taller:
+/// lleva la receta y las etapas, NO lleva precios ni márgenes.
+model Orden {
+  id           String      @id @default(cuid())
+  numero       Int         @unique @default(autoincrement())
+  cotizacionId String      @unique
+  estado       EstadoOrden @default(PENDIENTE)
+  usuarioId    String?
+
+  fechaEntrega DateTime?
+  prioridad    Int      @default(0)
+  instrucciones String?
+  creadaEn     DateTime @default(now())
+  cerradaEn    DateTime?
+
+  cotizacion Cotizacion  @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+  usuario    Usuario?    @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  etapas     EtapaOrden[]
+
+  @@index([estado])
+  @@index([fechaEntrega])
+}
+
+enum EstadoEtapa {
+  PENDIENTE
+  EN_PROCESO
+  LISTA
+  OMITIDA
+}
+
+/// Cada acabado de la cotización se convierte en una etapa del taller.
+model EtapaOrden {
+  id          String      @id @default(cuid())
+  ordenId     String
+  clave       String      // misma clave del acabado: "impTiro", "troquelado"...
+  nombre      String
+  orden       Int         @default(0)
+  estado      EstadoEtapa @default(PENDIENTE)
+  responsable String?
+  iniciadaEn  DateTime?
+  terminadaEn DateTime?
+  notas       String?
+
+  ordenProd Orden @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+
+  @@index([ordenId])
+}
