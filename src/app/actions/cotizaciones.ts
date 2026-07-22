@@ -14,6 +14,7 @@ import {
   ESTADOS,
 } from "@/lib/cotizaciones";
 import type { FormCotizacion, FormProveedor } from "@/lib/cotizacion-form";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 export type EstadoGuardar = { error: string | null };
 
@@ -47,13 +48,17 @@ export async function guardarProveedorAction(
 
 /** Cambia el estado de una cotización (Borrador → Enviada → Aprobada…). */
 export async function cambiarEstadoAction(formData: FormData): Promise<void> {
-  await requireRol("ADMIN", "VENDEDOR");
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
 
   const id = String(formData.get("id") ?? "");
   const estado = String(formData.get("estado") ?? "") as EstadoCotizacion;
   if (!id || !ESTADOS.includes(estado)) return;
 
   await cambiarEstadoCotizacion(id, estado);
+  await registrarAuditoria({
+    actorId: usuario.id, actorNombre: usuario.nombre,
+    accion: "cotizacion.estado", entidad: id, detalle: `Estado → ${estado}`,
+  });
   revalidatePath(`/cotizaciones/${id}`);
   revalidatePath("/cotizaciones");
 }

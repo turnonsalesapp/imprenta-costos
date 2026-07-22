@@ -31,7 +31,7 @@ model Usuario {
   /// Interpretar solicitud con IA para ESTE usuario: null = hereda del sistema,
   /// true = siempre activo, false = siempre apagado. Solo aplica a quien cotiza.
   interpretarIA Boolean?
-  creadoEn     DateTime @default(now())
+  creadoEn     DateTime @default(now()) @db.Timestamptz(3)
 
   cotizaciones Cotizacion[]
   ordenes      Orden[]
@@ -42,7 +42,7 @@ model Sesion {
   id        String   @id @default(cuid())
   usuarioId String
   token     String   @unique
-  expiraEn  DateTime
+  expiraEn  DateTime @db.Timestamptz(3)
   usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId])
@@ -60,7 +60,7 @@ model Cliente {
   direccion String?
   notas     String?
   activo    Boolean  @default(true)
-  creadoEn  DateTime @default(now())
+  creadoEn  DateTime @default(now()) @db.Timestamptz(3)
 
   trabajos     Trabajo[]
   cotizaciones Cotizacion[]
@@ -104,7 +104,7 @@ model MovimientoInventario {
   motivo    String?
   ordenId   String?
   usuarioId String?
-  fecha     DateTime       @default(now())
+  fecha     DateTime       @default(now()) @db.Timestamptz(3)
 
   papel Papel @relation(fields: [papelId], references: [id], onDelete: Cascade)
 
@@ -150,13 +150,13 @@ model Config {
   empresaDireccion String?
   empresaEmail     String?
   empresaWeb       String?
-  actualizadoEn DateTime @updatedAt
+  actualizadoEn DateTime @updatedAt @db.Timestamptz(3)
 }
 
 /// Histórico de tasas, para saber con qué cambio se cotizó cada trabajo.
 model Tasa {
   id        String   @id @default(cuid())
-  fecha     DateTime @default(now())
+  fecha     DateTime @default(now()) @db.Timestamptz(3)
   bcv       Decimal  @db.Decimal(14, 4)
   binCompra Decimal  @db.Decimal(14, 4)
   binVenta  Decimal  @db.Decimal(14, 4)
@@ -181,7 +181,7 @@ model Trabajo {
   capAuto     Boolean  @default(true)
   acabados    Json     // { "impTiro": { "on": true, "q": 1 }, ... }
   archivado   Boolean  @default(false)
-  creadoEn    DateTime @default(now())
+  creadoEn    DateTime @default(now()) @db.Timestamptz(3)
 
   cliente      Cliente?     @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   papel        Papel?       @relation(fields: [papelId], references: [id], onDelete: SetNull)
@@ -248,9 +248,9 @@ model Cotizacion {
   tasaBCV    Decimal @db.Decimal(14, 4)
   precioBs   Decimal @db.Decimal(16, 4)
 
-  validaHasta DateTime?
+  validaHasta DateTime? @db.Timestamptz(3)
   notas       String?
-  creadaEn    DateTime @default(now())
+  creadaEn    DateTime @default(now()) @db.Timestamptz(3)
 
   cliente Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   trabajo Trabajo? @relation(fields: [trabajoId], references: [id], onDelete: SetNull)
@@ -281,12 +281,12 @@ model Orden {
   estado       EstadoOrden @default(PENDIENTE)
   usuarioId    String?
 
-  fechaEntrega DateTime?
+  fechaEntrega DateTime? @db.Timestamptz(3)
   prioridad    Int      @default(0)
   instrucciones String?
   inventarioAplicado Boolean @default(false) // si ya descontó el papel al terminar
-  creadaEn     DateTime @default(now())
-  cerradaEn    DateTime?
+  creadaEn     DateTime @default(now()) @db.Timestamptz(3)
+  cerradaEn    DateTime? @db.Timestamptz(3)
 
   cotizacion Cotizacion  @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
   usuario    Usuario?    @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
@@ -312,11 +312,28 @@ model EtapaOrden {
   orden       Int         @default(0)
   estado      EstadoEtapa @default(PENDIENTE)
   responsable String?
-  iniciadaEn  DateTime?
-  terminadaEn DateTime?
+  iniciadaEn  DateTime? @db.Timestamptz(3)
+  terminadaEn DateTime? @db.Timestamptz(3)
   notas       String?
 
   ordenProd Orden @relation(fields: [ordenId], references: [id], onDelete: Cascade)
 
   @@index([ordenId])
+}
+
+// ─────────────────────────── auditoría ───────────────────────────
+
+/// Bitácora de operaciones sensibles (cambios de estado de cotización, de rol,
+/// activación/desactivación de usuarios). Registra actor, acción y momento.
+/// No se borra ni edita; es solo-agregar.
+model RegistroAuditoria {
+  id          String   @id @default(cuid())
+  fecha       DateTime @default(now()) @db.Timestamptz(3)
+  actorId     String?  // usuario que hizo la acción (puede quedar null si se borra)
+  actorNombre String?  // nombre congelado, para que el registro sobreviva
+  accion      String   // "cotizacion.estado", "usuario.rol", "usuario.activo"...
+  entidad     String?  // id o número del objeto afectado
+  detalle     String?  // texto legible del cambio
+
+  @@index([fecha])
 }

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireRol } from "@/lib/auth";
 import { ROLES } from "@/lib/roles";
+import { registrarAuditoria } from "@/lib/auditoria";
 
 export type EstadoCrear = { error: string | null; ok: boolean };
 
@@ -60,6 +61,10 @@ export async function cambiarRol(formData: FormData): Promise<void> {
   if (id === admin.id && rol !== "ADMIN") return;
 
   await db.usuario.update({ where: { id }, data: { rol: rol as Rol } });
+  await registrarAuditoria({
+    actorId: admin.id, actorNombre: admin.nombre,
+    accion: "usuario.rol", entidad: id, detalle: `Rol → ${rol}`,
+  });
   revalidatePath("/usuarios");
 }
 
@@ -68,12 +73,17 @@ export async function cambiarRol(formData: FormData): Promise<void> {
  * sistema), "si" (siempre activo) o "no" (siempre apagado).
  */
 export async function cambiarInterpretar(formData: FormData): Promise<void> {
-  await requireRol("ADMIN");
+  const admin = await requireRol("ADMIN");
   const id = String(formData.get("id") ?? "");
   const v = String(formData.get("valor") ?? "");
   if (!id) return;
   const interpretarIA = v === "si" ? true : v === "no" ? false : null;
   await db.usuario.update({ where: { id }, data: { interpretarIA } });
+  await registrarAuditoria({
+    actorId: admin.id, actorNombre: admin.nombre,
+    accion: "usuario.interpretarIA", entidad: id,
+    detalle: `Interpretar IA → ${interpretarIA === null ? "según el sistema" : interpretarIA ? "activado" : "desactivado"}`,
+  });
   revalidatePath("/usuarios");
 }
 
@@ -92,5 +102,9 @@ export async function alternarActivo(formData: FormData): Promise<void> {
   // Al desactivar, cortamos sus sesiones abiertas de una vez.
   if (u.activo) await db.sesion.deleteMany({ where: { usuarioId: id } });
 
+  await registrarAuditoria({
+    actorId: admin.id, actorNombre: admin.nombre,
+    accion: "usuario.activo", entidad: id, detalle: u.activo ? "Desactivado" : "Activado",
+  });
   revalidatePath("/usuarios");
 }

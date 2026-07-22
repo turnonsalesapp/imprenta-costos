@@ -59,6 +59,9 @@ export function Nav({ usuario }: { usuario: Sesion }) {
               <Link href="/usuarios" className="text-kraft hover:text-tinta">
                 Usuarios
               </Link>
+              <Link href="/auditoria" className="text-kraft hover:text-tinta">
+                Auditoría
+              </Link>
             </>
           )}
         </nav>

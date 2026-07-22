@@ -36,22 +36,22 @@ Por eso el análisis **traduce los principios** del estándar (trazabilidad, seg
 | §2.5 Inyección SQL | ✅ | Todo pasa por Prisma (parametrizado). No hay SQL crudo con interpolación. |
 | §2.6 Seguridad del LLM / prompt injection | ✅/🟡 | La IA **solo redacta un borrador**; no fija precios ni ejecuta acciones. Se le pasa el catálogo y el servidor **vuelve a filtrar** claves inválidas. Entrada tratada como dato. Falta límite de tamaño del texto (P2-B). |
 | §2.7 Integridad financiera / antifraude | ⚪ | No hay lectura de comprobantes ni aprobación de pagos. |
-| §2.8 Validación de entrada (Pydantic) | 🟡 | `zod` en clientes y usuarios; el resto de acciones normaliza con `n()`/`String()` sin esquema. Recomendado ampliar (P3-B). |
+| §2.8 Validación de entrada (Pydantic) | ✅/🟡 | `zod` en clientes, usuarios e **inventario (rangos, P3-B)**; tope de tamaño en el texto de IA (P2-B). Las acciones basadas en objeto se apoyan en el recálculo autoritativo del servidor. |
 | §2.9 Concurrencia / `SELECT FOR UPDATE` | 🟡 | El descuento de inventario es idempotente pero no usa bloqueo de fila; en este volumen (un taller) el riesgo real es bajo (P3-C). |
 | §2.10 Rate limiting / DoS | ✅ | **Resuelto (P1-A):** limitador en memoria (`lib/rate-limit.ts`); login por IP y por correo, IA por usuario. |
 | §2.11 Errores sin fugas | ✅ | Las acciones devuelven `{ ok, error }` con mensajes de dominio; no se exponen stack traces al usuario. |
-| §2.12 Logging / auditoría / PII | 🟡 | No hay `print`/`console` regados (✅ limpio), pero tampoco hay logging estructurado ni un log de auditoría de operaciones sensibles (cambios de estado, roles). Movimientos de inventario sí se auditan. (P2-D) |
+| §2.12 Logging / auditoría / PII | ✅/🟡 | **Auditoría resuelta (P2-D):** `RegistroAuditoria` + pantalla `/auditoria`. Sin `print`/`console` regados. Falta logging estructurado con `trace_id` (sobredimensionado para esta escala). |
 | §2.13 Cifrado / retención | ✅/⚪ | TLS y cifrado en reposo los provee Railway. No se guardan comprobantes ni PII financiera. |
 | §2.14 Dependencias fijadas | 🟡 | `package.json` usa rangos `^`; el `package-lock.json` sí fija (build reproducible). Falta escaneo en CI (P3-D). |
-| §3.1 Compuerta de calidad (format/lint/types) | 🟡 | TS `strict` ✅ y `next lint` disponible, pero no hay pre-commit ni gate de CI que corra lint+typecheck+tests. **P2-A**. |
+| §3.1 Compuerta de calidad (format/lint/types) | ✅ | **Resuelto (P2-A):** `.github/workflows/ci.yml` corre tipos + pruebas + build en cada push/PR. TS `strict`. |
 | §3.2 Logging estructurado | 🟡 | Ver §2.12. |
 | §3.3 Taxonomía de excepciones | ✅/🟡 | El patrón `{ ok, error }` cumple el espíritu (nada se traga en silencio). No hay jerarquía de errores tipada, innecesaria a esta escala. |
 | §3.4 Disciplina async | ✅ | Todo es async idiomático; sin llamadas bloqueantes; Prisma singleton correcto. |
 | §3.5 Configuración tipada única | ✅ | **Resuelto (P1-B):** `lib/env.ts` centraliza el entorno con getters perezosos + `verificarEnv()` (Zod). Los módulos leen `env`, no `process.env`. |
 | §3.6 Migraciones | ✅ | Todo cambio de esquema por migración Prisma; generadas offline; Railway las aplica en preDeploy. |
 | §3.7 Testing | ✅/🟡 | Motor muy bien probado (contrato Jugarte), auth cubierto y **test del invariante TALLER-sin-precios resuelto (P2-E)** (`seguridad.test.ts`, 38 pruebas). Falta cobertura de server actions (P3-B). |
-| §3.8 Tipos de datos (TIMESTAMPTZ, DECIMAL) | 🟡 | Dinero en `Decimal` ✅. Pero las fechas Prisma `DateTime` mapean a `timestamp(3)` **sin** zona horaria; el estándar exige `TIMESTAMPTZ`. (P2-F) |
-| §4 Documentación y legibilidad | ✅/🟡 | Docstrings/comentarios en español explicando el *porqué* (excelente). Faltan READMEs por carpeta y un glosario (P3-A). Este set de documentos cubre gran parte. |
+| §3.8 Tipos de datos (TIMESTAMPTZ, DECIMAL) | ✅ | Dinero en `Decimal`. **Fechas resueltas (P2-F):** todas las `DateTime` con `@db.Timestamptz(3)`; migración con `AT TIME ZONE 'UTC'`. |
+| §4 Documentación y legibilidad | ✅ | Docstrings/comentarios en español explicando el *porqué*. **READMEs por carpeta y glosario añadidos (P3-A).** |
 | §4.6 Commits semánticos | 🟡 | Los mensajes son descriptivos pero no usan prefijos `feat:`/`fix:`/`security:`. Opcional. |
 
 ---
@@ -80,27 +80,27 @@ Estas prácticas del código **ya cumplen o superan** el estándar y son la mejo
 **P1-B · Configuración tipada única. ✅**
 `lib/env.ts`: fuente única del entorno con **getters perezosos** (edge-safe; no rompen `next build`) y `verificarEnv()` con Zod para un chequeo explícito. `jwt`, `auth`, `tasas`, `interpretar`, el cron y el debug ahora leen `env`, no `process.env`.
 
-### Prioridad 2 — siguiente iteración
+### Prioridad 2
 
-**P2-A · Gate de calidad en CI.** Añadir un workflow (o pre-commit) que corra `tsc --noEmit`, `next lint` y `npm test`, y bloquee el merge si fallan. Hoy la disciplina es manual.
+**P2-A · Gate de calidad en CI. ✅** `.github/workflows/ci.yml` corre en cada push/PR: `npm ci`, `prisma generate`, `tsc --noEmit`, `npm test` y `npm run build`. (Sin `next lint`: el proyecto no tiene ESLint configurado.)
 
-**P2-B · Límite de tamaño del texto del intérprete.** `interpretarSolicitud` solo exige ≥ 3 caracteres. Añadir un tope superior (p. ej. 5.000 caracteres) para acotar costo y evitar payloads enormes.
+**P2-B · Límite de tamaño del texto del intérprete. ✅** `interpretarSolicitud` ahora rechaza textos > 5.000 caracteres.
 
-**P2-C · Endurecer auth (menor).** Subir el cost de bcrypt de 10 a 12; considerar `maxAge` de sesión más corto con refresh. Bajo impacto, fácil.
+**P2-C · Endurecer auth (menor).** Pendiente (bajo impacto): subir bcrypt a 12, `maxAge` más corto con refresh.
 
-**P2-D · Log de auditoría de operaciones sensibles.** Registrar (actor, acción, fecha) para cambios de estado de cotización, cambios de rol y activación/desactivación de usuarios, como ya se hace con `MovimientoInventario`. Alinea con §2.12.
+**P2-D · Log de auditoría. ✅** Modelo `RegistroAuditoria` (solo-agregar) + `lib/auditoria.ts`. Se registran cambios de estado de cotización, de rol, activación y override de IA por usuario. Pantalla `/auditoria` (solo ADMIN).
 
-**P2-E · Test del invariante TALLER. ✅ IMPLEMENTADO.** `seguridad.test.ts` escanea `SELECT_PROD` (ahora exportado) y falla si aparece cualquier columna de dinero; además reafirma `puedeVerPrecios(TALLER) === false`. Sin base de datos (estructural). Para poder importar módulos `server-only` en las pruebas se añadió un stub y un alias en `vitest.config.ts`.
+**P2-E · Test del invariante TALLER. ✅** `seguridad.test.ts` escanea `SELECT_PROD` (exportado) y falla si aparece una columna de dinero; reafirma `puedeVerPrecios(TALLER) === false`. Stub + alias de `server-only` en `vitest.config.ts`.
 
-**P2-F · `TIMESTAMPTZ` en fechas.** Migrar las columnas `DateTime` a `@db.Timestamptz(3)`. En un sistema de un solo país el riesgo es menor, pero el estándar lo pide y evita ambigüedad futura. Requiere una migración.
+**P2-F · `TIMESTAMPTZ` en fechas. ✅** Todas las columnas `DateTime` llevan `@db.Timestamptz(3)`. La migración convierte con `USING … AT TIME ZONE 'UTC'` para no desplazar datos existentes (Prisma los guarda en UTC).
 
-### Prioridad 3 — cuando haya holgura
+### Prioridad 3
 
-- **P3-A · Documentación de módulo y glosario.** README de 10–15 líneas por carpeta (`lib/`, `actions/`, `api/`) y un `docs/glosario.md` (diferencial, costo protegido, snapshot, clave↔cuid, pliego/corte).
-- **P3-B · zod en todas las server actions.** Extender el esquema de validación (hoy en clientes/usuarios) a cotizaciones e inventario.
-- **P3-C · Bloqueo de fila en inventario.** Si el volumen crece, envolver el descuento en transacción con bloqueo para evitar carreras (hoy improbable).
-- **P3-D · Escaneo de dependencias en CI** (`npm audit`/Dependabot) y considerar fijar versiones exactas.
-- **P3-E · Commits semánticos** con prefijos `feat:`/`fix:`/`security:`.
+- **P3-A · Documentación de módulo y glosario. ✅** README en `lib/`, `actions/`, `api/` y `docs/glosario.md`.
+- **P3-B · zod en más server actions. ✅ (parcial)** Rangos validados en inventario; clientes y usuarios ya usaban zod. Las acciones basadas en objeto (`guardarCotizacion`) siguen apoyándose en el recálculo autoritativo del servidor.
+- **P3-C · Bloqueo de fila en inventario.** Pendiente (hoy improbable a este volumen).
+- **P3-D · Escaneo de dependencias en CI** (`npm audit`/Dependabot). Pendiente.
+- **P3-E · Commits semánticos.** Pendiente (convención).
 
 ---
 
@@ -120,4 +120,4 @@ Estas prácticas del código **ya cumplen o superan** el estándar y son la mejo
 
 El código está **bien diseñado para su escala**: el motor puro y probado, el invariante TALLER estructural y la inmutabilidad con snapshot son exactamente el tipo de "seguridad por diseño" que el estándar promueve.
 
-**Estado tras esta iteración:** los tres de mayor retorno ya están implementados — **P1-A (rate limiting)**, **P1-B (configuración tipada única)** y **P2-E (test del invariante TALLER)**. Quedan mejoras de higiene: **P2-A** (gate de CI), **P2-D** (log de auditoría), **P2-F** (`TIMESTAMPTZ`) y las de Prioridad 3.
+**Estado tras esta iteración:** implementados P1-A, P1-B, P2-A, P2-B, P2-D, P2-E, P2-F, P3-A y P3-B. Quedan como opcionales de baja prioridad: **P2-C** (endurecer bcrypt/sesión), **P3-C** (bloqueo de fila), **P3-D** (escaneo de dependencias en CI) y **P3-E** (commits semánticos).

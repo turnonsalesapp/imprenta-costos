@@ -171,6 +171,9 @@ export async function interpretarSolicitud(
 ): Promise<ResultadoInterpretar> {
   const limpio = (texto ?? "").trim();
   if (limpio.length < 3) return { ok: false, error: "Pega primero el texto de la solicitud." };
+  if (limpio.length > 5000) {
+    return { ok: false, error: "El texto es demasiado largo (máximo 5.000 caracteres)." };
+  }
   if (!interpretarDisponible()) {
     return { ok: false, error: "La interpretación con IA no está configurada (falta ANTHROPIC_API_KEY)." };
   }

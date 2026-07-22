@@ -1,0 +1,35 @@
+name: CI
+
+# Compuerta de calidad (§3.1 del estándar): ningún cambio se da por terminado si
+# no pasa tipos, pruebas y build. Corre en cada push y en cada Pull Request.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  calidad:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Generar cliente Prisma
+        run: npx prisma generate
+
+      - name: Verificar tipos (tsc --noEmit)
+        run: npx tsc --noEmit
+
+      - name: Pruebas (vitest)
+        run: npm test
+
+      - name: Build de producción
+        run: npm run build
