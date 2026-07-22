@@ -13,7 +13,12 @@ import { SignJWT, jwtVerify } from "jose";
 import { env } from "./env";
 
 export const COOKIE = "imp_sesion";
+/** Ventana de INACTIVIDAD: la sesión en BD vence si no hay actividad en tantos días. */
 export const SESION_DIAS = 7;
+/** Vida del token/cookie firmado (proof). Más largo que la ventana de inactividad
+ *  porque la BD es la autoridad real: una sesión inactiva se corta en BD aunque
+ *  el token siga siendo válido. Permite deslizar la sesión sin re-emitir cookie. */
+export const COOKIE_DIAS = 30;
 
 export type TokenPayload = {
   /** token aleatorio que identifica la fila de `Sesion`. */
@@ -31,7 +36,7 @@ export async function firmarToken(payload: TokenPayload): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${SESION_DIAS}d`)
+    .setExpirationTime(`${COOKIE_DIAS}d`)
     .sign(clave());
 }
 

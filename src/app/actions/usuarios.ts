@@ -37,7 +37,7 @@ export async function crearUsuario(
   const { nombre, email, clave, rol } = parsed.data;
   try {
     await db.usuario.create({
-      data: { nombre, email, rol, passwordHash: await bcrypt.hash(clave, 10) },
+      data: { nombre, email, rol, passwordHash: await bcrypt.hash(clave, 12) },
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {

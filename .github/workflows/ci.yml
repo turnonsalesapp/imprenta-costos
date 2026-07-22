@@ -22,6 +22,10 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Auditoría de dependencias (informativa)
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
       - name: Generar cliente Prisma
         run: npx prisma generate
 

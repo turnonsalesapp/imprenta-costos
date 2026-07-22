@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import type { Rol } from "@prisma/client";
 import { db } from "./db";
 import { env } from "./env";
-import { COOKIE, SESION_DIAS, firmarToken, verificarToken } from "./jwt";
+import { COOKIE, SESION_DIAS, COOKIE_DIAS, firmarToken, verificarToken } from "./jwt";
 
 /**
  * Autenticación y sesiones, del lado del servidor.
@@ -24,7 +24,11 @@ export type Sesion = {
   rol: Rol;
 };
 
-const MS_SESION = SESION_DIAS * 24 * 60 * 60 * 1000;
+const DIA_MS = 24 * 60 * 60 * 1000;
+/** Ventana de inactividad de la sesión en BD (se desliza con la actividad). */
+const MS_INACTIVIDAD = SESION_DIAS * DIA_MS;
+/** Vida de la cookie/token firmado. */
+const MS_COOKIE = COOKIE_DIAS * DIA_MS;
 
 /** Usuario de la petición actual, o `null` si no hay sesión válida. */
 export async function getUsuario(): Promise<Sesion | null> {
@@ -40,13 +44,25 @@ export async function getUsuario(): Promise<Sesion | null> {
   });
   if (!sesion) return null;
 
-  if (sesion.expiraEn.getTime() < Date.now()) {
+  const ahora = Date.now();
+  if (sesion.expiraEn.getTime() < ahora) {
     await db.sesion.delete({ where: { id: sesion.id } }).catch(() => {});
     return null;
   }
 
   const u = sesion.usuario;
   if (!u.activo) return null;
+
+  // Sesión deslizante: si ya pasó de la mitad de su ventana, se extiende. Así el
+  // usuario activo no se desconecta a mitad de trabajo, pero el inactivo caduca
+  // ~SESION_DIAS después de su última actividad. Solo escribe una vez por medio
+  // ciclo, no en cada request. (Escribir en BD sí se permite en un Server
+  // Component; re-emitir la cookie no, por eso la cookie vive más — la BD manda.)
+  if (sesion.expiraEn.getTime() - ahora < MS_INACTIVIDAD / 2) {
+    await db.sesion
+      .update({ where: { id: sesion.id }, data: { expiraEn: new Date(ahora + MS_INACTIVIDAD) } })
+      .catch(() => {});
+  }
 
   return { id: u.id, email: u.email, nombre: u.nombre, rol: u.rol };
 }
@@ -80,7 +96,8 @@ export async function iniciarSesion(
   // filtrar por tiempo de respuesta cuáles correos están registrados. El
   // señuelo es un hash bcrypt VÁLIDO (de una clave al azar) para que `compare`
   // haga el trabajo real y devuelva false, en vez de fallar por formato.
-  const SEÑUELO = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+  // Cost 12, igual que las claves reales, para que el tiempo no delate usuarios.
+  const SEÑUELO = "$2a$12$nSxmROTkGQ1NUo6yYvyU.uCPV4Gmo5XnIwNsEQmeyknGkwRtO6lYu";
   const claveOk = await bcrypt.compare(clave, u?.passwordHash ?? SEÑUELO);
 
   if (!u || !u.activo || !claveOk) {
@@ -88,7 +105,7 @@ export async function iniciarSesion(
   }
 
   const token = randomBytes(32).toString("base64url");
-  const expiraEn = new Date(Date.now() + MS_SESION);
+  const expiraEn = new Date(Date.now() + MS_INACTIVIDAD);
   await db.sesion.create({ data: { usuarioId: u.id, token, expiraEn } });
 
   const jwt = await firmarToken({ sid: token, rol: u.rol });
@@ -97,7 +114,7 @@ export async function iniciarSesion(
     secure: env.esProduccion,
     sameSite: "lax",
     path: "/",
-    maxAge: MS_SESION / 1000,
+    maxAge: MS_COOKIE / 1000,
   });
 
   return { ok: true };

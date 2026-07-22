@@ -37,12 +37,12 @@ Por eso el análisis **traduce los principios** del estándar (trazabilidad, seg
 | §2.6 Seguridad del LLM / prompt injection | ✅/🟡 | La IA **solo redacta un borrador**; no fija precios ni ejecuta acciones. Se le pasa el catálogo y el servidor **vuelve a filtrar** claves inválidas. Entrada tratada como dato. Falta límite de tamaño del texto (P2-B). |
 | §2.7 Integridad financiera / antifraude | ⚪ | No hay lectura de comprobantes ni aprobación de pagos. |
 | §2.8 Validación de entrada (Pydantic) | ✅/🟡 | `zod` en clientes, usuarios e **inventario (rangos, P3-B)**; tope de tamaño en el texto de IA (P2-B). Las acciones basadas en objeto se apoyan en el recálculo autoritativo del servidor. |
-| §2.9 Concurrencia / `SELECT FOR UPDATE` | 🟡 | El descuento de inventario es idempotente pero no usa bloqueo de fila; en este volumen (un taller) el riesgo real es bajo (P3-C). |
+| §2.9 Concurrencia / `SELECT FOR UPDATE` | ✅ | **Resuelto (P3-C):** entradas, ajustes y descuento por orden usan transacción con `SELECT … FOR UPDATE`; el descuento re-verifica la idempotencia bajo el lock. |
 | §2.10 Rate limiting / DoS | ✅ | **Resuelto (P1-A):** limitador en memoria (`lib/rate-limit.ts`); login por IP y por correo, IA por usuario. |
 | §2.11 Errores sin fugas | ✅ | Las acciones devuelven `{ ok, error }` con mensajes de dominio; no se exponen stack traces al usuario. |
 | §2.12 Logging / auditoría / PII | ✅/🟡 | **Auditoría resuelta (P2-D):** `RegistroAuditoria` + pantalla `/auditoria`. Sin `print`/`console` regados. Falta logging estructurado con `trace_id` (sobredimensionado para esta escala). |
 | §2.13 Cifrado / retención | ✅/⚪ | TLS y cifrado en reposo los provee Railway. No se guardan comprobantes ni PII financiera. |
-| §2.14 Dependencias fijadas | 🟡 | `package.json` usa rangos `^`; el `package-lock.json` sí fija (build reproducible). Falta escaneo en CI (P3-D). |
+| §2.14 Dependencias fijadas | ✅/🟡 | `package-lock.json` fija (build reproducible). **Escaneo añadido (P3-D):** Dependabot + `npm audit` en CI. Los rangos `^` se mantienen (Dependabot los actualiza). |
 | §3.1 Compuerta de calidad (format/lint/types) | ✅ | **Resuelto (P2-A):** `.github/workflows/ci.yml` corre tipos + pruebas + build en cada push/PR. TS `strict`. |
 | §3.2 Logging estructurado | 🟡 | Ver §2.12. |
 | §3.3 Taxonomía de excepciones | ✅/🟡 | El patrón `{ ok, error }` cumple el espíritu (nada se traga en silencio). No hay jerarquía de errores tipada, innecesaria a esta escala. |
@@ -52,7 +52,7 @@ Por eso el análisis **traduce los principios** del estándar (trazabilidad, seg
 | §3.7 Testing | ✅/🟡 | Motor muy bien probado (contrato Jugarte), auth cubierto y **test del invariante TALLER-sin-precios resuelto (P2-E)** (`seguridad.test.ts`, 38 pruebas). Falta cobertura de server actions (P3-B). |
 | §3.8 Tipos de datos (TIMESTAMPTZ, DECIMAL) | ✅ | Dinero en `Decimal`. **Fechas resueltas (P2-F):** todas las `DateTime` con `@db.Timestamptz(3)`; migración con `AT TIME ZONE 'UTC'`. |
 | §4 Documentación y legibilidad | ✅ | Docstrings/comentarios en español explicando el *porqué*. **READMEs por carpeta y glosario añadidos (P3-A).** |
-| §4.6 Commits semánticos | 🟡 | Los mensajes son descriptivos pero no usan prefijos `feat:`/`fix:`/`security:`. Opcional. |
+| §4.6 Commits semánticos | ✅ | **Convención documentada (P3-E)** en `CONTRIBUTING.md`; adoptada de aquí en adelante. |
 
 ---
 
@@ -86,7 +86,7 @@ Estas prácticas del código **ya cumplen o superan** el estándar y son la mejo
 
 **P2-B · Límite de tamaño del texto del intérprete. ✅** `interpretarSolicitud` ahora rechaza textos > 5.000 caracteres.
 
-**P2-C · Endurecer auth (menor).** Pendiente (bajo impacto): subir bcrypt a 12, `maxAge` más corto con refresh.
+**P2-C · Endurecer auth. ✅** bcrypt a **cost 12** (y señuelo de timing igualado a 12). **Sesión deslizante:** la sesión en BD vence tras 7 días de inactividad y se extiende sola con la actividad (`getUsuario`), mientras la cookie/token vive 30 días; la BD sigue siendo la autoridad de revocación.
 
 **P2-D · Log de auditoría. ✅** Modelo `RegistroAuditoria` (solo-agregar) + `lib/auditoria.ts`. Se registran cambios de estado de cotización, de rol, activación y override de IA por usuario. Pantalla `/auditoria` (solo ADMIN).
 
@@ -98,9 +98,9 @@ Estas prácticas del código **ya cumplen o superan** el estándar y son la mejo
 
 - **P3-A · Documentación de módulo y glosario. ✅** README en `lib/`, `actions/`, `api/` y `docs/glosario.md`.
 - **P3-B · zod en más server actions. ✅ (parcial)** Rangos validados en inventario; clientes y usuarios ya usaban zod. Las acciones basadas en objeto (`guardarCotizacion`) siguen apoyándose en el recálculo autoritativo del servidor.
-- **P3-C · Bloqueo de fila en inventario.** Pendiente (hoy improbable a este volumen).
-- **P3-D · Escaneo de dependencias en CI** (`npm audit`/Dependabot). Pendiente.
-- **P3-E · Commits semánticos.** Pendiente (convención).
+- **P3-C · Bloqueo de fila en inventario. ✅** `registrarEntrada`, `ajustarStock` y `descontarPorOrden` usan transacciones con `SELECT … FOR UPDATE`; el descuento por orden también bloquea la orden y re-verifica la idempotencia dentro de la transacción.
+- **P3-D · Escaneo de dependencias. ✅** `.github/dependabot.yml` (npm + github-actions, semanal) y paso `npm audit` informativo en CI.
+- **P3-E · Commits semánticos. ✅** Convención documentada en `CONTRIBUTING.md` (`feat:`/`fix:`/`security:`/…), adoptada de aquí en adelante.
 
 ---
 
@@ -120,4 +120,4 @@ Estas prácticas del código **ya cumplen o superan** el estándar y son la mejo
 
 El código está **bien diseñado para su escala**: el motor puro y probado, el invariante TALLER estructural y la inmutabilidad con snapshot son exactamente el tipo de "seguridad por diseño" que el estándar promueve.
 
-**Estado tras esta iteración:** implementados P1-A, P1-B, P2-A, P2-B, P2-D, P2-E, P2-F, P3-A y P3-B. Quedan como opcionales de baja prioridad: **P2-C** (endurecer bcrypt/sesión), **P3-C** (bloqueo de fila), **P3-D** (escaneo de dependencias en CI) y **P3-E** (commits semánticos).
+**Estado tras esta iteración:** **todas las recomendaciones (P1-A/B, P2-A/B/C/D/E/F, P3-A/B/C/D/E) están implementadas.** Lo que se dejó fuera a propósito sigue siendo lo del punto 4 (reglas multi-tenant que no aplican a un taller de un solo dueño).
