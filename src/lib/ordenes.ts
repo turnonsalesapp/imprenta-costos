@@ -2,6 +2,7 @@ import "server-only";
 import { Prisma, type EstadoOrden, type EstadoEtapa } from "@prisma/client";
 import { db } from "./db";
 import type { LineaCosto } from "./calculo";
+import { descontarPorOrden } from "./inventario";
 
 /**
  * Órdenes de producción. NO llevan precios: ni el modelo los tiene, ni estas
@@ -205,6 +206,8 @@ async function recomputarEstadoOrden(ordenId: string): Promise<void> {
       where: { id: ordenId },
       data: { estado: nuevo, cerradaEn: nuevo === "TERMINADA" ? new Date() : null },
     });
+    // Al terminar, se descuenta el papel del inventario (una sola vez).
+    if (nuevo === "TERMINADA") await descontarPorOrden(ordenId);
   }
 }
 
@@ -213,6 +216,8 @@ export async function cambiarEstadoOrden(id: string, estado: EstadoOrden): Promi
     where: { id },
     data: { estado, cerradaEn: estado === "ENTREGADA" || estado === "TERMINADA" ? new Date() : null },
   });
+  // Terminar/entregar a mano también descuenta el inventario (una sola vez).
+  if (estado === "TERMINADA" || estado === "ENTREGADA") await descontarPorOrden(id);
 }
 
 export async function fijarEntrega(id: string, fecha: Date | null): Promise<void> {

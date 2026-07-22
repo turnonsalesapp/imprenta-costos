@@ -76,7 +76,36 @@ model Papel {
   medida  String                     // "66x96" | "68x96" | "70x100"
   activo  Boolean @default(true)
 
-  trabajos Trabajo[]
+  // Inventario (en pliegos completos).
+  stock    Decimal @db.Decimal(14, 2) @default(0)
+  stockMin Decimal @db.Decimal(14, 2) @default(0) // avisa cuando el stock baja de aquí
+
+  trabajos    Trabajo[]
+  movimientos MovimientoInventario[]
+}
+
+enum TipoMovimiento {
+  ENTRADA // compra que suma stock
+  SALIDA  // consumo al terminar una orden
+  AJUSTE  // corrección manual
+}
+
+/// Movimientos de inventario de papel, en pliegos completos (cantidad con signo).
+model MovimientoInventario {
+  id        String         @id @default(cuid())
+  papelId   String
+  tipo      TipoMovimiento
+  cantidad  Decimal        @db.Decimal(14, 2) // + entra, - sale
+  saldo     Decimal        @db.Decimal(14, 2) // stock resultante, para auditoría
+  motivo    String?
+  ordenId   String?
+  usuarioId String?
+  fecha     DateTime       @default(now())
+
+  papel Papel @relation(fields: [papelId], references: [id], onDelete: Cascade)
+
+  @@index([papelId])
+  @@index([fecha])
 }
 
 model Acabado {
@@ -237,6 +266,7 @@ model Orden {
   fechaEntrega DateTime?
   prioridad    Int      @default(0)
   instrucciones String?
+  inventarioAplicado Boolean @default(false) // si ya descontó el papel al terminar
   creadaEn     DateTime @default(now())
   cerradaEn    DateTime?
 

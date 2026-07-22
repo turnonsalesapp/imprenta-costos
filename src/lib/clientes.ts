@@ -87,6 +87,23 @@ export async function alternarActivoCliente(id: string): Promise<void> {
   await db.cliente.update({ where: { id }, data: { activo: !c.activo } });
 }
 
+/**
+ * Borrado inteligente: solo se elimina un cliente SIN historia (sin cotizaciones
+ * ni trabajos). Si tiene histórico, se desactiva, no se borra.
+ */
+export async function eliminarCliente(id: string): Promise<{ ok: boolean; error?: string }> {
+  const c = await db.cliente.findUnique({
+    where: { id },
+    select: { _count: { select: { cotizaciones: true, trabajos: true } } },
+  });
+  if (!c) return { ok: false, error: "El cliente no existe." };
+  if (c._count.cotizaciones > 0 || c._count.trabajos > 0) {
+    return { ok: false, error: "Tiene histórico; desactívalo en vez de borrarlo." };
+  }
+  await db.cliente.delete({ where: { id } });
+  return { ok: true };
+}
+
 function normalizar(d: DatosCliente) {
   const limpio = (v: string | null | undefined) => {
     const s = (v ?? "").trim();

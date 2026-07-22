@@ -8,6 +8,7 @@ import {
   crearCotizacion,
   actualizarCotizacion,
   cambiarEstadoCotizacion,
+  eliminarCotizacion,
   ESTADOS,
 } from "@/lib/cotizaciones";
 import type { FormCotizacion } from "@/lib/cotizacion-form";
@@ -40,4 +41,15 @@ export async function cambiarEstadoAction(formData: FormData): Promise<void> {
   await cambiarEstadoCotizacion(id, estado);
   revalidatePath(`/cotizaciones/${id}`);
   revalidatePath("/cotizaciones");
+}
+
+/** Elimina una cotización (solo ADMIN, solo borrador sin orden). */
+export async function eliminarCotizacionAction(formData: FormData): Promise<void> {
+  await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const r = await eliminarCotizacion(id);
+  if (!r.ok) redirect(`/cotizaciones/${id}`);
+  revalidatePath("/cotizaciones");
+  redirect("/cotizaciones");
 }

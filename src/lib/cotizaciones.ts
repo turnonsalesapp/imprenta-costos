@@ -295,6 +295,26 @@ export async function cambiarEstadoCotizacion(
   await db.cotizacion.update({ where: { id }, data: { estado } });
 }
 
+/**
+ * Borrado inteligente: solo se elimina de verdad lo "sin historia" — una
+ * cotización en BORRADOR sin orden. Lo demás se marca Rechazada, no se borra.
+ */
+export async function eliminarCotizacion(id: string): Promise<ResultadoGuardar> {
+  const c = await db.cotizacion.findUnique({
+    where: { id },
+    select: { estado: true, orden: { select: { id: true } } },
+  });
+  if (!c) return { ok: false, error: "La cotización no existe." };
+  if (c.orden) {
+    return { ok: false, error: "Tiene una orden de producción; anúlala primero." };
+  }
+  if (c.estado !== "BORRADOR") {
+    return { ok: false, error: "Solo se borra un borrador; las demás se marcan Rechazada." };
+  }
+  await db.cotizacion.delete({ where: { id } });
+  return { ok: true, id };
+}
+
 function whereLista(f: FiltroLista): Prisma.CotizacionWhereInput {
   const where: Prisma.CotizacionWhereInput = {};
   if (f.estado) where.estado = f.estado;

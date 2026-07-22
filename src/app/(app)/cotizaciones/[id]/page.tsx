@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRol } from "@/lib/auth";
 import { obtenerCotizacion, ESTADOS, ETIQUETA_ESTADO } from "@/lib/cotizaciones";
-import { cambiarEstadoAction } from "@/app/actions/cotizaciones";
+import { cambiarEstadoAction, eliminarCotizacionAction } from "@/app/actions/cotizaciones";
 import { generarOrdenAction } from "@/app/actions/ordenes";
+import { esAdmin } from "@/lib/roles";
+import { BotonEliminar } from "@/app/_components/BotonEliminar";
 import { fmtNum, usd } from "@/lib/calculo";
 import { EstadoBadge } from "../EstadoBadge";
 
@@ -16,10 +18,12 @@ export default async function DetalleCotizacion({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireRol("ADMIN", "VENDEDOR");
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
   const { id } = await params;
   const c = await obtenerCotizacion(id);
   if (!c) notFound();
+
+  const puedeBorrar = esAdmin(usuario.rol) && c.estado === "BORRADOR" && !c.orden;
 
   return (
     <>
@@ -40,6 +44,14 @@ export default async function DetalleCotizacion({
             className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
             Imprimir / PDF
           </Link>
+          {puedeBorrar && (
+            <BotonEliminar
+              accion={eliminarCotizacionAction}
+              id={c.id}
+              texto="Eliminar"
+              confirmacion="¿Eliminar este borrador? No se puede deshacer."
+            />
+          )}
           <EstadoBadge estado={c.estado} />
         </div>
       </div>

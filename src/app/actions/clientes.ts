@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRol } from "@/lib/auth";
 import {
-  crearCliente, editarCliente, alternarActivoCliente, type DatosCliente,
+  crearCliente, editarCliente, alternarActivoCliente, eliminarCliente, type DatosCliente,
 } from "@/lib/clientes";
 
 export type EstadoCliente = { error: string | null; ok?: boolean };
@@ -68,4 +68,15 @@ export async function alternarActivoClienteAction(formData: FormData): Promise<v
   await alternarActivoCliente(id);
   revalidatePath(`/clientes/${id}`);
   revalidatePath("/clientes");
+}
+
+/** Elimina un cliente (solo ADMIN, solo si no tiene histórico). */
+export async function eliminarClienteAction(formData: FormData): Promise<void> {
+  await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const r = await eliminarCliente(id);
+  if (!r.ok) redirect(`/clientes/${id}`);
+  revalidatePath("/clientes");
+  redirect("/clientes");
 }

@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { EstadoCotizacion } from "@prisma/client";
 import { requireRol } from "@/lib/auth";
+import { esAdmin } from "@/lib/roles";
 import { obtenerFichaCliente } from "@/lib/clientes";
-import { alternarActivoClienteAction } from "@/app/actions/clientes";
+import { alternarActivoClienteAction, eliminarClienteAction } from "@/app/actions/clientes";
+import { BotonEliminar } from "@/app/_components/BotonEliminar";
 import { fmtNum, usd } from "@/lib/calculo";
 import { EstadoBadge } from "../../cotizaciones/EstadoBadge";
 import { ClienteForm } from "../ClienteForm";
@@ -15,10 +17,12 @@ export default async function FichaClientePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireRol("ADMIN", "VENDEDOR");
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
   const { id } = await params;
   const c = await obtenerFichaCliente(id);
   if (!c) notFound();
+
+  const puedeBorrar = esAdmin(usuario.rol) && c.cotizaciones.length === 0 && c.trabajos.length === 0;
 
   return (
     <>
@@ -41,6 +45,14 @@ export default async function FichaClientePage({
               {c.activo ? "Desactivar" : "Activar"}
             </button>
           </form>
+          {puedeBorrar && (
+            <BotonEliminar
+              accion={eliminarClienteAction}
+              id={c.id}
+              texto="Eliminar"
+              confirmacion="¿Eliminar este cliente? Solo se permite porque no tiene histórico."
+            />
+          )}
         </div>
       </header>
 
