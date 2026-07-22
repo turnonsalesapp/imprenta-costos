@@ -34,6 +34,9 @@ export function Nav({ usuario }: { usuario: Sesion }) {
               <Link href="/cotizar" className="text-kraft hover:text-tinta">
                 Cotizar
               </Link>
+              <Link href="/cotizar-proveedor" className="text-kraft hover:text-tinta">
+                Cotizar prov.
+              </Link>
               <Link href="/cotizaciones" className="text-kraft hover:text-tinta">
                 Cotizaciones
               </Link>

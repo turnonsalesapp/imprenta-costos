@@ -18,21 +18,21 @@ function frac(tamano: string): number {
 }
 
 export type FilaInventario = {
-  id: string; nombre: string; medida: string; hojas: number;
+  id: string; nombre: string; medida: string; hojas: number; categoria: string;
   stock: number; stockMin: number; bajo: boolean;
 };
 
 export async function listarInventario(): Promise<FilaInventario[]> {
   const papeles = await db.papel.findMany({
     where: { activo: true },
-    orderBy: { nombre: "asc" },
-    select: { id: true, nombre: true, medida: true, hojas: true, stock: true, stockMin: true },
+    orderBy: [{ categoria: "asc" }, { nombre: "asc" }],
+    select: { id: true, nombre: true, medida: true, hojas: true, categoria: true, stock: true, stockMin: true },
   });
   return papeles.map((p) => {
     const stock = num(p.stock);
     const stockMin = num(p.stockMin);
     return {
-      id: p.id, nombre: p.nombre, medida: p.medida, hojas: p.hojas,
+      id: p.id, nombre: p.nombre, medida: p.medida, hojas: p.hojas, categoria: p.categoria,
       stock, stockMin, bajo: stockMin > 0 && stock <= stockMin,
     };
   });

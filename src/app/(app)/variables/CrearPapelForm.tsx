@@ -18,6 +18,10 @@ export function CrearPapelForm({ medidas }: { medidas: string[] }) {
         <input name="nombre" required className={`mt-1 block w-56 ${inCls}`} placeholder="Nuevo papel" />
       </label>
       <label className="block">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Categoría</span>
+        <input name="categoria" defaultValue="Papel" className={`mt-1 block w-28 ${inCls}`} />
+      </label>
+      <label className="block">
         <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Medida</span>
         <select name="medida" className={`mt-1 block ${inCls}`} defaultValue="70x100">
           {medidas.map((m) => <option key={m} value={m}>{m}</option>)}

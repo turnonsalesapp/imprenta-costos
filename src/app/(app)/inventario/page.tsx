@@ -16,6 +16,14 @@ export default async function InventarioPage() {
   const [papeles, movs] = await Promise.all([listarInventario(), movimientosRecientes(30)]);
   const bajos = papeles.filter((p) => p.bajo);
 
+  // Agrupar por categoría de material (ya vienen ordenados por categoría).
+  const categorias: { nombre: string; filas: typeof papeles }[] = [];
+  for (const p of papeles) {
+    let g = categorias.find((c) => c.nombre === p.categoria);
+    if (!g) { g = { nombre: p.categoria, filas: [] }; categorias.push(g); }
+    g.filas.push(p);
+  }
+
   return (
     <>
       <header>
@@ -49,26 +57,33 @@ export default async function InventarioPage() {
             <span className="w-48">Ajustar a</span>
           </div>
           <div className="max-h-[28rem] overflow-y-auto">
-            {papeles.map((p) => (
-              <div key={p.id}
-                className={`flex flex-wrap items-center gap-2 border-b border-suave px-4 py-1.5 ${p.bajo ? "bg-[#FDEDED]" : ""}`}>
-                <span className="min-w-[12rem] flex-1 text-sm">
-                  {p.nombre}
-                  {p.bajo && <span className="ml-2 text-[10px] font-bold uppercase text-[#C0563B]">bajo</span>}
-                </span>
-                <span className={`w-24 text-right font-mono text-sm font-bold ${p.bajo ? "text-[#C0563B]" : ""}`}>
-                  {fmtNum(p.stock, 0)}
-                </span>
-                <form action={stockMinAction} className="flex w-40 items-center gap-1">
-                  <input type="hidden" name="papelId" value={p.id} />
-                  <input name="stockMin" defaultValue={fmtNum(p.stockMin, 0)} inputMode="decimal" className={inCls} />
-                  <button type="submit" className={btn}>Guardar</button>
-                </form>
-                <form action={ajusteAction} className="flex w-48 items-center gap-1">
-                  <input type="hidden" name="papelId" value={p.id} />
-                  <input name="stock" placeholder="conteo" inputMode="decimal" className={inCls} />
-                  <button type="submit" className={btn}>Ajustar</button>
-                </form>
+            {categorias.map((cat) => (
+              <div key={cat.nombre}>
+                <div className="border-b border-regla bg-suave px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-kraft">
+                  {cat.nombre}
+                </div>
+                {cat.filas.map((p) => (
+                  <div key={p.id}
+                    className={`flex flex-wrap items-center gap-2 border-b border-suave px-4 py-1.5 ${p.bajo ? "bg-[#FDEDED]" : ""}`}>
+                    <span className="min-w-[12rem] flex-1 text-sm">
+                      {p.nombre}
+                      {p.bajo && <span className="ml-2 text-[10px] font-bold uppercase text-[#C0563B]">bajo</span>}
+                    </span>
+                    <span className={`w-24 text-right font-mono text-sm font-bold ${p.bajo ? "text-[#C0563B]" : ""}`}>
+                      {fmtNum(p.stock, 0)}
+                    </span>
+                    <form action={stockMinAction} className="flex w-40 items-center gap-1">
+                      <input type="hidden" name="papelId" value={p.id} />
+                      <input name="stockMin" defaultValue={fmtNum(p.stockMin, 0)} inputMode="decimal" className={inCls} />
+                      <button type="submit" className={btn}>Guardar</button>
+                    </form>
+                    <form action={ajusteAction} className="flex w-48 items-center gap-1">
+                      <input type="hidden" name="papelId" value={p.id} />
+                      <input name="stock" placeholder="conteo" inputMode="decimal" className={inCls} />
+                      <button type="submit" className={btn}>Ajustar</button>
+                    </form>
+                  </div>
+                ))}
               </div>
             ))}
           </div>

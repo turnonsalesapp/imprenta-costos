@@ -39,12 +39,16 @@ export default async function CotizacionesPage({
             {filas.length} {filas.length === 1 ? "registro" : "registros"}
           </p>
         </div>
-        <Link
-          href="/cotizar"
-          className="rounded-sm bg-tinta px-3 py-2 text-sm font-bold text-hoja hover:opacity-90"
-        >
-          Nueva cotización
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/cotizar-proveedor"
+            className="rounded-sm border border-regla px-3 py-2 text-sm font-medium hover:border-tinta">
+            De proveedor
+          </Link>
+          <Link href="/cotizar"
+            className="rounded-sm bg-tinta px-3 py-2 text-sm font-bold text-hoja hover:opacity-90">
+            Nueva cotización
+          </Link>
+        </div>
       </header>
 
       {/* Buscador + filtro por estado (GET, sin JS) */}
@@ -123,8 +127,14 @@ export default async function CotizacionesPage({
                     <Link href={`/cotizaciones/${c.id}`} className="font-medium hover:text-cian">
                       {c.titulo}
                     </Link>
+                    {c.tipo === "PROVEEDOR" && (
+                      <span className="ml-2 rounded-sm bg-[#EDE6F7] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#5B3E8F]">
+                        Proveedor
+                      </span>
+                    )}
                     <div className="text-[11px] text-kraft">
-                      {c.clienteNombre ? c.clienteNombre + " · " : ""}{c.papelNombre} · {c.tamano}
+                      {c.clienteNombre ? c.clienteNombre + " · " : ""}
+                      {c.tipo === "PROVEEDOR" ? c.papelNombre : `${c.papelNombre} · ${c.tamano}`}
                     </div>
                   </td>
                   <td className="px-4 py-2.5 text-right font-mono">{fmtNum(c.cantidad, 0)}</td>

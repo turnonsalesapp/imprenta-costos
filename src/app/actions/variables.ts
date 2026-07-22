@@ -83,6 +83,7 @@ export async function crearPapelAction(
     medida: String(formData.get("medida") ?? "70x100"),
     hojas: Math.max(1, Math.round(n(formData.get("hojas")))),
     precio: n(formData.get("precio")),
+    categoria: String(formData.get("categoria") ?? "").trim() || "Papel",
   });
   if (!r.ok) return { error: r.error ?? "No se pudo crear." };
   revalidatePath("/variables");
@@ -98,6 +99,7 @@ export async function editarPapelAction(formData: FormData): Promise<void> {
     medida: String(formData.get("medida") ?? "70x100"),
     hojas: Math.max(1, Math.round(n(formData.get("hojas")))),
     precio: n(formData.get("precio")),
+    categoria: String(formData.get("categoria") ?? "").trim() || "Papel",
   });
   revalidatePath("/variables");
 }

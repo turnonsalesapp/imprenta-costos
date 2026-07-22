@@ -72,6 +72,43 @@ export function nuevoForm(cfg: Config): FormCotizacion {
   };
 }
 
+/**
+ * Formulario de cotización de PROVEEDOR (trabajo tercerizado): no hay papel ni
+ * acabados; se parte del costo que da el proveedor y se aplica el mismo
+ * diferencial cambiario y margen.
+ */
+export type FormProveedor = {
+  cliente: string;
+  clienteId: string;
+  trabajo: string;
+  descripcion: string;
+  proveedorNombre: string;
+  proveedorRef: string;
+  proveedorNotas: string;
+  cantidad: number | string;
+  costoTotal: number | string; // costo total que cobra el proveedor
+  margen: number | string;
+  comision: number | string;
+  ml: number | string;
+  tasaBCV: number | string;
+  binCompra: number | string;
+  binVenta: number | string;
+  difManual: boolean;
+  dif: number | string;
+  editarId: string;
+};
+
+export function nuevoFormProveedor(cfg: Config): FormProveedor {
+  return {
+    cliente: "", clienteId: "", trabajo: "", descripcion: "",
+    proveedorNombre: "", proveedorRef: "", proveedorNotas: "",
+    cantidad: "", costoTotal: "",
+    margen: cfg.margen, comision: cfg.comision, ml: cfg.ml,
+    tasaBCV: cfg.tasaBCV, binCompra: cfg.binCompra, binVenta: cfg.binVenta,
+    difManual: false, dif: "", editarId: "",
+  };
+}
+
 /** Extrae del formulario solo lo que el motor entiende. */
 export function formAEntrada(f: FormCotizacion): Entrada {
   return {

@@ -104,18 +104,20 @@ export async function historicoTasas(limite = 10): Promise<FilaTasa[]> {
 
 export type PapelFila = {
   id: string; clave: string; nombre: string; medida: string;
-  hojas: number; precio: number; activo: boolean;
+  hojas: number; precio: number; categoria: string; activo: boolean;
 };
 
 export async function listarPapeles(): Promise<PapelFila[]> {
   const filas = await db.papel.findMany({ orderBy: [{ activo: "desc" }, { nombre: "asc" }] });
   return filas.map((p) => ({
     id: p.id, clave: p.clave, nombre: p.nombre, medida: p.medida,
-    hojas: p.hojas, precio: num(p.precio), activo: p.activo,
+    hojas: p.hojas, precio: num(p.precio), categoria: p.categoria, activo: p.activo,
   }));
 }
 
-export type DatosPapel = { nombre: string; medida: string; hojas: number; precio: number };
+export type DatosPapel = {
+  nombre: string; medida: string; hojas: number; precio: number; categoria?: string;
+};
 
 export async function crearPapel(d: DatosPapel): Promise<{ ok: boolean; error?: string }> {
   try {

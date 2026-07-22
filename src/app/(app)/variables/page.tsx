@@ -130,6 +130,7 @@ export default async function VariablesPage() {
         <div className="rounded-sm border border-regla bg-hoja">
           <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
             <span className="flex-1">Referencia</span>
+            <span className="w-24">Categoría</span>
             <span className="w-24">Medida</span>
             <span className="w-16 text-right">Hojas</span>
             <span className="w-20 text-right">Precio</span>
@@ -142,6 +143,7 @@ export default async function VariablesPage() {
                 className={`flex flex-wrap items-center gap-2 border-b border-suave px-4 py-1.5 ${p.activo ? "" : "opacity-50"}`}>
                 <input type="hidden" name="id" value={p.id} />
                 <input name="nombre" defaultValue={p.nombre} className={`min-w-[12rem] flex-1 ${inCls}`} />
+                <input name="categoria" defaultValue={p.categoria} className={`w-24 ${inCls}`} />
                 <select name="medida" defaultValue={p.medida} className={`w-24 ${inCls}`}>
                   {medidas.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>

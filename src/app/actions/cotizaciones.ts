@@ -7,11 +7,13 @@ import { requireRol } from "@/lib/auth";
 import {
   crearCotizacion,
   actualizarCotizacion,
+  crearCotizacionProveedor,
+  actualizarCotizacionProveedor,
   cambiarEstadoCotizacion,
   eliminarCotizacion,
   ESTADOS,
 } from "@/lib/cotizaciones";
-import type { FormCotizacion } from "@/lib/cotizacion-form";
+import type { FormCotizacion, FormProveedor } from "@/lib/cotizacion-form";
 
 export type EstadoGuardar = { error: string | null };
 
@@ -27,6 +29,19 @@ export async function guardarCotizacionAction(
     : await crearCotizacion(form, usuario.id);
   if (!r.ok) return { error: r.error };
 
+  redirect(`/cotizaciones/${r.id}`);
+}
+
+/** Guarda una cotización de PROVEEDOR (crea o actualiza si es borrador). */
+export async function guardarProveedorAction(
+  form: FormProveedor,
+): Promise<EstadoGuardar> {
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
+  const editarId = form.editarId?.trim();
+  const r = editarId
+    ? await actualizarCotizacionProveedor(editarId, form)
+    : await crearCotizacionProveedor(form, usuario.id);
+  if (!r.ok) return { error: r.error };
   redirect(`/cotizaciones/${r.id}`);
 }
 

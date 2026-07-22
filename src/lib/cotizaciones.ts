@@ -1,9 +1,13 @@
 import "server-only";
-import { Prisma, type EstadoCotizacion } from "@prisma/client";
+import { Prisma, type EstadoCotizacion, type TipoCotizacion } from "@prisma/client";
 import { db } from "./db";
 import { cargarConfig, snapshot } from "./config";
-import { calcular, n, type LineaCosto, type Entrada, type Config } from "./calculo";
-import { formAEntrada, type FormCotizacion } from "./cotizacion-form";
+import {
+  calcular, precioDesdeCosto, n, type LineaCosto, type Entrada, type Config,
+} from "./calculo";
+import {
+  formAEntrada, type FormCotizacion, type FormProveedor,
+} from "./cotizacion-form";
 import { crearTrabajoDesdeForm } from "./trabajos";
 
 /**
@@ -177,6 +181,111 @@ export async function cargarCotizacionEnForm(
   };
 }
 
+/* ─────────────────────── cotizaciones de proveedor ─────────────────────── */
+
+function datosProveedor(form: FormProveedor) {
+  const cant = Math.max(0, Math.round(n(form.cantidad)));
+  const costoTotal = n(form.costoTotal);
+  const params = {
+    margen: form.margen, comision: form.comision, ml: form.ml,
+    tasaBCV: form.tasaBCV, binCompra: form.binCompra, binVenta: form.binVenta,
+    difManual: form.difManual, dif: form.dif,
+  };
+  const pr = precioDesdeCosto(costoTotal, cant, params);
+  const provNombre = (form.proveedorNombre ?? "").trim() || null;
+  const provRef = (form.proveedorRef ?? "").trim() || null;
+  const detalle = [provNombre, provRef].filter(Boolean).join(" · ") || "Externo";
+  const lineas = [{ k: "proveedor", label: "Costo del proveedor", detalle, monto: costoTotal }];
+  return {
+    pr,
+    data: {
+      tipo: "PROVEEDOR" as const,
+      clienteId: form.clienteId?.trim() || null,
+      clienteNombre: (form.cliente ?? "").trim() || null,
+      titulo: (form.trabajo ?? "").trim() || "Trabajo de proveedor",
+      descripcion: form.descripcion?.trim() || null,
+      proveedorNombre: provNombre,
+      proveedorRef: provRef,
+      proveedorNotas: (form.proveedorNotas ?? "").trim() || null,
+      cantidad: pr.cant,
+      ancho: 0, alto: 0, tamano: "—",
+      papelNombre: provNombre ? `Proveedor: ${provNombre}` : "Proveedor externo",
+      capacidad: 0,
+      entrada: { costoTotal, cantidad: cant, ...params } as unknown as Prisma.InputJsonValue,
+      snapshot: { tipo: "proveedor" } as unknown as Prisma.InputJsonValue,
+      lineas: lineas as unknown as Prisma.InputJsonValue,
+      pliegos: 0,
+      costoTotal: pr.costoTotal, costoUnit: pr.costoUnit, diferencial: pr.dif,
+      margen: n(form.margen),
+      precioUnit: pr.precioUnit, ventaTotal: pr.ventaTotal, precioML: pr.precioML,
+      tasaBCV: n(form.tasaBCV), precioBs: pr.precioBs,
+    },
+  };
+}
+
+export async function crearCotizacionProveedor(
+  form: FormProveedor, usuarioId: string,
+): Promise<ResultadoGuardar> {
+  const cliente = (form.cliente ?? "").trim();
+  const trabajo = (form.trabajo ?? "").trim();
+  if (!cliente && !trabajo) return { ok: false, error: "Falta el cliente o el trabajo." };
+  if (n(form.costoTotal) <= 0) return { ok: false, error: "Indica el costo del proveedor." };
+  const { pr, data } = datosProveedor(form);
+  if (pr.cant <= 0) return { ok: false, error: "Indica la cantidad." };
+
+  const cot = await db.cotizacion.create({
+    data: { estado: "BORRADOR", usuarioId, ...data },
+    select: { id: true },
+  });
+  return { ok: true, id: cot.id };
+}
+
+export async function actualizarCotizacionProveedor(
+  id: string, form: FormProveedor,
+): Promise<ResultadoGuardar> {
+  const ex = await db.cotizacion.findUnique({ where: { id }, select: { estado: true } });
+  if (!ex) return { ok: false, error: "La cotización no existe." };
+  if (ex.estado !== "BORRADOR") {
+    return { ok: false, error: "Solo se pueden editar cotizaciones en borrador." };
+  }
+  if (n(form.costoTotal) <= 0) return { ok: false, error: "Indica el costo del proveedor." };
+  const { pr, data } = datosProveedor(form);
+  if (pr.cant <= 0) return { ok: false, error: "Indica la cantidad." };
+
+  await db.cotizacion.update({ where: { id }, data });
+  return { ok: true, id };
+}
+
+export async function cargarProveedorEnForm(
+  id: string, modo: "copia" | "editar",
+): Promise<Partial<FormProveedor> | null> {
+  const c = await db.cotizacion.findUnique({
+    where: { id },
+    select: {
+      entrada: true, titulo: true, descripcion: true, clienteNombre: true, clienteId: true,
+      proveedorNombre: true, proveedorRef: true, proveedorNotas: true,
+    },
+  });
+  if (!c) return null;
+  const e = (c.entrada as unknown as Record<string, unknown>) ?? {};
+  const v = (k: string) => (e[k] ?? "") as number | string;
+  return {
+    cliente: c.clienteNombre ?? "",
+    clienteId: c.clienteId ?? "",
+    trabajo: modo === "copia" ? `${c.titulo} (copia)` : c.titulo,
+    descripcion: c.descripcion ?? "",
+    proveedorNombre: c.proveedorNombre ?? "",
+    proveedorRef: c.proveedorRef ?? "",
+    proveedorNotas: c.proveedorNotas ?? "",
+    cantidad: v("cantidad"),
+    costoTotal: v("costoTotal"),
+    margen: v("margen"), comision: v("comision"), ml: v("ml"),
+    tasaBCV: v("tasaBCV"), binCompra: v("binCompra"), binVenta: v("binVenta"),
+    difManual: Boolean(e.difManual), dif: v("dif"),
+    editarId: modo === "editar" ? id : "",
+  };
+}
+
 export type FiltroLista = { q?: string; estado?: EstadoCotizacion | "" };
 
 /** Fila del listado (Decimals ya convertidos a number). */
@@ -185,6 +294,7 @@ export type CotizacionFila = {
   numero: number;
   creadaEn: Date;
   estado: EstadoCotizacion;
+  tipo: TipoCotizacion;
   clienteNombre: string | null;
   titulo: string;
   papelNombre: string;
@@ -201,7 +311,7 @@ export async function listarCotizaciones(f: FiltroLista): Promise<CotizacionFila
     where: whereLista(f),
     orderBy: { creadaEn: "desc" },
     select: {
-      id: true, numero: true, creadaEn: true, estado: true, clienteNombre: true,
+      id: true, numero: true, creadaEn: true, estado: true, tipo: true, clienteNombre: true,
       titulo: true, papelNombre: true, tamano: true, cantidad: true,
       costoUnit: true, precioUnit: true, ventaTotal: true, costoTotal: true,
     },
@@ -222,8 +332,12 @@ export type CotizacionDetalle = {
   numero: number;
   creadaEn: Date;
   estado: EstadoCotizacion;
+  tipo: TipoCotizacion;
   clienteId: string | null;
   clienteNombre: string | null;
+  proveedorNombre: string | null;
+  proveedorRef: string | null;
+  proveedorNotas: string | null;
   titulo: string;
   descripcion: string | null;
   cantidad: number;
@@ -262,8 +376,12 @@ export async function obtenerCotizacion(id: string): Promise<CotizacionDetalle |
     numero: c.numero,
     creadaEn: c.creadaEn,
     estado: c.estado,
+    tipo: c.tipo,
     clienteId: c.clienteId,
     clienteNombre: c.clienteNombre,
+    proveedorNombre: c.proveedorNombre,
+    proveedorRef: c.proveedorRef,
+    proveedorNotas: c.proveedorNotas,
     titulo: c.titulo,
     descripcion: c.descripcion,
     cantidad: c.cantidad,

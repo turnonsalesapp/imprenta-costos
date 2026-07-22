@@ -77,17 +77,33 @@ export interface LineaCosto {
   monto: number;
 }
 
-export interface Resultado {
-  frac: number; factor: number;
-  precioPliego: number; precioCorte: number;
-  pliegosBase: number; pliegos: number; piezas: number; millares: number;
-  lineas: LineaCosto[];
+/** Parámetros de precio (diferencial, margen, comisión) — comunes a todo cálculo. */
+export interface ParamsPrecio {
+  margen: number | string;
+  comision: number | string;
+  ml: number | string;
+  tasaBCV: number | string;
+  binCompra: number | string;
+  binVenta: number | string;
+  difManual?: boolean;
+  dif?: number | string;
+}
+
+/** Resultado de precio a partir de un costo. */
+export interface Precio {
   costoTotal: number; costoUnit: number;
   binProm: number; difAuto: number; dif: number;
   costoProt: number; utilidad: number; utilProt: number;
   precioSinCom: number; precioUnit: number;
   ventaTotal: number; precioML: number; precioBs: number;
   gananciaTotal: number; cant: number;
+}
+
+export interface Resultado extends Precio {
+  frac: number; factor: number;
+  precioPliego: number; precioCorte: number;
+  pliegosBase: number; pliegos: number; piezas: number; millares: number;
+  lineas: LineaCosto[];
 }
 
 export const TAMANOS = [
@@ -157,6 +173,40 @@ export function calcCapacidad(
 
 /* --------------------------- motor de cálculo --------------------------- */
 
+/**
+ * Precio de venta a partir de un costo total. Aplica el diferencial cambiario
+ * (dos veces: al costo y a la utilidad), el margen sobre el precio y la
+ * comisión del vendedor. Lo usan tanto `calcular()` (costo de papel + acabados)
+ * como las cotizaciones de proveedor (costo que da un tercero).
+ */
+export function precioDesdeCosto(costoTotal: number, cant: number, p: ParamsPrecio): Precio {
+  const costoUnit = cant > 0 ? costoTotal / cant : 0;
+
+  // Diferencial cambiario: promedio Binance sobre tasa BCV.
+  const binProm = (n(p.binCompra) + n(p.binVenta)) / 2;
+  const difAuto = n(p.tasaBCV) > 0 ? binProm / n(p.tasaBCV) : 1;
+  const dif = p.difManual ? (n(p.dif) || 1) : difAuto;
+
+  const costoProt = costoUnit * dif;
+  const m = Math.min(0.95, Math.max(0, n(p.margen) / 100));
+  const utilidad = costoProt * (m / (1 - m)); // margen sobre precio, no sobre costo
+  const utilProt = utilidad * dif;
+
+  const precioSinCom = costoProt + utilProt;
+  const com = Math.min(0.9, Math.max(0, n(p.comision) / 100));
+  const precioUnit = com > 0 ? precioSinCom / (1 - com) : precioSinCom;
+
+  const ventaTotal = precioUnit * cant;
+  const precioML = precioUnit * (1 + n(p.ml) / 100);
+  const precioBs = precioUnit * n(p.tasaBCV);
+  const gananciaTotal = ventaTotal - costoTotal;
+
+  return {
+    costoTotal, costoUnit, binProm, difAuto, dif, costoProt, utilidad, utilProt,
+    precioSinCom, precioUnit, ventaTotal, precioML, precioBs, gananciaTotal, cant,
+  };
+}
+
 export function calcular(f: Entrada, cfg: Config): Resultado {
   const tam = TAMANOS.find((t) => t.id === f.tamano) ?? TAMANOS[2];
   const frac = tam.frac;
@@ -216,32 +266,11 @@ export function calcular(f: Entrada, cfg: Config): Resultado {
   }
 
   const costoTotal = lineas.reduce((s, l) => s + l.monto, 0);
-  const costoUnit = cant > 0 ? costoTotal / cant : 0;
-
-  // Diferencial cambiario: promedio Binance sobre tasa BCV.
-  const binProm = (n(f.binCompra) + n(f.binVenta)) / 2;
-  const difAuto = n(f.tasaBCV) > 0 ? binProm / n(f.tasaBCV) : 1;
-  const dif = f.difManual ? (n(f.dif) || 1) : difAuto;
-
-  const costoProt = costoUnit * dif;
-  const m = Math.min(0.95, Math.max(0, n(f.margen) / 100));
-  const utilidad = costoProt * (m / (1 - m)); // margen sobre precio, no sobre costo
-  const utilProt = utilidad * dif;
-
-  const precioSinCom = costoProt + utilProt;
-  const com = Math.min(0.9, Math.max(0, n(f.comision) / 100));
-  const precioUnit = com > 0 ? precioSinCom / (1 - com) : precioSinCom;
-
-  const ventaTotal = precioUnit * cant;
-  const precioML = precioUnit * (1 + n(f.ml) / 100);
-  const precioBs = precioUnit * n(f.tasaBCV);
-  const gananciaTotal = ventaTotal - costoTotal;
+  const pr = precioDesdeCosto(costoTotal, cant, f);
 
   return {
     frac, factor, precioPliego, precioCorte, pliegosBase, pliegos, piezas, millares,
-    lineas, costoTotal, costoUnit, binProm, difAuto, dif, costoProt, utilidad,
-    utilProt, precioSinCom, precioUnit, ventaTotal, precioML, precioBs,
-    gananciaTotal, cant,
+    lineas, ...pr,
   };
 }
 

@@ -24,6 +24,7 @@ export default async function DetalleCotizacion({
   if (!c) notFound();
 
   const puedeBorrar = esAdmin(usuario.rol) && c.estado === "BORRADOR" && !c.orden;
+  const rutaCotizar = c.tipo === "PROVEEDOR" ? "/cotizar-proveedor" : "/cotizar";
 
   return (
     <>
@@ -31,12 +32,12 @@ export default async function DetalleCotizacion({
         <Link href="/cotizaciones" className="text-sm text-kraft hover:text-tinta">← Cotizaciones</Link>
         <div className="flex items-center gap-2">
           {c.estado === "BORRADOR" && (
-            <Link href={`/cotizar?editar=${c.id}`}
+            <Link href={`${rutaCotizar}?editar=${c.id}`}
               className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
               Editar
             </Link>
           )}
-          <Link href={`/cotizar?desde=${c.id}`}
+          <Link href={`${rutaCotizar}?desde=${c.id}`}
             className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
             Usar como base
           </Link>
@@ -116,15 +117,30 @@ export default async function DetalleCotizacion({
             </div>
             {c.descripcion && <p className="mb-2">{c.descripcion}</p>}
             <dl className="space-y-1 font-mono text-[12px] text-kraft">
-              <Cond k="Medida" v={`${fmtNum(c.ancho, 0)}×${fmtNum(c.alto, 0)} mm`} />
-              <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} pzs`} />
-              <Cond k="Papel" v={c.papelNombre} />
-              <Cond k="Tamaño de corte" v={c.tamano} />
-              <Cond k="Piezas por corte" v={fmtNum(c.capacidad, 0)} />
-              <Cond k="Cortes (con merma)" v={fmtNum(c.pliegos, 2)} />
-              <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
-              <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
-              <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
+              {c.tipo === "PROVEEDOR" ? (
+                <>
+                  {c.proveedorNombre && <Cond k="Proveedor" v={c.proveedorNombre} />}
+                  {c.proveedorRef && <Cond k="Referencia" v={c.proveedorRef} />}
+                  <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} u`} />
+                  <Cond k="Costo del proveedor" v={usd(c.costoTotal)} />
+                  <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
+                  <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
+                  <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
+                  {c.proveedorNotas && <Cond k="Notas" v={c.proveedorNotas} />}
+                </>
+              ) : (
+                <>
+                  <Cond k="Medida" v={`${fmtNum(c.ancho, 0)}×${fmtNum(c.alto, 0)} mm`} />
+                  <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} pzs`} />
+                  <Cond k="Papel" v={c.papelNombre} />
+                  <Cond k="Tamaño de corte" v={c.tamano} />
+                  <Cond k="Piezas por corte" v={fmtNum(c.capacidad, 0)} />
+                  <Cond k="Cortes (con merma)" v={fmtNum(c.pliegos, 2)} />
+                  <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
+                  <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
+                  <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
+                </>
+              )}
             </dl>
           </section>
 
@@ -153,7 +169,11 @@ export default async function DetalleCotizacion({
             <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
               Orden de producción
             </div>
-            {c.orden ? (
+            {c.tipo === "PROVEEDOR" ? (
+              <p className="text-[11px] text-kraft">
+                Trabajo tercerizado: la produce el proveedor, no genera orden de taller.
+              </p>
+            ) : c.orden ? (
               <Link
                 href={`/taller/${c.orden.id}`}
                 className="inline-block rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta"
