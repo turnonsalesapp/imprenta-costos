@@ -102,6 +102,32 @@ describe("comparador por tiraje", () => {
   });
 });
 
+describe("precio de venta a mano", () => {
+  const base = calcular(jugarte, cfg);
+
+  it("fija el precio unitario y recalcula los totales de venta", () => {
+    const r = calcular({ ...jugarte, precioManual: 1 }, cfg);
+    expect(r.manual).toBe(true);
+    expect(r.precioUnit).toBe(1);
+    expect(r.ventaTotal).toBeCloseTo(base.cant, 6);          // 1 × cantidad
+    expect(r.precioBs).toBeCloseTo(473, 4);                  // 1 × BCV
+    expect(r.precioML).toBeCloseTo(1.12, 6);                 // 1 × (1 + 12%)
+    expect(r.gananciaTotal).toBeCloseTo(base.cant - base.costoTotal, 2);
+  });
+
+  it("conserva el desglose protegido y el precio sugerido como referencia", () => {
+    const r = calcular({ ...jugarte, precioManual: 1 }, cfg);
+    expect(r.costoProt).toBeCloseTo(base.costoProt, 6);
+    expect(r.utilProt).toBeCloseTo(base.utilProt, 6);
+    expect(r.precioCalc).toBeCloseTo(base.precioUnit, 6);
+  });
+
+  it("con precio a mano 0 o vacío calcula como siempre", () => {
+    expect(calcular({ ...jugarte, precioManual: 0 }, cfg).manual).toBe(false);
+    expect(calcular({ ...jugarte, precioManual: "" }, cfg).precioUnit).toBeCloseTo(0.5038, 4);
+  });
+});
+
 describe("comisión del vendedor", () => {
   it("se descuenta del precio, no se suma al costo", () => {
     const sin = calcular({ ...jugarte, comision: 0 }, cfg).precioUnit;

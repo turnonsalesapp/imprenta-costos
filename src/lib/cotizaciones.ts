@@ -174,6 +174,7 @@ export async function cargarCotizacionEnForm(
     binVenta: e.binVenta ?? "",
     difManual: e.difManual ?? false,
     dif: e.dif ?? "",
+    precioManual: e.precioManual ?? "",
     acabados: e.acabados ?? {},
     trabajoId: "",
     guardarComoTrabajo: false,
@@ -190,7 +191,7 @@ function datosProveedor(form: FormProveedor) {
   const params = {
     margen: form.margen, comision: form.comision, ml: form.ml,
     tasaBCV: form.tasaBCV, binCompra: form.binCompra, binVenta: form.binVenta,
-    difManual: form.difManual, dif: form.dif,
+    difManual: form.difManual, dif: form.dif, precioManual: form.precioManual,
   };
   const pr = precioDesdeCosto(costoTotal, cant, params);
   const provNombre = (form.proveedorNombre ?? "").trim() || null;
@@ -289,7 +290,7 @@ export async function cargarProveedorEnForm(
     costoUnitario: v("costoUnitario"),
     margen: v("margen"), comision: v("comision"), ml: v("ml"),
     tasaBCV: v("tasaBCV"), binCompra: v("binCompra"), binVenta: v("binVenta"),
-    difManual: Boolean(e.difManual), dif: v("dif"),
+    difManual: Boolean(e.difManual), dif: v("dif"), precioManual: v("precioManual"),
     editarId: modo === "editar" ? id : "",
   };
 }

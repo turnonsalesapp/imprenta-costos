@@ -68,6 +68,7 @@ export interface Entrada {
   binVenta: number | string;
   difManual?: boolean;
   dif?: number | string;
+  precioManual?: number | string;
 }
 
 export interface LineaCosto {
@@ -87,6 +88,8 @@ export interface ParamsPrecio {
   binVenta: number | string;
   difManual?: boolean;
   dif?: number | string;
+  /** Precio unitario de venta fijado a mano. Si es > 0, manda sobre el calculado. */
+  precioManual?: number | string;
 }
 
 /** Resultado de precio a partir de un costo. */
@@ -94,9 +97,9 @@ export interface Precio {
   costoTotal: number; costoUnit: number;
   binProm: number; difAuto: number; dif: number;
   costoProt: number; utilidad: number; utilProt: number;
-  precioSinCom: number; precioUnit: number;
+  precioSinCom: number; precioCalc: number; precioUnit: number;
   ventaTotal: number; precioML: number; precioBs: number;
-  gananciaTotal: number; cant: number;
+  gananciaTotal: number; cant: number; manual: boolean;
 }
 
 export interface Resultado extends Precio {
@@ -194,7 +197,14 @@ export function precioDesdeCosto(costoTotal: number, cant: number, p: ParamsPrec
 
   const precioSinCom = costoProt + utilProt;
   const com = Math.min(0.9, Math.max(0, n(p.comision) / 100));
-  const precioUnit = com > 0 ? precioSinCom / (1 - com) : precioSinCom;
+  const precioCalc = com > 0 ? precioSinCom / (1 - com) : precioSinCom;
+
+  // Precio de venta fijado a mano: si se indica (> 0), manda sobre el calculado.
+  // El desglose (costo/utilidad protegida) se conserva como referencia; solo se
+  // recalculan los totales de venta a partir del precio elegido.
+  const pm = n(p.precioManual);
+  const manual = pm > 0;
+  const precioUnit = manual ? pm : precioCalc;
 
   const ventaTotal = precioUnit * cant;
   const precioML = precioUnit * (1 + n(p.ml) / 100);
@@ -203,7 +213,7 @@ export function precioDesdeCosto(costoTotal: number, cant: number, p: ParamsPrec
 
   return {
     costoTotal, costoUnit, binProm, difAuto, dif, costoProt, utilidad, utilProt,
-    precioSinCom, precioUnit, ventaTotal, precioML, precioBs, gananciaTotal, cant,
+    precioSinCom, precioCalc, precioUnit, ventaTotal, precioML, precioBs, gananciaTotal, cant, manual,
   };
 }
 

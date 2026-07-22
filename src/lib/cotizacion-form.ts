@@ -37,6 +37,7 @@ export type FormCotizacion = {
   binVenta: number | string;
   difManual: boolean;
   dif: number | string;
+  precioManual: number | string; // precio unitario de venta fijado a mano ("" = calculado)
   acabados: Record<string, AcabadoSel>;
 };
 
@@ -66,6 +67,7 @@ export function nuevoForm(cfg: Config): FormCotizacion {
     binVenta: cfg.binVenta,
     difManual: false,
     dif: "",
+    precioManual: "",
     acabados: {
       impTiro: { on: true, q: 1 },
       guillotina: { on: true, q: 1 },
@@ -101,6 +103,7 @@ export type FormProveedor = {
   binVenta: number | string;
   difManual: boolean;
   dif: number | string;
+  precioManual: number | string; // precio unitario de venta fijado a mano ("" = calculado)
   editarId: string;
 };
 
@@ -111,7 +114,7 @@ export function nuevoFormProveedor(cfg: Config): FormProveedor {
     cantidad: "", costoModo: "total", costoTotal: "", costoUnitario: "",
     margen: cfg.margen, comision: cfg.comision, ml: cfg.ml,
     tasaBCV: cfg.tasaBCV, binCompra: cfg.binCompra, binVenta: cfg.binVenta,
-    difManual: false, dif: "", editarId: "",
+    difManual: false, dif: "", precioManual: "", editarId: "",
   };
 }
 
@@ -142,5 +145,6 @@ export function formAEntrada(f: FormCotizacion): Entrada {
     binVenta: f.binVenta,
     difManual: f.difManual,
     dif: f.dif,
+    precioManual: f.precioManual,
   };
 }

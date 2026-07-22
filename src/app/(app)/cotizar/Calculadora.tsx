@@ -77,13 +77,15 @@ export function Calculadora({
   }, [auto.cap, form.capAuto, form.capacidad]);
 
   const r = useMemo(() => calcular(form, cfg), [form, cfg]);
+  // Precio "sugerido" por el motor (sin el precio a mano), para comparar.
+  const rBase = useMemo(() => calcular({ ...form, precioManual: "" }, cfg), [form, cfg]);
 
   const pts = useMemo(() => {
     const qs = escalas.split(/[,;\s]+/).map((v) => Math.round(n(v)))
       .filter((v) => v > 0).filter((v, i, a) => a.indexOf(v) === i)
       .sort((a, b) => a - b).slice(0, 8);
     return qs.map((cant) => {
-      const c = calcular({ ...form, cantidad: cant }, cfg);
+      const c = calcular({ ...form, cantidad: cant, precioManual: "" }, cfg);
       return {
         cant, pliegos: c.pliegos, costoTotal: c.costoTotal, costoUnit: c.costoUnit,
         precioUnit: c.precioUnit, ventaTotal: c.ventaTotal, gananciaTotal: c.gananciaTotal,
@@ -96,7 +98,7 @@ export function Calculadora({
     const ms = margenes.split(/[,;\s]+/).map((v) => n(v)).filter((v) => v > 0)
       .filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).slice(0, 8);
     return ms.map((mg) => {
-      const c = calcular({ ...form, margen: mg }, cfg);
+      const c = calcular({ ...form, margen: mg, precioManual: "" }, cfg);
       return {
         margen: mg, costoUnit: c.costoUnit, precioUnit: c.precioUnit,
         ventaTotal: c.ventaTotal, gananciaTotal: c.gananciaTotal,
@@ -111,7 +113,7 @@ export function Calculadora({
       const [W, H] = medidaCorte(papel.med, t.frac);
       const cap = calcCapacidad(n(form.ancho), n(form.alto), W, H, n(cfg.pinza), n(cfg.sep)).cap;
       if (cap <= 0) return { id: t.id, cap: 0, precioUnit: Infinity, costoTotal: 0, entra: false };
-      const c = calcular({ ...form, tamano: t.id, capacidad: cap }, cfg);
+      const c = calcular({ ...form, tamano: t.id, capacidad: cap, precioManual: "" }, cfg);
       return { id: t.id, cap, precioUnit: c.precioUnit, costoTotal: c.costoTotal, entra: true };
     });
   }, [papel, form, cfg]);
@@ -123,6 +125,14 @@ export function Calculadora({
   }, [opcionesTamano]);
 
   const usarTamano = (id: string) => setForm((f) => ({ ...f, tamano: id, capAuto: true }));
+
+  // Precio de venta a mano: al activar, arranca con el sugerido; al desactivar, se limpia.
+  const manualOn = n(form.precioManual) > 0;
+  const alternarManual = () =>
+    setForm((f) => ({
+      ...f,
+      precioManual: n(f.precioManual) > 0 ? "" : Number(rBase.precioUnit.toFixed(4)) || "",
+    }));
 
   // Carga el borrador interpretado por IA, mezclando los acabados sin pisar los
   // que ya estén marcados (guillotina, etc.) salvo que la interpretación los toque.
@@ -548,7 +558,7 @@ export function Calculadora({
             <div className="tot" style={{ color: "#767D76" }}>
               <span>Utilidad protegida</span><span className="a mono">{usd(r.utilProt, 4)}</span>
             </div>
-            {n(form.comision) > 0 ? (
+            {n(form.comision) > 0 && !r.manual ? (
               <div className="tot" style={{ color: "#767D76" }}>
                 <span>Comisión {fmtNum(n(form.comision), 0)}%</span>
                 <span className="a mono">{usd(r.precioUnit - r.precioSinCom, 4)}</span>
@@ -557,7 +567,10 @@ export function Calculadora({
             <div style={{ height: 10 }} />
 
             <div className="price">
-              <div className="lb">Precio unitario de venta</div>
+              <div className="lb">
+                Precio unitario de venta
+                {r.manual ? <span style={{ color: "#C4177C", fontSize: 9.5, marginLeft: 6 }}>A MANO</span> : null}
+              </div>
               <div className="v mono">{usd(r.precioUnit, 4)}</div>
               <div className="sub mono">
                 <span>Venta total <b>{usd(r.ventaTotal)}</b></span>
@@ -567,6 +580,27 @@ export function Calculadora({
                 <span>Bs {fmtNum(r.precioBs, 2)}</span>
                 <span>MercadoLibre {usd(r.precioML, 4)}</span>
               </div>
+            </div>
+
+            <div style={{ marginTop: 10 }}>
+              <div className="hint" style={{ cursor: "pointer" }} onClick={alternarManual}>
+                <button type="button" className={manualOn ? "chk on" : "chk"} aria-label="Fijar precio de venta a mano">
+                  {manualOn ? <Check size={10} strokeWidth={4} /> : null}
+                </button>
+                <span>Fijar precio de venta a mano</span>
+              </div>
+              {manualOn ? (
+                <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <input className="in mono" style={{ maxWidth: 150 }} type="text" inputMode="decimal"
+                    value={form.precioManual} onChange={(e) => up("precioManual", e.target.value)} />
+                  <span className="hint mono">
+                    sugerido {usd(rBase.precioUnit, 4)}
+                    {rBase.precioUnit > 0
+                      ? ` · ${n(form.precioManual) >= rBase.precioUnit ? "+" : ""}${fmtNum((n(form.precioManual) / rBase.precioUnit - 1) * 100, 1)}%`
+                      : ""}
+                  </span>
+                </div>
+              ) : null}
             </div>
           </div>
           <div className="tear" />
