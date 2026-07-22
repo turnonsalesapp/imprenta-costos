@@ -10,6 +10,7 @@
  * `Sesion`. Aquí solo validamos que el token esté firmado por nosotros y vigente.
  */
 import { SignJWT, jwtVerify } from "jose";
+import { env } from "./env";
 
 export const COOKIE = "imp_sesion";
 export const SESION_DIAS = 7;
@@ -22,13 +23,8 @@ export type TokenPayload = {
 };
 
 function clave(): Uint8Array {
-  const secreto = process.env.AUTH_SECRET;
-  if (!secreto) {
-    // En producción AUTH_SECRET siempre está; este fallback solo evita que un
-    // arranque mal configurado reviente con un error opaco.
-    throw new Error("Falta AUTH_SECRET en el entorno.");
-  }
-  return new TextEncoder().encode(secreto);
+  // `env.authSecret` lanza un error claro si falta AUTH_SECRET.
+  return new TextEncoder().encode(env.authSecret);
 }
 
 export async function firmarToken(payload: TokenPayload): Promise<string> {

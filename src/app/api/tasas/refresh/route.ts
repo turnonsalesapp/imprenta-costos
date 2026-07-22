@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { fetchTasasExternas } from "@/lib/tasas";
 import { obtenerConfig, actualizarConfig } from "@/lib/variables";
+import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
  * Si CRON_SECRET no está configurado, queda deshabilitado.
  */
 export async function GET(req: NextRequest) {
-  const secreto = process.env.CRON_SECRET;
+  const secreto = env.cronSecret;
   const token = req.nextUrl.searchParams.get("token");
   if (!secreto || token !== secreto) {
     return new NextResponse("No autorizado", { status: 403 });

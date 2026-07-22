@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUsuario } from "@/lib/auth";
+import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export async function GET() {
     return new NextResponse("No autorizado", { status: 403 });
   }
 
-  const url = process.env.TASAS_API ?? "https://ve.dolarapi.com/v1/dolares";
+  const url = env.tasasApi;
   try {
     const res = await fetch(url, {
       headers: { accept: "application/json" },

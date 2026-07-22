@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { db } from "./db";
+import { env } from "./env";
 import { TAMANOS, MEDIDAS, type Config } from "./calculo";
 import { modeloValido, MODELO_IA_DEFAULT } from "./modelos-ia";
 
@@ -25,8 +26,7 @@ import { modeloValido, MODELO_IA_DEFAULT } from "./modelos-ia";
 function resolverModelo(modelo?: string): string {
   const elegido = (modelo ?? "").trim();
   if (elegido) return modeloValido(elegido);
-  const env = (process.env.ANTHROPIC_MODEL ?? "").trim();
-  return env || MODELO_IA_DEFAULT;
+  return env.anthropicModel || MODELO_IA_DEFAULT;
 }
 
 /** Confianza del modelo en cada bloque de la interpretación. */
@@ -108,7 +108,7 @@ export type ResultadoInterpretar =
 
 /** ¿Está disponible la función? Necesita la API key configurada. */
 export function interpretarDisponible(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(env.anthropicApiKey);
 }
 
 /**
@@ -176,7 +176,7 @@ export async function interpretarSolicitud(
   }
 
   try {
-    const client = new Anthropic();
+    const client = new Anthropic({ apiKey: env.anthropicApiKey });
     const res = await client.messages.create({
       model: resolverModelo(modelo),
       max_tokens: 2000,

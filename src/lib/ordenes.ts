@@ -65,7 +65,9 @@ export async function generarOrden(cotizacionId: string): Promise<ResultadoOrden
 }
 
 // Selección SIN precios: solo lo que el taller necesita ver.
-const SELECT_PROD = {
+// Se exporta para que una prueba (seguridad.test.ts) verifique el invariante
+// TALLER-sin-precios de forma estructural, sin depender de la base de datos.
+export const SELECT_PROD = {
   id: true,
   numero: true,
   estado: true,

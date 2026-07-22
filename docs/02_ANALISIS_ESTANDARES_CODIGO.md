@@ -38,7 +38,7 @@ Por eso el análisis **traduce los principios** del estándar (trazabilidad, seg
 | §2.7 Integridad financiera / antifraude | ⚪ | No hay lectura de comprobantes ni aprobación de pagos. |
 | §2.8 Validación de entrada (Pydantic) | 🟡 | `zod` en clientes y usuarios; el resto de acciones normaliza con `n()`/`String()` sin esquema. Recomendado ampliar (P3-B). |
 | §2.9 Concurrencia / `SELECT FOR UPDATE` | 🟡 | El descuento de inventario es idempotente pero no usa bloqueo de fila; en este volumen (un taller) el riesgo real es bajo (P3-C). |
-| §2.10 Rate limiting / DoS | 🔴 | Login y `/api/interpretar`/acción de IA no tienen límite de intentos. Riesgo de fuerza bruta y de costo de IA. **P1-A**. |
+| §2.10 Rate limiting / DoS | ✅ | **Resuelto (P1-A):** limitador en memoria (`lib/rate-limit.ts`); login por IP y por correo, IA por usuario. |
 | §2.11 Errores sin fugas | ✅ | Las acciones devuelven `{ ok, error }` con mensajes de dominio; no se exponen stack traces al usuario. |
 | §2.12 Logging / auditoría / PII | 🟡 | No hay `print`/`console` regados (✅ limpio), pero tampoco hay logging estructurado ni un log de auditoría de operaciones sensibles (cambios de estado, roles). Movimientos de inventario sí se auditan. (P2-D) |
 | §2.13 Cifrado / retención | ✅/⚪ | TLS y cifrado en reposo los provee Railway. No se guardan comprobantes ni PII financiera. |
@@ -47,9 +47,9 @@ Por eso el análisis **traduce los principios** del estándar (trazabilidad, seg
 | §3.2 Logging estructurado | 🟡 | Ver §2.12. |
 | §3.3 Taxonomía de excepciones | ✅/🟡 | El patrón `{ ok, error }` cumple el espíritu (nada se traga en silencio). No hay jerarquía de errores tipada, innecesaria a esta escala. |
 | §3.4 Disciplina async | ✅ | Todo es async idiomático; sin llamadas bloqueantes; Prisma singleton correcto. |
-| §3.5 Configuración tipada única | 🔴 | `process.env` aparece disperso en 7 archivos (jwt, tasas, interpretar, db, auth, cron, debug). El estándar pide un módulo único tipado. **P1-B**. |
+| §3.5 Configuración tipada única | ✅ | **Resuelto (P1-B):** `lib/env.ts` centraliza el entorno con getters perezosos + `verificarEnv()` (Zod). Los módulos leen `env`, no `process.env`. |
 | §3.6 Migraciones | ✅ | Todo cambio de esquema por migración Prisma; generadas offline; Railway las aplica en preDeploy. |
-| §3.7 Testing | 🟡 | Motor muy bien probado (contrato Jugarte) y auth cubierto. Falta un **test negativo del invariante TALLER-sin-precios** y de las server actions. **P2-E**. |
+| §3.7 Testing | ✅/🟡 | Motor muy bien probado (contrato Jugarte), auth cubierto y **test del invariante TALLER-sin-precios resuelto (P2-E)** (`seguridad.test.ts`, 38 pruebas). Falta cobertura de server actions (P3-B). |
 | §3.8 Tipos de datos (TIMESTAMPTZ, DECIMAL) | 🟡 | Dinero en `Decimal` ✅. Pero las fechas Prisma `DateTime` mapean a `timestamp(3)` **sin** zona horaria; el estándar exige `TIMESTAMPTZ`. (P2-F) |
 | §4 Documentación y legibilidad | ✅/🟡 | Docstrings/comentarios en español explicando el *porqué* (excelente). Faltan READMEs por carpeta y un glosario (P3-A). Este set de documentos cubre gran parte. |
 | §4.6 Commits semánticos | 🟡 | Los mensajes son descriptivos pero no usan prefijos `feat:`/`fix:`/`security:`. Opcional. |
@@ -72,15 +72,13 @@ Estas prácticas del código **ya cumplen o superan** el estándar y son la mejo
 
 ## 3. Mejoras recomendadas (priorizadas)
 
-### Prioridad 1 — hacer pronto
+### Prioridad 1 — ✅ IMPLEMENTADO
 
-**P1-A · Rate limiting en login e IA.**
-`iniciarSesion` (`lib/auth.ts`) y `interpretarSolicitudAction` no limitan intentos. Riesgos: fuerza bruta de contraseñas y abuso de costo de la API de Claude.
-*Recomendación:* limitador simple por IP/usuario (ventana + contador en memoria o en una tabla), p. ej. 5 intentos de login por minuto y N interpretaciones por usuario/hora. Fail-closed.
+**P1-A · Rate limiting en login e IA. ✅**
+`lib/rate-limit.ts`: limitador en memoria (ventana fija, fail-closed, con cota de memoria). Login limitado por IP (10 / 5 min) y por correo (8 / 15 min), con reinicio del contador de correo tras un login válido. IA limitada por usuario (30 / hora). Mensajes indican los segundos/minutos de espera.
 
-**P1-B · Configuración tipada única (`core/config`).**
-`process.env` aparece en 7 archivos sin validación centralizada. Un typo o una variable faltante se descubre en runtime.
-*Recomendación:* un módulo `src/lib/env.ts` con un objeto `env` validado con zod al arranque (`DATABASE_URL`, `AUTH_SECRET`, `ANTHROPIC_API_KEY?`, `ANTHROPIC_MODEL?`, `CRON_SECRET?`, `TASAS_API?`). Importar `env` en vez de `process.env`. Alinea con §3.5.
+**P1-B · Configuración tipada única. ✅**
+`lib/env.ts`: fuente única del entorno con **getters perezosos** (edge-safe; no rompen `next build`) y `verificarEnv()` con Zod para un chequeo explícito. `jwt`, `auth`, `tasas`, `interpretar`, el cron y el debug ahora leen `env`, no `process.env`.
 
 ### Prioridad 2 — siguiente iteración
 
@@ -92,7 +90,7 @@ Estas prácticas del código **ya cumplen o superan** el estándar y son la mejo
 
 **P2-D · Log de auditoría de operaciones sensibles.** Registrar (actor, acción, fecha) para cambios de estado de cotización, cambios de rol y activación/desactivación de usuarios, como ya se hace con `MovimientoInventario`. Alinea con §2.12.
 
-**P2-E · Test negativo del invariante TALLER.** Prueba automatizada que afirme que `SELECT_PROD`/`obtenerOrden` no devuelven ninguna columna de dinero, y que la exportación CSV rechaza a TALLER. Es el control de seguridad #1; debe estar amarrado por un test como el motor.
+**P2-E · Test del invariante TALLER. ✅ IMPLEMENTADO.** `seguridad.test.ts` escanea `SELECT_PROD` (ahora exportado) y falla si aparece cualquier columna de dinero; además reafirma `puedeVerPrecios(TALLER) === false`. Sin base de datos (estructural). Para poder importar módulos `server-only` en las pruebas se añadió un stub y un alias en `vitest.config.ts`.
 
 **P2-F · `TIMESTAMPTZ` en fechas.** Migrar las columnas `DateTime` a `@db.Timestamptz(3)`. En un sistema de un solo país el riesgo es menor, pero el estándar lo pide y evita ambigüedad futura. Requiere una migración.
 
@@ -120,6 +118,6 @@ Estas prácticas del código **ya cumplen o superan** el estándar y son la mejo
 
 ## 5. Resumen ejecutivo
 
-El código está **bien diseñado para su escala**: el motor puro y probado, el invariante TALLER estructural y la inmutabilidad con snapshot son exactamente el tipo de "seguridad por diseño" que el estándar promueve. Los huecos reales y accionables son pocos: **rate limiting (P1-A)** y **configuración tipada única (P1-B)** son los dos que conviene atacar primero; el resto son mejoras de higiene (CI, auditoría, un test del invariante de precios, TIMESTAMPTZ).
+El código está **bien diseñado para su escala**: el motor puro y probado, el invariante TALLER estructural y la inmutabilidad con snapshot son exactamente el tipo de "seguridad por diseño" que el estándar promueve.
 
-> ¿Quieres que implemente P1-A y P1-B (y el test del invariante TALLER, P2-E) en un commit? Son los tres de mayor retorno y bajo riesgo.
+**Estado tras esta iteración:** los tres de mayor retorno ya están implementados — **P1-A (rate limiting)**, **P1-B (configuración tipada única)** y **P2-E (test del invariante TALLER)**. Quedan mejoras de higiene: **P2-A** (gate de CI), **P2-D** (log de auditoría), **P2-F** (`TIMESTAMPTZ`) y las de Prioridad 3.

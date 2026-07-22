@@ -5,6 +5,7 @@ import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import type { Rol } from "@prisma/client";
 import { db } from "./db";
+import { env } from "./env";
 import { COOKIE, SESION_DIAS, firmarToken, verificarToken } from "./jwt";
 
 /**
@@ -93,7 +94,7 @@ export async function iniciarSesion(
   const jwt = await firmarToken({ sid: token, rol: u.rol });
   (await cookies()).set(COOKIE, jwt, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: env.esProduccion,
     sameSite: "lax",
     path: "/",
     maxAge: MS_SESION / 1000,

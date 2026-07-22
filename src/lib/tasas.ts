@@ -1,4 +1,5 @@
 import "server-only";
+import { env } from "./env";
 
 /**
  * Consulta de tasas a una fuente externa (best-effort).
@@ -21,12 +22,10 @@ export type ResultadoTasas =
   | { ok: true; tasas: TasasExternas }
   | { ok: false; detalle: string };
 
-const FUENTE = process.env.TASAS_API ?? "https://ve.dolarapi.com/v1/dolares";
-
 export async function fetchTasasExternas(): Promise<ResultadoTasas> {
   let data: unknown;
   try {
-    const res = await fetch(FUENTE, {
+    const res = await fetch(env.tasasApi, {
       headers: { accept: "application/json" },
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
@@ -45,7 +44,7 @@ export async function fetchTasasExternas(): Promise<ResultadoTasas> {
       detalle: `formato inesperado (BCV=${bcv ?? "?"}, paralelo=${par ?? "?"}). Revisa /api/tasas/debug`,
     };
   }
-  return { ok: true, tasas: { bcv, binCompra: par, binVenta: par, fuente: host(FUENTE) } };
+  return { ok: true, tasas: { bcv, binCompra: par, binVenta: par, fuente: host(env.tasasApi) } };
 }
 
 /** Saca un número de un nodo, probando los campos usuales de cada API. */
