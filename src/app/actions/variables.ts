@@ -44,6 +44,7 @@ export async function guardarConfigAction(
     merma: f("merma"), margen: f("margen"), comision: f("comision"), ml: f("ml"),
     tasaBCV: f("tasaBCV"), binCompra: f("binCompra"), binVenta: f("binVenta"),
     pinza: f("pinza"), sep: f("sep"), margenMin: f("margenMin"), iva: f("iva"),
+    interpretarIA: formData.get("interpretarIA") === "on",
   });
   revalidatePath("/variables");
   return { error: null, ok: true };

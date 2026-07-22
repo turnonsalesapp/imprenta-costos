@@ -30,6 +30,18 @@ export function ConfigForm({ cfg }: { cfg: DatosConfig }) {
         <Campo l="IVA (%)" name="iva" v={cfg.iva} />
       </div>
 
+      <label className="mt-4 flex items-start gap-2.5 rounded-sm border border-regla bg-suave px-3 py-2.5">
+        <input type="checkbox" name="interpretarIA" defaultChecked={cfg.interpretarIA} className="mt-0.5 h-4 w-4 accent-tinta" />
+        <span>
+          <span className="text-sm font-medium">Interpretar solicitud del cliente con IA</span>
+          <span className="mt-0.5 block text-[11px] leading-relaxed text-kraft">
+            Activa el panel en «Cotizar» para pegar el texto del cliente y traducirlo en un borrador.
+            Interruptor general; puedes ajustarlo por usuario en Usuarios. Requiere la clave
+            ANTHROPIC_API_KEY configurada en el servidor. El texto pegado se procesa con IA de Anthropic.
+          </span>
+        </span>
+      </label>
+
       {estado.error && (
         <p className="mt-3 rounded-sm border border-[#E8B4B4] bg-[#FDEDED] px-3 py-2 text-sm text-[#8A1C1C]">{estado.error}</p>
       )}

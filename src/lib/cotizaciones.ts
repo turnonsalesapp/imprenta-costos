@@ -6,7 +6,7 @@ import {
   calcular, precioDesdeCosto, n, type LineaCosto, type Entrada, type Config,
 } from "./calculo";
 import {
-  formAEntrada, type FormCotizacion, type FormProveedor,
+  formAEntrada, totalProveedor, type FormCotizacion, type FormProveedor,
 } from "./cotizacion-form";
 import { crearTrabajoDesdeForm } from "./trabajos";
 
@@ -185,7 +185,8 @@ export async function cargarCotizacionEnForm(
 
 function datosProveedor(form: FormProveedor) {
   const cant = Math.max(0, Math.round(n(form.cantidad)));
-  const costoTotal = n(form.costoTotal);
+  const costoTotal = totalProveedor(form);
+  const costoUnitario = n(form.costoUnitario);
   const params = {
     margen: form.margen, comision: form.comision, ml: form.ml,
     tasaBCV: form.tasaBCV, binCompra: form.binCompra, binVenta: form.binVenta,
@@ -194,7 +195,10 @@ function datosProveedor(form: FormProveedor) {
   const pr = precioDesdeCosto(costoTotal, cant, params);
   const provNombre = (form.proveedorNombre ?? "").trim() || null;
   const provRef = (form.proveedorRef ?? "").trim() || null;
-  const detalle = [provNombre, provRef].filter(Boolean).join(" · ") || "Externo";
+  const detalle =
+    form.costoModo === "unitario" && costoUnitario > 0
+      ? `${[provNombre, provRef].filter(Boolean).join(" · ") || "Externo"} · ${cant} × costo unit.`
+      : [provNombre, provRef].filter(Boolean).join(" · ") || "Externo";
   const lineas = [{ k: "proveedor", label: "Costo del proveedor", detalle, monto: costoTotal }];
   return {
     pr,
@@ -211,7 +215,9 @@ function datosProveedor(form: FormProveedor) {
       ancho: 0, alto: 0, tamano: "—",
       papelNombre: provNombre ? `Proveedor: ${provNombre}` : "Proveedor externo",
       capacidad: 0,
-      entrada: { costoTotal, cantidad: cant, ...params } as unknown as Prisma.InputJsonValue,
+      entrada: {
+        costoTotal, cantidad: cant, costoModo: form.costoModo, costoUnitario, ...params,
+      } as unknown as Prisma.InputJsonValue,
       snapshot: { tipo: "proveedor" } as unknown as Prisma.InputJsonValue,
       lineas: lineas as unknown as Prisma.InputJsonValue,
       pliegos: 0,
@@ -229,7 +235,7 @@ export async function crearCotizacionProveedor(
   const cliente = (form.cliente ?? "").trim();
   const trabajo = (form.trabajo ?? "").trim();
   if (!cliente && !trabajo) return { ok: false, error: "Falta el cliente o el trabajo." };
-  if (n(form.costoTotal) <= 0) return { ok: false, error: "Indica el costo del proveedor." };
+  if (totalProveedor(form) <= 0) return { ok: false, error: "Indica el costo del proveedor." };
   const { pr, data } = datosProveedor(form);
   if (pr.cant <= 0) return { ok: false, error: "Indica la cantidad." };
 
@@ -248,7 +254,7 @@ export async function actualizarCotizacionProveedor(
   if (ex.estado !== "BORRADOR") {
     return { ok: false, error: "Solo se pueden editar cotizaciones en borrador." };
   }
-  if (n(form.costoTotal) <= 0) return { ok: false, error: "Indica el costo del proveedor." };
+  if (totalProveedor(form) <= 0) return { ok: false, error: "Indica el costo del proveedor." };
   const { pr, data } = datosProveedor(form);
   if (pr.cant <= 0) return { ok: false, error: "Indica la cantidad." };
 
@@ -278,7 +284,9 @@ export async function cargarProveedorEnForm(
     proveedorRef: c.proveedorRef ?? "",
     proveedorNotas: c.proveedorNotas ?? "",
     cantidad: v("cantidad"),
+    costoModo: e.costoModo === "unitario" ? "unitario" : "total",
     costoTotal: v("costoTotal"),
+    costoUnitario: v("costoUnitario"),
     margen: v("margen"), comision: v("comision"), ml: v("ml"),
     tasaBCV: v("tasaBCV"), binCompra: v("binCompra"), binVenta: v("binVenta"),
     difManual: Boolean(e.difManual), dif: v("dif"),

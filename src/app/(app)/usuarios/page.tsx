@@ -1,8 +1,10 @@
 import { requireRol } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { alternarActivo } from "@/app/actions/usuarios";
+import { interpretarDisponible } from "@/lib/interpretar";
 import { CrearUsuarioForm } from "./CrearUsuarioForm";
 import { SelectorRol } from "./SelectorRol";
+import { SelectorInterpretar } from "./SelectorInterpretar";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +17,9 @@ export default async function UsuariosPage() {
 
   const usuarios = await db.usuario.findMany({
     orderBy: [{ activo: "desc" }, { creadoEn: "asc" }],
-    select: { id: true, nombre: true, email: true, rol: true, activo: true },
+    select: { id: true, nombre: true, email: true, rol: true, activo: true, interpretarIA: true },
   });
+  const iaDisponible = interpretarDisponible();
 
   return (
     <>
@@ -38,6 +41,7 @@ export default async function UsuariosPage() {
               <th className="px-4 py-2 font-bold">Nombre</th>
               <th className="px-4 py-2 font-bold">Correo</th>
               <th className="px-4 py-2 font-bold">Rol</th>
+              {iaDisponible && <th className="px-4 py-2 font-bold">Interpretar IA</th>}
               <th className="px-4 py-2 font-bold">Estado</th>
               <th className="px-4 py-2" />
             </tr>
@@ -59,6 +63,11 @@ export default async function UsuariosPage() {
                   <td className="px-4 py-2.5">
                     <SelectorRol id={u.id} rol={u.rol} disabled={esYo} />
                   </td>
+                  {iaDisponible && (
+                    <td className="px-4 py-2.5">
+                      <SelectorInterpretar id={u.id} valor={u.interpretarIA} disabled={u.rol === "TALLER"} />
+                    </td>
+                  )}
                   <td className="px-4 py-2.5">
                     <span
                       className={
@@ -93,6 +102,7 @@ export default async function UsuariosPage() {
       <p className="mt-4 text-xs leading-relaxed text-kraft">
         Al desactivar un usuario se cierran sus sesiones abiertas de inmediato.
         No puedes cambiar tu propio rol ni desactivarte a ti mismo.
+        {iaDisponible ? " «Interpretar IA» en «Según el sistema» sigue el interruptor general de Variables; ponlo en Activado o Desactivado para forzarlo en un usuario." : ""}
       </p>
     </>
   );

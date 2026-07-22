@@ -63,6 +63,20 @@ export async function cambiarRol(formData: FormData): Promise<void> {
   revalidatePath("/usuarios");
 }
 
+/**
+ * Ajusta el intérprete de IA para un usuario concreto: "heredar" (sigue al
+ * sistema), "si" (siempre activo) o "no" (siempre apagado).
+ */
+export async function cambiarInterpretar(formData: FormData): Promise<void> {
+  await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  const v = String(formData.get("valor") ?? "");
+  if (!id) return;
+  const interpretarIA = v === "si" ? true : v === "no" ? false : null;
+  await db.usuario.update({ where: { id }, data: { interpretarIA } });
+  revalidatePath("/usuarios");
+}
+
 export async function alternarActivo(formData: FormData): Promise<void> {
   const admin = await requireRol("ADMIN");
 

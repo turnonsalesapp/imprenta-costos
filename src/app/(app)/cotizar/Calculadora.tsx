@@ -9,6 +9,7 @@ import {
 import { nuevoForm, type FormCotizacion } from "@/lib/cotizacion-form";
 import type { ClienteSimple } from "@/lib/clientes";
 import { guardarCotizacionAction } from "@/app/actions/cotizaciones";
+import { PanelInterpretar } from "./PanelInterpretar";
 import "./calc.css";
 
 const TINTAS = ["#0B8FA8", "#C4177C", "#C79400", "#171B19", "#5B8C5A", "#8A5FBF", "#C0563B"];
@@ -19,12 +20,14 @@ export function Calculadora({
   formInicial,
   banner,
   margenMin,
+  interpretarHabilitado = false,
 }: {
   cfg: Config;
   clientes: ClienteSimple[];
   formInicial: FormCotizacion;
   banner?: string;
   margenMin?: number;
+  interpretarHabilitado?: boolean;
 }) {
   const [form, setForm] = useState<FormCotizacion>(() => formInicial);
   const [escalas, setEscalas] = useState("500, 1000, 3000, 5000, 10000");
@@ -121,6 +124,15 @@ export function Calculadora({
 
   const usarTamano = (id: string) => setForm((f) => ({ ...f, tamano: id, capAuto: true }));
 
+  // Carga el borrador interpretado por IA, mezclando los acabados sin pisar los
+  // que ya estén marcados (guillotina, etc.) salvo que la interpretación los toque.
+  const cargarInterpretado = (parcial: Partial<FormCotizacion>) =>
+    setForm((f) => ({
+      ...f,
+      ...parcial,
+      acabados: parcial.acabados ? { ...f.acabados, ...parcial.acabados } : f.acabados,
+    }));
+
   function guardar() {
     setError(null);
     if (!form.cliente.trim() && !form.trabajo.trim()) { setError("Falta el cliente o el trabajo."); return; }
@@ -141,6 +153,13 @@ export function Calculadora({
       <div className="grid">
         {/* ─────────────────────── columna izquierda ─────────────────────── */}
         <div>
+          <PanelInterpretar
+            habilitado={interpretarHabilitado}
+            papeles={cfg.papeles}
+            acabados={cfg.acabados}
+            onCargar={cargarInterpretado}
+          />
+
           <section className="card">
             <div className="ch"><b>Datos del trabajo</b></div>
             <div className="cb">

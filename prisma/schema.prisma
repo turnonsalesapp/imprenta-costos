@@ -28,6 +28,9 @@ model Usuario {
   passwordHash String
   rol          Rol      @default(VENDEDOR)
   activo       Boolean  @default(true)
+  /// Interpretar solicitud con IA para ESTE usuario: null = hereda del sistema,
+  /// true = siempre activo, false = siempre apagado. Solo aplica a quien cotiza.
+  interpretarIA Boolean?
   creadoEn     DateTime @default(now())
 
   cotizaciones Cotizacion[]
@@ -136,6 +139,8 @@ model Config {
   sep           Decimal  @db.Decimal(6, 2) @default(3)
   margenMin     Decimal  @db.Decimal(6, 2) @default(15) // avisa si el margen baja de aquí
   iva           Decimal  @db.Decimal(6, 2) @default(16) // % de IVA en la cotización al cliente
+  /// Interruptor general del intérprete de solicitudes con IA (todo el sistema).
+  interpretarIA Boolean  @default(false)
   // Membrete para la cotización que se envía al cliente.
   empresaNombre    String?
   empresaRif       String?

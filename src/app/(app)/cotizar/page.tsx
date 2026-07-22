@@ -4,6 +4,7 @@ import { obtenerConfig } from "@/lib/variables";
 import { listarClientesSimple } from "@/lib/clientes";
 import { cargarTrabajoEnForm } from "@/lib/trabajos";
 import { cargarCotizacionEnForm } from "@/lib/cotizaciones";
+import { interpretarActivo } from "@/lib/interpretar";
 import { nuevoForm, type FormCotizacion } from "@/lib/cotizacion-form";
 import { Calculadora } from "./Calculadora";
 
@@ -20,10 +21,10 @@ export default async function CotizarPage({
 }: {
   searchParams: Promise<{ trabajo?: string; desde?: string; editar?: string }>;
 }) {
-  await requireRol("ADMIN", "VENDEDOR");
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
 
-  const [cfg, clientes, dc] = await Promise.all([
-    cargarConfig(), listarClientesSimple(), obtenerConfig(),
+  const [cfg, clientes, dc, interpretarHabilitado] = await Promise.all([
+    cargarConfig(), listarClientesSimple(), obtenerConfig(), interpretarActivo(usuario.id),
   ]);
   const sp = await searchParams;
 
@@ -69,6 +70,7 @@ export default async function CotizarPage({
         formInicial={formInicial}
         banner={banners[modo]}
         margenMin={dc.margenMin}
+        interpretarHabilitado={interpretarHabilitado}
       />
     </>
   );

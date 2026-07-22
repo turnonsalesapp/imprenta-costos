@@ -4,6 +4,7 @@
  * en vivo) y el servidor (cálculo autoritativo al guardar).
  */
 import type { Config, Entrada, AcabadoSel } from "./calculo";
+import { n } from "./calculo";
 
 export type FormCotizacion = {
   // Meta (no entra al motor)
@@ -86,7 +87,12 @@ export type FormProveedor = {
   proveedorRef: string;
   proveedorNotas: string;
   cantidad: number | string;
+  // El costo del proveedor se puede indicar de dos formas: total, o unitario por
+  // elemento (× cantidad). `costoModo` decide cuál manda; el motor siempre parte
+  // del total efectivo (ver `totalProveedor`).
+  costoModo: "total" | "unitario";
   costoTotal: number | string; // costo total que cobra el proveedor
+  costoUnitario: number | string; // costo por elemento que cobra el proveedor
   margen: number | string;
   comision: number | string;
   ml: number | string;
@@ -102,11 +108,21 @@ export function nuevoFormProveedor(cfg: Config): FormProveedor {
   return {
     cliente: "", clienteId: "", trabajo: "", descripcion: "",
     proveedorNombre: "", proveedorRef: "", proveedorNotas: "",
-    cantidad: "", costoTotal: "",
+    cantidad: "", costoModo: "total", costoTotal: "", costoUnitario: "",
     margen: cfg.margen, comision: cfg.comision, ml: cfg.ml,
     tasaBCV: cfg.tasaBCV, binCompra: cfg.binCompra, binVenta: cfg.binVenta,
     difManual: false, dif: "", editarId: "",
   };
+}
+
+/**
+ * Costo total efectivo del proveedor. Si se indicó por elemento, lo multiplica
+ * por la cantidad; si no, usa el total tal cual. Fuente única para el cálculo,
+ * la validación y lo que se congela al guardar.
+ */
+export function totalProveedor(f: FormProveedor): number {
+  const cant = Math.max(0, Math.round(n(f.cantidad)));
+  return f.costoModo === "unitario" ? n(f.costoUnitario) * cant : n(f.costoTotal);
 }
 
 /** Extrae del formulario solo lo que el motor entiende. */

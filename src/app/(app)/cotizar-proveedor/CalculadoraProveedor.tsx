@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Save, RotateCcw } from "lucide-react";
 import { precioDesdeCosto, n, fmtNum, usd } from "@/lib/calculo";
-import { nuevoFormProveedor, type FormProveedor } from "@/lib/cotizacion-form";
+import { nuevoFormProveedor, totalProveedor, type FormProveedor } from "@/lib/cotizacion-form";
 import type { Config } from "@/lib/calculo";
 import type { ClienteSimple } from "@/lib/clientes";
 import { guardarProveedorAction } from "@/app/actions/cotizaciones";
@@ -41,13 +41,14 @@ export function CalculadoraProveedor({
     difManual: form.difManual, dif: form.dif,
   };
   const cant = Math.max(0, Math.round(n(form.cantidad)));
-  const r = useMemo(() => precioDesdeCosto(n(form.costoTotal), cant, params), [form, cant]);
+  const costoEfectivo = totalProveedor(form);
+  const r = useMemo(() => precioDesdeCosto(costoEfectivo, cant, params), [form, cant]);
 
   const ptsMargen = useMemo(() => {
     const ms = margenes.split(/[,;\s]+/).map((v) => n(v)).filter((v) => v > 0)
       .filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).slice(0, 8);
     return ms.map((mg) => {
-      const c = precioDesdeCosto(n(form.costoTotal), cant, { ...params, margen: mg });
+      const c = precioDesdeCosto(costoEfectivo, cant, { ...params, margen: mg });
       return { margen: mg, precioUnit: c.precioUnit, ventaTotal: c.ventaTotal, gananciaTotal: c.gananciaTotal };
     });
   }, [margenes, form, cant]);
@@ -55,8 +56,8 @@ export function CalculadoraProveedor({
   function guardar() {
     setError(null);
     if (!form.cliente.trim() && !form.trabajo.trim()) { setError("Falta el cliente o el trabajo."); return; }
-    if (n(form.costoTotal) <= 0) { setError("Indica el costo del proveedor."); return; }
     if (cant <= 0) { setError("Indica la cantidad."); return; }
+    if (costoEfectivo <= 0) { setError("Indica el costo del proveedor."); return; }
     startTransition(async () => {
       const res = await guardarProveedorAction(form);
       if (res?.error) setError(res.error);
@@ -87,7 +88,15 @@ export function CalculadoraProveedor({
                 <T l="Trabajo" v={form.trabajo} set={(v) => up("trabajo", v)} ph="Ej. Pendones gran formato" />
               </div>
               <div style={{ marginTop: 10 }}>
-                <T l="Descripción" v={form.descripcion} set={(v) => up("descripcion", v)} />
+                <F l="Características de lo ofertado" hint="Qué incluye el trabajo: material, medidas, acabados, tiempos. Va en la cotización al cliente.">
+                  <textarea
+                    className="in"
+                    style={{ minHeight: 66, resize: "vertical", fontFamily: "inherit" }}
+                    value={form.descripcion}
+                    placeholder="Ej. Pendón 1×2 m en lona banner 13 oz, full color, con tubo y cordón. Entrega en 3 días."
+                    onChange={(e) => up("descripcion", e.target.value)}
+                  />
+                </F>
               </div>
             </div>
           </section>
@@ -101,7 +110,35 @@ export function CalculadoraProveedor({
               </div>
               <div className="rowg c2" style={{ marginTop: 10 }}>
                 <T l="Cantidad" v={form.cantidad} set={(v) => up("cantidad", v)} num ph="100" />
-                <T l="Costo total del proveedor (USD)" v={form.costoTotal} set={(v) => up("costoTotal", v)} num ph="0" />
+                <F l="Cómo cobra el proveedor">
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button type="button" className={form.costoModo === "total" ? "btn sm" : "btn g sm"}
+                      onClick={() => up("costoModo", "total")}>Costo total</button>
+                    <button type="button" className={form.costoModo === "unitario" ? "btn sm" : "btn g sm"}
+                      onClick={() => up("costoModo", "unitario")}>Costo unitario</button>
+                  </div>
+                </F>
+              </div>
+              <div className="rowg c2" style={{ marginTop: 10 }}>
+                {form.costoModo === "unitario" ? (
+                  <>
+                    <T l="Costo unitario del elemento (USD)" v={form.costoUnitario} set={(v) => up("costoUnitario", v)} num ph="0" />
+                    <F l="Costo total (calculado)">
+                      <input className="in mono" type="text" value={usd(costoEfectivo)} readOnly
+                        style={{ background: "#EFF2EF", color: "#767D76" }} />
+                      <div className="hint mono">{fmtNum(cant, 0)} × {usd(n(form.costoUnitario), 4)}</div>
+                    </F>
+                  </>
+                ) : (
+                  <>
+                    <T l="Costo total del proveedor (USD)" v={form.costoTotal} set={(v) => up("costoTotal", v)} num ph="0" />
+                    <F l="Costo unitario (calculado)">
+                      <input className="in mono" type="text" value={cant > 0 ? usd(costoEfectivo / cant, 4) : "—"} readOnly
+                        style={{ background: "#EFF2EF", color: "#767D76" }} />
+                      <div className="hint">Costo total ÷ cantidad</div>
+                    </F>
+                  </>
+                )}
               </div>
               <div style={{ marginTop: 10 }}>
                 <T l="Notas del proveedor" v={form.proveedorNotas} set={(v) => up("proveedorNotas", v)} />
