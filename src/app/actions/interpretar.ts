@@ -2,6 +2,7 @@
 
 import { requireRol } from "@/lib/auth";
 import { cargarConfig } from "@/lib/config";
+import { obtenerConfig } from "@/lib/variables";
 import {
   interpretarActivo, interpretarSolicitud, type SolicitudInterpretada,
 } from "@/lib/interpretar";
@@ -24,6 +25,6 @@ export async function interpretarSolicitudAction(
     return { ok: false, error: "La interpretación con IA está desactivada para tu usuario." };
   }
 
-  const cfg = await cargarConfig();
-  return interpretarSolicitud(texto, cfg);
+  const [cfg, dc] = await Promise.all([cargarConfig(), obtenerConfig()]);
+  return interpretarSolicitud(texto, cfg, dc.interpretarModelo);
 }

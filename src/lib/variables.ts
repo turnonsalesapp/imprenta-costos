@@ -21,7 +21,7 @@ export type DatosConfig = {
   merma: number; margen: number; comision: number; ml: number;
   tasaBCV: number; binCompra: number; binVenta: number;
   pinza: number; sep: number; margenMin: number; iva: number;
-  interpretarIA: boolean;
+  interpretarIA: boolean; interpretarModelo: string;
 };
 
 export async function obtenerConfig(): Promise<DatosConfig> {
@@ -32,6 +32,7 @@ export async function obtenerConfig(): Promise<DatosConfig> {
     binVenta: num(c?.binVenta), pinza: num(c?.pinza), sep: num(c?.sep),
     margenMin: c ? num(c.margenMin) : 15, iva: c ? num(c.iva) : 16,
     interpretarIA: Boolean(c?.interpretarIA),
+    interpretarModelo: c?.interpretarModelo ?? "",
   };
 }
 

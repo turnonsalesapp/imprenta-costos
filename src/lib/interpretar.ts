@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { db } from "./db";
 import { TAMANOS, MEDIDAS, type Config } from "./calculo";
+import { modeloValido, MODELO_IA_DEFAULT } from "./modelos-ia";
 
 /**
  * Intérprete de solicitudes del cliente (opcional, con IA de Anthropic).
@@ -17,7 +18,16 @@ import { TAMANOS, MEDIDAS, type Config } from "./calculo";
  * navegador. El texto SÍ se envía a la API de Anthropic para procesarlo.
  */
 
-const MODELO = process.env.ANTHROPIC_MODEL || "claude-opus-4-8";
+/**
+ * Modelo a usar: el que eligió el ADMIN en Variables; si no, el override por
+ * entorno (ANTHROPIC_MODEL); si tampoco, el de por defecto.
+ */
+function resolverModelo(modelo?: string): string {
+  const elegido = (modelo ?? "").trim();
+  if (elegido) return modeloValido(elegido);
+  const env = (process.env.ANTHROPIC_MODEL ?? "").trim();
+  return env || MODELO_IA_DEFAULT;
+}
 
 /** Confianza del modelo en cada bloque de la interpretación. */
 const Confianza = z.enum(["alta", "media", "baja"]);
@@ -157,6 +167,7 @@ Reglas:
 export async function interpretarSolicitud(
   texto: string,
   cfg: Config,
+  modelo?: string,
 ): Promise<ResultadoInterpretar> {
   const limpio = (texto ?? "").trim();
   if (limpio.length < 3) return { ok: false, error: "Pega primero el texto de la solicitud." };
@@ -167,7 +178,7 @@ export async function interpretarSolicitud(
   try {
     const client = new Anthropic();
     const res = await client.messages.create({
-      model: MODELO,
+      model: resolverModelo(modelo),
       max_tokens: 2000,
       system: `${INSTRUCCIONES}\n\n${catalogoTexto(cfg)}`,
       messages: [

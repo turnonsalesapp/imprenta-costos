@@ -8,6 +8,7 @@ import {
   alternarPapel, crearAcabado, editarAcabado, alternarAcabado,
 } from "@/lib/variables";
 import { fetchTasasExternas } from "@/lib/tasas";
+import { modeloValido } from "@/lib/modelos-ia";
 
 export type EstadoVar = { error: string | null; ok?: boolean; msg?: string };
 
@@ -45,6 +46,7 @@ export async function guardarConfigAction(
     tasaBCV: f("tasaBCV"), binCompra: f("binCompra"), binVenta: f("binVenta"),
     pinza: f("pinza"), sep: f("sep"), margenMin: f("margenMin"), iva: f("iva"),
     interpretarIA: formData.get("interpretarIA") === "on",
+    interpretarModelo: modeloValido(String(formData.get("interpretarModelo") ?? "")),
   });
   revalidatePath("/variables");
   return { error: null, ok: true };

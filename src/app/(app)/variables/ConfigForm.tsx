@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { guardarConfigAction, type EstadoVar } from "@/app/actions/variables";
 import type { DatosConfig } from "@/lib/variables";
+import { MODELOS_IA, MODELO_IA_DEFAULT } from "@/lib/modelos-ia";
 
 const INICIAL: EstadoVar = { error: null };
 const inCls = "mt-1 w-full rounded-sm border border-regla bg-white px-3 py-1.5 text-sm font-mono outline-none focus:border-cian";
@@ -38,6 +39,15 @@ export function ConfigForm({ cfg }: { cfg: DatosConfig }) {
             Activa el panel en «Cotizar» para pegar el texto del cliente y traducirlo en un borrador.
             Interruptor general; puedes ajustarlo por usuario en Usuarios. Requiere la clave
             ANTHROPIC_API_KEY configurada en el servidor. El texto pegado se procesa con IA de Anthropic.
+          </span>
+          <span className="mt-2.5 block">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Modelo de IA</span>
+            <select name="interpretarModelo" defaultValue={cfg.interpretarModelo || MODELO_IA_DEFAULT}
+              className="mt-1 block rounded-sm border border-regla bg-white px-2 py-1.5 text-sm outline-none focus:border-cian">
+              {MODELOS_IA.map((m) => (
+                <option key={m.id} value={m.id}>{m.label} — {m.nota}</option>
+              ))}
+            </select>
           </span>
         </span>
       </label>

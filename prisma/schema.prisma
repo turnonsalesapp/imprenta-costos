@@ -141,6 +141,8 @@ model Config {
   iva           Decimal  @db.Decimal(6, 2) @default(16) // % de IVA en la cotización al cliente
   /// Interruptor general del intérprete de solicitudes con IA (todo el sistema).
   interpretarIA Boolean  @default(false)
+  /// Modelo de IA elegido para el intérprete (null = el de por defecto).
+  interpretarModelo String?
   // Membrete para la cotización que se envía al cliente.
   empresaNombre    String?
   empresaRif       String?
