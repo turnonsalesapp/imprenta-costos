@@ -67,9 +67,17 @@ Si el administrador activó la función, arriba aparece **"Interpretar solicitud
 
 > El texto se procesa con IA de Anthropic. Nada se guarda hasta que guardes la cotización.
 
-### 3.8 Guardar
-- **Guardar cotización** crea la cotización en estado **Borrador** y te lleva a su detalle.
-- Puedes marcar **"Guardar también como trabajo repetido"** para reutilizar la receta después.
+### 3.8 Varios ítems en una cotización
+Una cotización puede tener **varios ítems** (por ejemplo, el mismo trabajo a distintos volúmenes, o trabajos distintos para el mismo cliente):
+- Arriba de la calculadora hay **pestañas de ítems**. Pulsa **＋ Ítem** para agregar otro; cada pestaña se edita por separado. La ✕ quita un ítem.
+- Desde el **Comparador por cantidad**, cada volumen trae **＋ ítem** (lo agrega como ítem con esa cantidad), o **"Agregar los N volúmenes como ítems"** para cargarlos todos de una vez.
+- El **cliente** es común a toda la cotización; el **título y la descripción** son por ítem.
+- En el panel **"Ítems"** (abajo del ticket) ves cada ítem con su **descripción editable** —que ya viene rellena con lo que incluye (medida, papel, tamaño, acabados)— y el **total** de la cotización.
+
+### 3.9 Guardar
+- **Guardar cotización** crea la cotización en estado **Borrador** (con todos sus ítems) y te lleva a su detalle.
+- Con un solo ítem puedes marcar **"Guardar también como trabajo repetido"** para reutilizar la receta después.
+- En el detalle y en la impresión, cada ítem aparece con su descripción y su total; el cliente ve el **Total** de la cotización con IVA.
 
 ---
 

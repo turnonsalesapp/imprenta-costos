@@ -233,9 +233,13 @@ model Cotizacion {
   papelNombre String
   capacidad   Int
 
-  entrada   Json // Entrada exacta que recibió el motor
-  snapshot  Json // { papeles, acabados, config } del momento del cálculo
-  lineas    Json // desglose línea por línea
+  entrada   Json // Entrada exacta que recibió el motor (del primer ítem; compat)
+  snapshot  Json // { papeles, acabados, config } del momento del cálculo (compartido)
+  lineas    Json // desglose línea por línea (unión, para generar la orden)
+  /// Ítems de la cotización (array congelado). Una cotización puede tener varios
+  /// ítems (p. ej. el mismo trabajo a distintos volúmenes). Null en las viejas:
+  /// se sintetiza un ítem único desde las columnas de arriba al leerlas.
+  items     Json?
 
   pliegos    Decimal @db.Decimal(14, 4)
   costoTotal Decimal @db.Decimal(14, 4)

@@ -18,16 +18,17 @@ import { registrarAuditoria } from "@/lib/auditoria";
 
 export type EstadoGuardar = { error: string | null };
 
-/** Guarda una cotización nueva. Redirige a su detalle al terminar. */
+/** Guarda una cotización (uno o varios ítems). Redirige a su detalle al terminar. */
 export async function guardarCotizacionAction(
-  form: FormCotizacion,
+  items: FormCotizacion[],
 ): Promise<EstadoGuardar> {
   const usuario = await requireRol("ADMIN", "VENDEDOR");
+  if (!items.length) return { error: "Agrega al menos un ítem." };
 
-  const editarId = form.editarId?.trim();
+  const editarId = items[0].editarId?.trim();
   const r = editarId
-    ? await actualizarCotizacion(editarId, form)
-    : await crearCotizacion(form, usuario.id);
+    ? await actualizarCotizacion(editarId, items)
+    : await crearCotizacion(items, usuario.id);
   if (!r.ok) return { error: r.error };
 
   redirect(`/cotizaciones/${r.id}`);

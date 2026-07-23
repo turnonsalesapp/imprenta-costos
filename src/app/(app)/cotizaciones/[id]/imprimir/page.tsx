@@ -98,20 +98,22 @@ export default async function ImprimirCotizacion({
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-suave align-top">
-                <td className="py-3">
-                  <div className="font-medium">{c.titulo}</div>
-                  {c.descripcion && <div className="text-[12px] text-kraft">{c.descripcion}</div>}
-                  <div className="mt-1 text-[11px] text-kraft">
-                    {c.tipo === "PROVEEDOR"
-                      ? (c.proveedorNombre ? `Proveedor: ${c.proveedorNombre}` : "Trabajo tercerizado")
-                      : `${fmtNum(c.ancho, 0)}×${fmtNum(c.alto, 0)} mm · ${c.papelNombre} · ${c.tamano}`}
-                  </div>
-                </td>
-                <td className="py-3 text-right font-mono">{fmtNum(c.cantidad, 0)}</td>
-                <td className="py-3 text-right font-mono">{usd(c.precioUnit, 4)}</td>
-                <td className="py-3 text-right font-mono">{usd(subtotal)}</td>
-              </tr>
+              {c.items.map((it, i) => (
+                <tr key={i} className="border-b border-suave align-top">
+                  <td className="py-3">
+                    <div className="font-medium">{it.titulo}</div>
+                    {it.descripcion && <div className="text-[12px] text-kraft">{it.descripcion}</div>}
+                    <div className="mt-1 text-[11px] text-kraft">
+                      {c.tipo === "PROVEEDOR"
+                        ? (c.proveedorNombre ? `Proveedor: ${c.proveedorNombre}` : "Trabajo tercerizado")
+                        : `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} mm · ${it.papelNombre} · ${it.tamano}`}
+                    </div>
+                  </td>
+                  <td className="py-3 text-right font-mono">{fmtNum(it.cantidad, 0)}</td>
+                  <td className="py-3 text-right font-mono">{usd(it.precioUnit, 4)}</td>
+                  <td className="py-3 text-right font-mono">{usd(it.ventaTotal)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
 

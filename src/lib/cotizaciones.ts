@@ -41,65 +41,155 @@ export type ResultadoGuardar =
   | { ok: true; id: string }
   | { ok: false; error: string };
 
-/**
- * Construye las columnas de la cotización a partir del formulario y la config.
- * Lo comparten crear y actualizar, para que la cotización se congele igual en
- * ambos casos (snapshot de papeles, acabados y variables del momento).
- */
-function datosCotizacion(form: FormCotizacion, cfg: Config) {
+/** Un ítem congelado de la cotización (una cotización puede tener varios). */
+export type ItemGuardado = {
+  titulo: string;
+  descripcion: string | null;
+  cantidad: number;
+  ancho: number;
+  alto: number;
+  tamano: string;
+  papelNombre: string;
+  capacidad: number;
+  entrada: Entrada;
+  lineas: LineaCosto[];
+  pliegos: number;
+  costoTotal: number;
+  costoUnit: number;
+  diferencial: number;
+  margen: number;
+  precioUnit: number;
+  ventaTotal: number;
+  precioML: number;
+  precioBs: number;
+  tasaBCV: number;
+};
+
+/** Descripción legible por defecto (qué incluye el ítem), si el usuario no puso una. */
+function autoDescripcion(
+  papelNombre: string, ancho: number, alto: number, tamano: string, acabados: string[],
+): string {
+  const partes = [
+    ancho > 0 && alto > 0 ? `${ancho}×${alto} mm` : "",
+    papelNombre && papelNombre !== "—" ? papelNombre : "",
+    tamano,
+    acabados.join(", "),
+  ].filter(Boolean);
+  return partes.join(" · ");
+}
+
+/** Calcula y congela UN ítem a partir de su formulario. */
+function datosItem(form: FormCotizacion, cfg: Config): { cant: number; item: ItemGuardado } {
   const entrada = formAEntrada(form);
   const r = calcular(entrada, cfg);
   const papel = cfg.papeles.find((p) => p.id === entrada.papelId) ?? null;
+  const papelNombre = papel?.nombre ?? "—";
+  const acabados = r.lineas.filter((l) => l.k !== "papel").map((l) => l.label);
+  const ancho = Math.round(n(form.ancho));
+  const alto = Math.round(n(form.alto));
+  const descripcion =
+    (form.descripcion ?? "").trim() || autoDescripcion(papelNombre, ancho, alto, entrada.tamano, acabados);
+
+  const item: ItemGuardado = {
+    titulo: (form.trabajo ?? "").trim() || "Ítem",
+    descripcion,
+    cantidad: r.cant,
+    ancho, alto,
+    tamano: entrada.tamano,
+    papelNombre,
+    capacidad: Math.round(n(form.capacidad)) || 0,
+    entrada,
+    lineas: r.lineas,
+    pliegos: r.pliegos,
+    costoTotal: r.costoTotal,
+    costoUnit: r.costoUnit,
+    diferencial: r.dif,
+    margen: num(entrada.margen),
+    precioUnit: r.precioUnit,
+    ventaTotal: r.ventaTotal,
+    precioML: r.precioML,
+    precioBs: r.precioBs,
+    tasaBCV: num(entrada.tasaBCV),
+  };
+  return { cant: r.cant, item };
+}
+
+/**
+ * Construye las columnas de la cotización a partir de sus ítems. La primera
+ * entrada del array trae la meta (cliente, título). Las columnas de dinero de
+ * nivel cotización son AGREGADOS (suma) para el listado/CSV; el detalle y la
+ * impresión iteran `items`. `lineas` guarda la unión de acabados para la orden.
+ */
+function datosCotizacion(forms: FormCotizacion[], cfg: Config) {
+  const calc = forms.map((f) => datosItem(f, cfg));
+  const items = calc.map((c) => c.item);
+  const meta = forms[0];
+  const suma = (sel: (i: ItemGuardado) => number) => items.reduce((s, i) => s + sel(i), 0);
+
+  const cantidad = suma((i) => i.cantidad);
+  const costoTotal = suma((i) => i.costoTotal);
+  const papeles = [...new Set(items.map((i) => i.papelNombre))];
+  const tamanos = [...new Set(items.map((i) => i.tamano))];
+  const primero = items[0];
+
+  // Unión de líneas (dedupe por clave) para generar las etapas de la orden.
+  const lineasUnion: LineaCosto[] = [];
+  const vistos = new Set<string>();
+  for (const it of items) for (const l of it.lineas) if (!vistos.has(l.k)) { vistos.add(l.k); lineasUnion.push(l); }
+
   return {
-    r,
+    cant: cantidad,
+    items,
     data: {
-      clienteId: form.clienteId?.trim() || null,
-      clienteNombre: (form.cliente ?? "").trim() || null,
-      titulo: (form.trabajo ?? "").trim() || "Sin título",
-      descripcion: form.descripcion?.trim() || null,
-      cantidad: r.cant,
-      ancho: Math.round(n(form.ancho)),
-      alto: Math.round(n(form.alto)),
-      tamano: entrada.tamano,
-      papelNombre: papel?.nombre ?? "—",
-      capacidad: Math.round(n(form.capacidad)) || 0,
-      entrada: entrada as unknown as Prisma.InputJsonValue,
+      clienteId: meta.clienteId?.trim() || null,
+      clienteNombre: (meta.cliente ?? "").trim() || null,
+      titulo: (meta.trabajo ?? "").trim() || "Sin título",
+      descripcion: items.length === 1 ? primero.descripcion : `${items.length} ítems`,
+      cantidad,
+      ancho: primero.ancho,
+      alto: primero.alto,
+      tamano: tamanos.length === 1 ? tamanos[0] : "Varios",
+      papelNombre: papeles.length === 1 ? papeles[0] : "Varios",
+      capacidad: primero.capacidad,
+      entrada: primero.entrada as unknown as Prisma.InputJsonValue,
       snapshot: snapshot(cfg) as unknown as Prisma.InputJsonValue,
-      lineas: r.lineas as unknown as Prisma.InputJsonValue,
-      pliegos: r.pliegos,
-      costoTotal: r.costoTotal,
-      costoUnit: r.costoUnit,
-      diferencial: r.dif,
-      margen: num(entrada.margen),
-      precioUnit: r.precioUnit,
-      ventaTotal: r.ventaTotal,
-      precioML: r.precioML,
-      tasaBCV: num(entrada.tasaBCV),
-      precioBs: r.precioBs,
+      lineas: lineasUnion as unknown as Prisma.InputJsonValue,
+      items: items as unknown as Prisma.InputJsonValue,
+      pliegos: suma((i) => i.pliegos),
+      costoTotal,
+      costoUnit: cantidad > 0 ? costoTotal / cantidad : 0,
+      diferencial: primero.diferencial,
+      margen: primero.margen,
+      precioUnit: primero.precioUnit,
+      ventaTotal: suma((i) => i.ventaTotal),
+      precioML: suma((i) => i.precioML),
+      tasaBCV: primero.tasaBCV,
+      precioBs: suma((i) => i.precioBs),
     },
   };
 }
 
-/** Crea la cotización recalculando y congelando en el servidor. */
+/** Crea la cotización (uno o varios ítems), recalculando y congelando en el servidor. */
 export async function crearCotizacion(
-  form: FormCotizacion,
+  items: FormCotizacion[],
   usuarioId: string,
 ): Promise<ResultadoGuardar> {
-  const cliente = (form.cliente ?? "").trim();
-  const trabajo = (form.trabajo ?? "").trim();
+  if (!items.length) return { ok: false, error: "Agrega al menos un ítem." };
+  const meta = items[0];
+  const cliente = (meta.cliente ?? "").trim();
+  const trabajo = (meta.trabajo ?? "").trim();
   if (!cliente && !trabajo) {
     return { ok: false, error: "Falta el cliente o el nombre del trabajo." };
   }
 
   const cfg = await cargarConfig();
-  const { r, data } = datosCotizacion(form, cfg);
-  if (r.cant <= 0) return { ok: false, error: "Indica la cantidad de piezas." };
+  const { cant, data } = datosCotizacion(items, cfg);
+  if (cant <= 0) return { ok: false, error: "Indica la cantidad de piezas." };
 
-  // Si viene de un trabajo repetido, se enlaza; si se pidió guardar la receta y
-  // no venía de uno, se crea ahora y se enlaza la cotización a ese trabajo.
-  let trabajoId = form.trabajoId?.trim() || null;
-  if (form.guardarComoTrabajo && !trabajoId) {
-    trabajoId = await crearTrabajoDesdeForm(form, data.clienteId);
+  // Guardar como trabajo repetido solo tiene sentido con un único ítem.
+  let trabajoId = meta.trabajoId?.trim() || null;
+  if (items.length === 1 && meta.guardarComoTrabajo && !trabajoId) {
+    trabajoId = await crearTrabajoDesdeForm(meta, data.clienteId);
   }
 
   const cot = await db.cotizacion.create({
@@ -112,59 +202,45 @@ export async function crearCotizacion(
 /** Actualiza una cotización, solo si sigue en BORRADOR. Vuelve a congelar. */
 export async function actualizarCotizacion(
   id: string,
-  form: FormCotizacion,
+  items: FormCotizacion[],
 ): Promise<ResultadoGuardar> {
   const existente = await db.cotizacion.findUnique({ where: { id }, select: { estado: true } });
   if (!existente) return { ok: false, error: "La cotización no existe." };
   if (existente.estado !== "BORRADOR") {
     return { ok: false, error: "Solo se pueden editar cotizaciones en borrador." };
   }
-
-  const cliente = (form.cliente ?? "").trim();
-  const trabajo = (form.trabajo ?? "").trim();
+  if (!items.length) return { ok: false, error: "Agrega al menos un ítem." };
+  const meta = items[0];
+  const cliente = (meta.cliente ?? "").trim();
+  const trabajo = (meta.trabajo ?? "").trim();
   if (!cliente && !trabajo) {
     return { ok: false, error: "Falta el cliente o el nombre del trabajo." };
   }
 
   const cfg = await cargarConfig();
-  const { r, data } = datosCotizacion(form, cfg);
-  if (r.cant <= 0) return { ok: false, error: "Indica la cantidad de piezas." };
+  const { cant, data } = datosCotizacion(items, cfg);
+  if (cant <= 0) return { ok: false, error: "Indica la cantidad de piezas." };
 
   await db.cotizacion.update({ where: { id }, data });
   return { ok: true, id };
 }
 
-/**
- * Carga una cotización guardada en un formulario, para duplicarla ("copia",
- * cotización nueva) o editarla ("editar", si es borrador). Trae la estructura y
- * las variables tal cual se guardaron (desde su `entrada`).
- */
-export async function cargarCotizacionEnForm(
-  id: string,
-  modo: "copia" | "editar",
-): Promise<Partial<FormCotizacion> | null> {
-  const c = await db.cotizacion.findUnique({
-    where: { id },
-    select: {
-      entrada: true, titulo: true, descripcion: true, ancho: true, alto: true,
-      tamano: true, capacidad: true, clienteNombre: true, clienteId: true,
-    },
-  });
-  if (!c) return null;
-
-  const e = (c.entrada as unknown as Entrada) ?? ({} as Entrada);
+/** Convierte una `Entrada` guardada en los campos de formulario de un ítem. */
+function entradaAForm(
+  e: Entrada, extra: { ancho: number; alto: number; capacidad: number; titulo: string; descripcion: string | null },
+): FormCotizacion {
   return {
-    cliente: c.clienteNombre ?? "",
-    clienteId: c.clienteId ?? "",
-    trabajo: modo === "copia" ? `${c.titulo} (copia)` : c.titulo,
-    descripcion: c.descripcion ?? "",
-    ancho: c.ancho || "",
-    alto: c.alto || "",
-    capAuto: false, // preservamos la capacidad exacta guardada
+    cliente: "", clienteId: "",
+    trabajo: extra.titulo,
+    descripcion: extra.descripcion ?? "",
+    ancho: extra.ancho || "",
+    alto: extra.alto || "",
+    capAuto: false,
+    trabajoId: "", guardarComoTrabajo: false, editarId: "",
     cantidad: e.cantidad ?? "",
-    tamano: c.tamano,
+    tamano: e.tamano ?? "1/4 Pliego",
     papelId: e.papelId ?? "",
-    capacidad: c.capacidad || "",
+    capacidad: extra.capacidad || "",
     merma: e.merma ?? "",
     margen: e.margen ?? "",
     comision: e.comision ?? "",
@@ -176,10 +252,53 @@ export async function cargarCotizacionEnForm(
     dif: e.dif ?? "",
     precioManual: e.precioManual ?? "",
     acabados: e.acabados ?? {},
-    trabajoId: "",
-    guardarComoTrabajo: false,
-    editarId: modo === "editar" ? id : "",
   };
+}
+
+/**
+ * Carga una cotización guardada como una lista de formularios-ítem, para
+ * duplicarla ("copia") o editarla ("editar", si es borrador). La primera trae la
+ * meta (cliente, editarId). Las cotizaciones viejas (sin `items`) dan un ítem.
+ */
+export async function cargarCotizacionEnForm(
+  id: string,
+  modo: "copia" | "editar",
+): Promise<FormCotizacion[] | null> {
+  const c = await db.cotizacion.findUnique({
+    where: { id },
+    select: {
+      entrada: true, items: true, titulo: true, descripcion: true, ancho: true, alto: true,
+      tamano: true, capacidad: true, clienteNombre: true, clienteId: true,
+    },
+  });
+  if (!c) return null;
+
+  const guardados = (c.items as unknown as ItemGuardado[] | null) ?? null;
+  const base: ItemGuardado[] =
+    guardados && guardados.length
+      ? guardados
+      : [{
+          titulo: c.titulo, descripcion: c.descripcion,
+          cantidad: 0, ancho: c.ancho, alto: c.alto, tamano: c.tamano,
+          papelNombre: "", capacidad: c.capacidad,
+          entrada: (c.entrada as unknown as Entrada) ?? ({} as Entrada),
+          lineas: [], pliegos: 0, costoTotal: 0, costoUnit: 0, diferencial: 0, margen: 0,
+          precioUnit: 0, ventaTotal: 0, precioML: 0, precioBs: 0, tasaBCV: 0,
+        }];
+
+  return base.map((it, i) => {
+    const titulo = i === 0 && modo === "copia" ? `${it.titulo} (copia)` : it.titulo;
+    const form = entradaAForm(it.entrada, {
+      ancho: it.ancho, alto: it.alto, capacidad: it.capacidad,
+      titulo, descripcion: it.descripcion,
+    });
+    if (i === 0) {
+      form.cliente = c.clienteNombre ?? "";
+      form.clienteId = c.clienteId ?? "";
+      form.editarId = modo === "editar" ? id : "";
+    }
+    return form;
+  });
 }
 
 /* ─────────────────────── cotizaciones de proveedor ─────────────────────── */
@@ -368,7 +487,23 @@ export type CotizacionDetalle = {
   tasaBCV: number;
   precioBs: number;
   orden: { id: string; numero: number } | null;
+  items: ItemDetalle[];
 };
+
+/** Ítem para el detalle/impresión: como el guardado pero sin la `entrada` cruda. */
+export type ItemDetalle = Omit<ItemGuardado, "entrada">;
+
+function aItemDetalle(i: ItemGuardado): ItemDetalle {
+  return {
+    titulo: i.titulo, descripcion: i.descripcion ?? null,
+    cantidad: num(i.cantidad), ancho: num(i.ancho), alto: num(i.alto), tamano: i.tamano,
+    papelNombre: i.papelNombre, capacidad: num(i.capacidad), pliegos: num(i.pliegos),
+    lineas: (i.lineas as LineaCosto[]) ?? [],
+    costoTotal: num(i.costoTotal), costoUnit: num(i.costoUnit), diferencial: num(i.diferencial),
+    margen: num(i.margen), precioUnit: num(i.precioUnit), ventaTotal: num(i.ventaTotal),
+    precioML: num(i.precioML), precioBs: num(i.precioBs), tasaBCV: num(i.tasaBCV),
+  };
+}
 
 export async function obtenerCotizacion(id: string): Promise<CotizacionDetalle | null> {
   const c = await db.cotizacion.findUnique({
@@ -380,7 +515,23 @@ export async function obtenerCotizacion(id: string): Promise<CotizacionDetalle |
   });
   if (!c) return null;
 
+  // Ítems: los guardados (multi-ítem) o uno sintetizado desde las columnas (viejas).
+  const guardados = (c.items as unknown as ItemGuardado[] | null) ?? null;
+  const items: ItemDetalle[] =
+    guardados && guardados.length
+      ? guardados.map(aItemDetalle)
+      : [{
+          titulo: c.titulo, descripcion: c.descripcion,
+          cantidad: c.cantidad, ancho: c.ancho, alto: c.alto, tamano: c.tamano,
+          papelNombre: c.papelNombre, capacidad: c.capacidad, pliegos: num(c.pliegos),
+          lineas: (c.lineas as unknown as LineaCosto[]) ?? [],
+          costoTotal: num(c.costoTotal), costoUnit: num(c.costoUnit), diferencial: num(c.diferencial),
+          margen: num(c.margen), precioUnit: num(c.precioUnit), ventaTotal: num(c.ventaTotal),
+          precioML: num(c.precioML), precioBs: num(c.precioBs), tasaBCV: num(c.tasaBCV),
+        }];
+
   return {
+    items,
     id: c.id,
     numero: c.numero,
     creadaEn: c.creadaEn,

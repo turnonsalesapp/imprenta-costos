@@ -28,21 +28,19 @@ export default async function CotizarPage({
   ]);
   const sp = await searchParams;
 
-  let cargado: Partial<FormCotizacion> | null = null;
   let modo: "nueva" | "recotizar" | "copia" | "editar" = "nueva";
+  let itemsIniciales: FormCotizacion[] = [nuevoForm(cfg)];
 
   if (sp.editar) {
-    cargado = await cargarCotizacionEnForm(sp.editar, "editar");
-    if (cargado) modo = "editar";
+    const its = await cargarCotizacionEnForm(sp.editar, "editar");
+    if (its?.length) { itemsIniciales = its.map((f) => ({ ...nuevoForm(cfg), ...f })); modo = "editar"; }
   } else if (sp.desde) {
-    cargado = await cargarCotizacionEnForm(sp.desde, "copia");
-    if (cargado) modo = "copia";
+    const its = await cargarCotizacionEnForm(sp.desde, "copia");
+    if (its?.length) { itemsIniciales = its.map((f) => ({ ...nuevoForm(cfg), ...f })); modo = "copia"; }
   } else if (sp.trabajo) {
-    cargado = await cargarTrabajoEnForm(sp.trabajo);
-    if (cargado) modo = "recotizar";
+    const t = await cargarTrabajoEnForm(sp.trabajo);
+    if (t) { itemsIniciales = [{ ...nuevoForm(cfg), ...t }]; modo = "recotizar"; }
   }
-
-  const formInicial: FormCotizacion = { ...nuevoForm(cfg), ...(cargado ?? {}) };
 
   const titulos: Record<typeof modo, string> = {
     nueva: "Nueva cotización",
@@ -67,7 +65,7 @@ export default async function CotizarPage({
       <Calculadora
         cfg={cfg}
         clientes={clientes}
-        formInicial={formInicial}
+        itemsIniciales={itemsIniciales}
         banner={banners[modo]}
         margenMin={dc.margenMin}
         interpretarHabilitado={interpretarHabilitado}

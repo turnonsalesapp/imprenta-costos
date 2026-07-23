@@ -17,33 +17,67 @@ const TINTAS = ["#0B8FA8", "#C4177C", "#C79400", "#171B19", "#5B8C5A", "#8A5FBF"
 export function Calculadora({
   cfg,
   clientes,
-  formInicial,
+  itemsIniciales,
   banner,
   margenMin,
   interpretarHabilitado = false,
 }: {
   cfg: Config;
   clientes: ClienteSimple[];
-  formInicial: FormCotizacion;
+  itemsIniciales: FormCotizacion[];
   banner?: string;
   margenMin?: number;
   interpretarHabilitado?: boolean;
 }) {
-  const [form, setForm] = useState<FormCotizacion>(() => formInicial);
+  // Una cotización tiene uno o varios ÍTEMS. Se edita el ítem activo; los demás
+  // se conservan. `setForm` opera sobre el activo, así todo el editor de abajo
+  // (que usa form/setForm) sigue funcionando sin cambios.
+  const [items, setItems] = useState<FormCotizacion[]>(() => (itemsIniciales.length ? itemsIniciales : [nuevoForm(cfg)]));
+  const [idx, setIdx] = useState(0);
   const [escalas, setEscalas] = useState("500, 1000, 3000, 5000, 10000");
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
   const [error, setError] = useState<string | null>(null);
   const [pendiente, startTransition] = useTransition();
 
+  const activo = Math.min(idx, items.length - 1);
+  const form = items[activo];
+
+  const setForm = (updater: FormCotizacion | ((f: FormCotizacion) => FormCotizacion)) =>
+    setItems((arr) => arr.map((it, i) =>
+      i === activo ? (typeof updater === "function" ? (updater as (f: FormCotizacion) => FormCotizacion)(it) : updater) : it));
+
   const up = <K extends keyof FormCotizacion>(k: K, v: FormCotizacion[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
   const setAcabado = (id: string, on: boolean, q: number | string) =>
     setForm((f) => ({ ...f, acabados: { ...f.acabados, [id]: { on, q } } }));
+
+  // El cliente es de la cotización completa: se aplica a TODOS los ítems.
+  const setCliente = (v: string) => setItems((arr) => arr.map((it) => ({ ...it, cliente: v })));
   const elegirCliente = (id: string) => {
-    if (!id) { setForm((f) => ({ ...f, clienteId: "" })); return; }
     const c = clientes.find((x) => x.id === id);
-    setForm((f) => ({ ...f, clienteId: id, cliente: c?.nombre ?? f.cliente }));
+    setItems((arr) => arr.map((it) => ({ ...it, clienteId: id, cliente: id ? (c?.nombre ?? it.cliente) : it.cliente })));
   };
+
+  // Descripción sugerida (qué incluye el ítem); se muestra y se puede editar.
+  const autoDesc = (it: FormCotizacion): string => {
+    const papel = cfg.papeles.find((p) => p.id === it.papelId);
+    const acc = cfg.acabados.filter((a) => it.acabados[a.id]?.on).map((a) => a.label);
+    return [
+      n(it.ancho) > 0 && n(it.alto) > 0 ? `${Math.round(n(it.ancho))}×${Math.round(n(it.alto))} mm` : "",
+      papel?.nombre ?? "", it.tamano, acc.join(", "),
+    ].filter(Boolean).join(" · ");
+  };
+
+  const agregarItem = () => { setItems((arr) => [...arr, { ...form, descripcion: "", editarId: "" }]); setIdx(items.length); };
+  const agregarVolumen = (cant: number) =>
+    setItems((arr) => [...arr, { ...form, cantidad: cant, descripcion: "", editarId: "" }]);
+  const quitarItem = (i: number) => {
+    if (items.length <= 1) return;
+    setItems((arr) => arr.filter((_, j) => j !== i));
+    setIdx((cur) => (cur >= i ? Math.max(0, cur - 1) : cur));
+  };
+  const setDescItem = (i: number, v: string) =>
+    setItems((arr) => arr.map((it, j) => (j === i ? { ...it, descripcion: v } : it)));
 
   // Acabados sueltos (casillas) vs. agrupados (un selector por grupo, excluyentes).
   const { sueltos, grupos } = useMemo(() => {
@@ -79,6 +113,16 @@ export function Calculadora({
   const r = useMemo(() => calcular(form, cfg), [form, cfg]);
   // Precio "sugerido" por el motor (sin el precio a mano), para comparar.
   const rBase = useMemo(() => calcular({ ...form, precioManual: "" }, cfg), [form, cfg]);
+
+  // Resumen de todos los ítems (para la lista y el total de la cotización).
+  const resumen = useMemo(
+    () => items.map((it) => {
+      const c = calcular(it, cfg);
+      return { titulo: it.trabajo || "Ítem", cant: c.cant, ventaTotal: c.ventaTotal, precioUnit: c.precioUnit };
+    }),
+    [items, cfg],
+  );
+  const totalVenta = resumen.reduce((s, x) => s + x.ventaTotal, 0);
 
   const pts = useMemo(() => {
     const qs = escalas.split(/[,;\s]+/).map((v) => Math.round(n(v)))
@@ -145,10 +189,15 @@ export function Calculadora({
 
   function guardar() {
     setError(null);
-    if (!form.cliente.trim() && !form.trabajo.trim()) { setError("Falta el cliente o el trabajo."); return; }
-    if (r.cant <= 0) { setError("Indica la cantidad de piezas."); return; }
+    const meta = items[0];
+    if (!meta.cliente.trim() && !meta.trabajo.trim()) {
+      setError("Falta el cliente o el nombre del trabajo (en el primer ítem).");
+      return;
+    }
+    const totalCant = items.reduce((s, it) => s + Math.max(0, Math.round(n(it.cantidad))), 0);
+    if (totalCant <= 0) { setError("Indica la cantidad de piezas."); return; }
     startTransition(async () => {
-      const res = await guardarCotizacionAction(form);
+      const res = await guardarCotizacionAction(items);
       if (res?.error) setError(res.error);
     });
   }
@@ -163,6 +212,23 @@ export function Calculadora({
       <div className="grid">
         {/* ─────────────────────── columna izquierda ─────────────────────── */}
         <div>
+          {/* Pestañas de ítems: cada cotización puede tener varios. */}
+          <div className="itemtabs">
+            {items.map((it, i) => (
+              <button key={i} type="button"
+                className={i === activo ? "itemtab on" : "itemtab"}
+                onClick={() => setIdx(i)}>
+                <span>{it.trabajo?.trim() || `Ítem ${i + 1}`}</span>
+                <span className="mono" style={{ color: "#767D76" }}>{fmtNum(n(it.cantidad), 0)}</span>
+                {items.length > 1 ? (
+                  <span className="x" role="button" aria-label="Quitar ítem"
+                    onClick={(e) => { e.stopPropagation(); quitarItem(i); }}>×</span>
+                ) : null}
+              </button>
+            ))}
+            <button type="button" className="itemtab add" onClick={agregarItem}>＋ Ítem</button>
+          </div>
+
           <PanelInterpretar
             habilitado={interpretarHabilitado}
             papeles={cfg.papeles}
@@ -181,13 +247,13 @@ export function Calculadora({
                   </select>
                   {form.clienteId === "" ? (
                     <input className="in" style={{ marginTop: 6 }} type="text" value={form.cliente}
-                      placeholder="Nombre del cliente" onChange={(e) => up("cliente", e.target.value)} />
+                      placeholder="Nombre del cliente" onChange={(e) => setCliente(e.target.value)} />
                   ) : null}
                 </F>
                 <T l="Trabajo" v={form.trabajo} set={(v) => up("trabajo", v)} ph="Ej. Stickers motivacionales" />
               </div>
               <div style={{ marginTop: 10 }}>
-                <T l="Descripción" v={form.descripcion} set={(v) => up("descripcion", v)} ph="Ej. Stickers 14×14, 2 hojas" />
+                <T l="Descripción" v={form.descripcion} set={(v) => up("descripcion", v)} ph={autoDesc(form) || "Qué incluye el trabajo"} />
               </div>
             </div>
           </section>
@@ -405,10 +471,19 @@ export function Calculadora({
 
                   <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
                     {pts.map((p) => (
-                      <button type="button" key={p.cant} className="btn g sm" onClick={() => up("cantidad", p.cant)}>
-                        Usar {fmtNum(p.cant, 0)}
-                      </button>
+                      <span key={p.cant} style={{ display: "inline-flex", gap: 4 }}>
+                        <button type="button" className="btn g sm" onClick={() => up("cantidad", p.cant)}>
+                          Usar {fmtNum(p.cant, 0)}
+                        </button>
+                        <button type="button" className="btn g sm" title="Agregar este volumen como ítem"
+                          onClick={() => agregarVolumen(p.cant)}>＋ ítem</button>
+                      </span>
                     ))}
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <button type="button" className="btn sm" onClick={() => pts.forEach((p) => agregarVolumen(p.cant))}>
+                      Agregar los {pts.length} volúmenes como ítems
+                    </button>
                   </div>
                 </>
               )}
@@ -605,6 +680,38 @@ export function Calculadora({
           </div>
           <div className="tear" />
 
+          {/* Ítems de la cotización: descripción editable + total. */}
+          {items.length > 1 ? (
+            <section className="card" style={{ marginTop: 12 }}>
+              <div className="ch">
+                <b>Ítems ({items.length})</b>
+                <span className="mt mono">total {usd(totalVenta)}</span>
+              </div>
+              <div className="cb">
+                {items.map((it, i) => (
+                  <div key={i} style={{ padding: "8px 0", borderBottom: i < items.length - 1 ? "1px solid var(--soft)" : "none" }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                      <button type="button" className="lnk" style={{ fontWeight: i === activo ? 700 : 400 }}
+                        onClick={() => setIdx(i)}>
+                        {it.trabajo?.trim() || `Ítem ${i + 1}`}
+                      </button>
+                      <span className="mono" style={{ marginLeft: "auto", fontSize: 12 }}>
+                        {fmtNum(resumen[i].cant, 0)} u · {usd(resumen[i].ventaTotal)}
+                      </span>
+                      <button type="button" className="lnk" style={{ color: "#C0563B" }} onClick={() => quitarItem(i)}>
+                        quitar
+                      </button>
+                    </div>
+                    <textarea className="in" style={{ marginTop: 6, minHeight: 42, resize: "vertical", fontFamily: "inherit", fontSize: 12 }}
+                      value={it.descripcion || autoDesc(it)}
+                      placeholder="Qué incluye este ítem"
+                      onChange={(e) => setDescItem(i, e.target.value)} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {margenMin != null && r.cant > 0 && n(form.margen) < margenMin ? (
             <div className="warn" style={{ marginTop: 10 }}>
               El margen ({fmtNum(n(form.margen), 0)}%) está por debajo del mínimo del taller
@@ -612,7 +719,7 @@ export function Calculadora({
             </div>
           ) : null}
 
-          {!form.trabajoId ? (
+          {items.length === 1 && !form.trabajoId ? (
             <div className="hint" style={{ marginTop: 12, cursor: "pointer" }}
               onClick={() => up("guardarComoTrabajo", !form.guardarComoTrabajo)}>
               <button type="button" className={form.guardarComoTrabajo ? "chk on" : "chk"}
@@ -621,11 +728,11 @@ export function Calculadora({
               </button>
               <span>Guardar también como trabajo repetido</span>
             </div>
-          ) : (
+          ) : items.length === 1 && form.trabajoId ? (
             <div className="hint" style={{ marginTop: 12 }}>
               Esta cotización queda enlazada al trabajo repetido.
             </div>
-          )}
+          ) : null}
 
           {error ? (
             <div className="warn" style={{ marginTop: 10 }}>{error}</div>
@@ -633,9 +740,11 @@ export function Calculadora({
 
           <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
             <Save size={14} />
-            {pendiente ? "Guardando…" : form.editarId ? "Guardar cambios" : "Guardar cotización"}
+            {pendiente
+              ? "Guardando…"
+              : (items[0].editarId ? "Guardar cambios" : "Guardar cotización") + (items.length > 1 ? ` · ${items.length} ítems` : "")}
           </button>
-          <button type="button" className="btn g w" onClick={() => { setForm(nuevoForm(cfg)); setError(null); }}>
+          <button type="button" className="btn g w" onClick={() => { setItems([nuevoForm(cfg)]); setIdx(0); setError(null); }}>
             <RotateCcw size={13} />Limpiar y empezar otra
           </button>
         </div>

@@ -25,6 +25,7 @@ export default async function DetalleCotizacion({
 
   const puedeBorrar = esAdmin(usuario.rol) && c.estado === "BORRADOR" && !c.orden;
   const rutaCotizar = c.tipo === "PROVEEDOR" ? "/cotizar-proveedor" : "/cotizar";
+  const multi = c.items.length > 1;
 
   return (
     <>
@@ -70,44 +71,63 @@ export default async function DetalleCotizacion({
       </header>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_320px]">
-        {/* Desglose congelado */}
-        <section className="rounded-sm border border-regla bg-hoja">
-          <div className="border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
-            Desglose de costos
-          </div>
-          <div className="divide-y divide-suave">
-            {c.lineas.map((l, i) => (
-              <div key={l.k} className="flex items-baseline gap-3 px-4 py-2.5 text-sm">
-                <span className="h-2 w-2 shrink-0 rounded-[1px]" style={{ background: TINTAS[i % TINTAS.length] }} />
-                <span className="min-w-0 flex-1">
-                  {l.label}
-                  <span className="block font-mono text-[11px] text-kraft">{l.detalle}</span>
-                </span>
-                <span className="ml-auto font-mono">{usd(l.monto)}</span>
+        {/* Desglose congelado, por ítem */}
+        <div className="space-y-4">
+          {c.items.map((it, ii) => (
+            <section key={ii} className="rounded-sm border border-regla bg-hoja">
+              <div className="flex items-baseline gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+                <span>{multi ? it.titulo : "Desglose de costos"}</span>
+                {multi && <span className="ml-auto font-mono normal-case">{fmtNum(it.cantidad, 0)} u</span>}
               </div>
-            ))}
-          </div>
-          <div className="flex items-baseline border-t border-regla px-4 py-2.5 text-sm font-bold">
-            <span>Costo total</span>
-            <span className="ml-auto font-mono">{usd(c.costoTotal)}</span>
-          </div>
-          <div className="flex items-baseline px-4 pb-3 text-sm text-kraft">
-            <span>Costo unitario</span>
-            <span className="ml-auto font-mono">{usd(c.costoUnit, 4)}</span>
-          </div>
-        </section>
+              {multi && it.descripcion && (
+                <p className="border-b border-suave px-4 py-2 text-[12px] text-kraft">{it.descripcion}</p>
+              )}
+              <div className="divide-y divide-suave">
+                {it.lineas.map((l, i) => (
+                  <div key={l.k} className="flex items-baseline gap-3 px-4 py-2.5 text-sm">
+                    <span className="h-2 w-2 shrink-0 rounded-[1px]" style={{ background: TINTAS[i % TINTAS.length] }} />
+                    <span className="min-w-0 flex-1">
+                      {l.label}
+                      <span className="block font-mono text-[11px] text-kraft">{l.detalle}</span>
+                    </span>
+                    <span className="ml-auto font-mono">{usd(l.monto)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-baseline border-t border-regla px-4 py-2.5 text-sm font-bold">
+                <span>Costo total</span>
+                <span className="ml-auto font-mono">{usd(it.costoTotal)}</span>
+              </div>
+              <div className="flex items-baseline px-4 pb-3 text-sm text-kraft">
+                <span>{multi ? "Venta del ítem" : "Costo unitario"}</span>
+                <span className="ml-auto font-mono">{multi ? usd(it.ventaTotal) : usd(it.costoUnit, 4)}</span>
+              </div>
+            </section>
+          ))}
+        </div>
 
         {/* Precio y condiciones */}
         <div className="space-y-4">
           <section className="rounded-sm bg-tinta px-4 py-4 text-hoja">
             <div className="text-[10px] font-bold uppercase tracking-widest text-[#9AA39C]">
-              Precio unitario de venta
+              {multi ? "Total de la cotización" : "Precio unitario de venta"}
             </div>
-            <div className="mt-1 font-mono text-3xl font-bold tracking-tight">{usd(c.precioUnit, 4)}</div>
+            <div className="mt-1 font-mono text-3xl font-bold tracking-tight">
+              {multi ? usd(c.ventaTotal) : usd(c.items[0].precioUnit, 4)}
+            </div>
             <div className="mt-3 flex gap-4 border-t border-[#333937] pt-3 font-mono text-[11px] text-[#B9C1BA]">
-              <span>Venta total <b className="text-hoja">{usd(c.ventaTotal)}</b></span>
-              <span>Bs <b className="text-hoja">{fmtNum(c.precioBs, 2)}</b></span>
-              <span>ML <b className="text-hoja">{usd(c.precioML, 4)}</b></span>
+              {multi ? (
+                <>
+                  <span>{c.items.length} ítems</span>
+                  <span>Bs <b className="text-hoja">{fmtNum(c.precioBs, 2)}</b></span>
+                </>
+              ) : (
+                <>
+                  <span>Venta total <b className="text-hoja">{usd(c.ventaTotal)}</b></span>
+                  <span>Bs <b className="text-hoja">{fmtNum(c.precioBs, 2)}</b></span>
+                  <span>ML <b className="text-hoja">{usd(c.precioML, 4)}</b></span>
+                </>
+              )}
             </div>
           </section>
 
@@ -115,7 +135,7 @@ export default async function DetalleCotizacion({
             <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
               Condiciones del cálculo
             </div>
-            {c.descripcion && <p className="mb-2">{c.descripcion}</p>}
+            {!multi && c.descripcion && <p className="mb-2">{c.descripcion}</p>}
             <dl className="space-y-1 font-mono text-[12px] text-kraft">
               {c.tipo === "PROVEEDOR" ? (
                 <>
@@ -128,14 +148,21 @@ export default async function DetalleCotizacion({
                   <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
                   {c.proveedorNotas && <Cond k="Notas" v={c.proveedorNotas} />}
                 </>
+              ) : multi ? (
+                <>
+                  {c.items.map((it, i) => (
+                    <Cond key={i} k={it.titulo} v={`${fmtNum(it.cantidad, 0)} u · ${usd(it.precioUnit, 4)}`} />
+                  ))}
+                  <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
+                </>
               ) : (
                 <>
-                  <Cond k="Medida" v={`${fmtNum(c.ancho, 0)}×${fmtNum(c.alto, 0)} mm`} />
-                  <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} pzs`} />
-                  <Cond k="Papel" v={c.papelNombre} />
-                  <Cond k="Tamaño de corte" v={c.tamano} />
-                  <Cond k="Piezas por corte" v={fmtNum(c.capacidad, 0)} />
-                  <Cond k="Cortes (con merma)" v={fmtNum(c.pliegos, 2)} />
+                  <Cond k="Medida" v={`${fmtNum(c.items[0].ancho, 0)}×${fmtNum(c.items[0].alto, 0)} mm`} />
+                  <Cond k="Cantidad" v={`${fmtNum(c.items[0].cantidad, 0)} pzs`} />
+                  <Cond k="Papel" v={c.items[0].papelNombre} />
+                  <Cond k="Tamaño de corte" v={c.items[0].tamano} />
+                  <Cond k="Piezas por corte" v={fmtNum(c.items[0].capacidad, 0)} />
+                  <Cond k="Cortes (con merma)" v={fmtNum(c.items[0].pliegos, 2)} />
                   <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
                   <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
                   <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
