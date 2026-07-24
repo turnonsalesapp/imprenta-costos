@@ -723,14 +723,14 @@ export function Calculadora({
             <div className="hint" style={{ marginTop: 12, cursor: "pointer" }}
               onClick={() => up("guardarComoTrabajo", !form.guardarComoTrabajo)}>
               <button type="button" className={form.guardarComoTrabajo ? "chk on" : "chk"}
-                aria-label="Guardar como trabajo repetido">
+                aria-label="Guardar como plantilla">
                 {form.guardarComoTrabajo ? <Check size={10} strokeWidth={4} /> : null}
               </button>
-              <span>Guardar también como trabajo repetido</span>
+              <span>Guardar también como plantilla</span>
             </div>
           ) : items.length === 1 && form.trabajoId ? (
             <div className="hint" style={{ marginTop: 12 }}>
-              Esta cotización queda enlazada al trabajo repetido.
+              Esta cotización queda enlazada a la plantilla.
             </div>
           ) : null}
 

@@ -52,9 +52,9 @@ export default async function OrdenPage({
         <div className="p-5">
           <div className="flex items-baseline justify-between gap-4 border-b border-regla pb-3">
             <div>
-              <h1 className="text-lg font-bold tracking-tight">Orden de producción</h1>
+              <h1 className="text-lg font-bold tracking-tight">Trabajo de producción</h1>
               <p className="text-xs uppercase tracking-widest text-kraft">
-                N° {o.numero} · Cotización {o.cotizacionNumero} · {o.creadaEn.toLocaleDateString("es-VE")}
+                N° {o.numero} · Orden de Venta {o.cotizacionNumero} · {o.creadaEn.toLocaleDateString("es-VE")}
               </p>
             </div>
             <div className="text-right">

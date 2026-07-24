@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRol } from "@/lib/auth";
-import { obtenerCotizacion, ESTADOS, ETIQUETA_ESTADO } from "@/lib/cotizaciones";
+import { obtenerCotizacion, ESTADOS, ETIQUETA_ESTADO, esOrdenVenta } from "@/lib/cotizaciones";
 import { cambiarEstadoAction, eliminarCotizacionAction } from "@/app/actions/cotizaciones";
 import { generarOrdenAction } from "@/app/actions/ordenes";
 import { esAdmin } from "@/lib/roles";
@@ -26,6 +26,7 @@ export default async function DetalleCotizacion({
   const puedeBorrar = esAdmin(usuario.rol) && c.estado === "BORRADOR" && !c.orden;
   const rutaCotizar = c.tipo === "PROVEEDOR" ? "/cotizar-proveedor" : "/cotizar";
   const multi = c.items.length > 1;
+  const ov = esOrdenVenta(c.estado);
 
   return (
     <>
@@ -59,6 +60,16 @@ export default async function DetalleCotizacion({
       </div>
 
       <header className="mt-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">
+            {ov ? "Orden de Venta" : "Cotización"}
+          </span>
+          {ov && (
+            <span className="rounded-sm bg-[#EDF9F1] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-exito">
+              Aprobada
+            </span>
+          )}
+        </div>
         <h1 className="text-lg font-bold tracking-tight">
           {c.titulo}{" "}
           <span className="font-mono text-sm font-normal text-kraft">N° {c.numero}</span>
@@ -191,39 +202,44 @@ export default async function DetalleCotizacion({
             </form>
           </section>
 
-          {/* Orden de producción */}
+          {/* Trabajo de producción */}
           <section className="rounded-sm border border-regla bg-hoja p-4">
             <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
-              Orden de producción
+              Trabajo de producción
             </div>
             {c.tipo === "PROVEEDOR" ? (
               <p className="text-[11px] text-kraft">
-                Trabajo tercerizado: la produce el proveedor, no genera orden de taller.
+                Trabajo tercerizado: lo produce el proveedor, no genera trabajo de taller.
               </p>
             ) : c.orden ? (
               <Link
                 href={`/taller/${c.orden.id}`}
                 className="inline-block rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta"
               >
-                Ver orden N° {c.orden.numero} →
+                Ver trabajo N° {c.orden.numero} →
               </Link>
             ) : c.estado === "APROBADA" ? (
-              <form action={generarOrdenAction}>
-                <input type="hidden" name="cotizacionId" value={c.id} />
-                <button type="submit" className="w-full rounded-sm bg-cian px-3 py-2 text-sm font-bold text-hoja hover:opacity-90">
-                  Generar orden de producción
-                </button>
-              </form>
+              <>
+                <p className="mb-2 text-[11px] text-kraft">
+                  Aprobada: es una <b>Orden de Venta</b>. Genera el trabajo de producción para el taller.
+                </p>
+                <form action={generarOrdenAction}>
+                  <input type="hidden" name="cotizacionId" value={c.id} />
+                  <button type="submit" className="w-full rounded-sm bg-cian px-3 py-2 text-sm font-bold text-hoja hover:opacity-90">
+                    Generar trabajo de producción
+                  </button>
+                </form>
+              </>
             ) : (
               <p className="text-[11px] text-kraft">
-                Aprueba la cotización (arriba) para poder generar su orden de producción.
+                Aprueba la cotización (arriba) para convertirla en <b>Orden de Venta</b> y generar su trabajo de producción.
               </p>
             )}
           </section>
 
           <p className="text-[11px] leading-relaxed text-kraft">
-            Esta cotización es inmutable: se guardó con los precios y tasas del día
-            y no se recalcula. Aunque cambien las variables, seguirá mostrando lo
+            {ov ? "Esta Orden de Venta" : "Esta cotización"} es inmutable: se guardó con los precios y
+            tasas del día y no se recalcula. Aunque cambien las variables, seguirá mostrando lo
             que se le prometió al cliente.
           </p>
         </div>

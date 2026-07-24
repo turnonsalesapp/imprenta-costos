@@ -44,7 +44,7 @@ export default async function CotizarPage({
 
   const titulos: Record<typeof modo, string> = {
     nueva: "Nueva cotización",
-    recotizar: "Recotizar trabajo",
+    recotizar: "Recotizar desde plantilla",
     copia: "Nueva cotización (copiada)",
     editar: "Editar borrador",
   };

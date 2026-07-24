@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRol } from "@/lib/auth";
-import { obtenerCotizacion } from "@/lib/cotizaciones";
+import { obtenerCotizacion, esOrdenVenta } from "@/lib/cotizaciones";
 import { obtenerMembrete, obtenerConfig } from "@/lib/variables";
 import { obtenerClienteContacto } from "@/lib/clientes";
 import { fmtNum, usd } from "@/lib/calculo";
@@ -28,6 +28,8 @@ export default async function ImprimirCotizacion({
 
   const cliente = c.clienteId ? await obtenerClienteContacto(c.clienteId) : null;
   const empresa = m.empresaNombre ?? "Imprenta";
+  const ov = esOrdenVenta(c.estado);
+  const docTipo = ov ? "Orden de Venta" : "Cotización";
 
   const subtotal = c.ventaTotal;
   const ivaMonto = subtotal * (dc.iva / 100);
@@ -65,7 +67,7 @@ export default async function ImprimirCotizacion({
               </div>
             </div>
             <div className="shrink-0 text-right">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">Cotización</div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">{docTipo}</div>
               <div className="font-mono text-xl font-bold">N° {c.numero}</div>
               <div className="font-mono text-[12px] text-kraft">{c.creadaEn.toLocaleDateString("es-VE")}</div>
             </div>
@@ -145,7 +147,9 @@ export default async function ImprimirCotizacion({
             <p><b>Forma de pago:</b> Bs a la tasa BCV del día del pago.</p>
             <p className="mt-1">
               Precios en dólares; el equivalente en bolívares se calcula a la tasa BCV.
-              Cotización válida por 15 días, sujeta a disponibilidad de material.
+              {ov
+                ? " Orden de Venta confirmada, sujeta a disponibilidad de material."
+                : " Cotización válida por 15 días, sujeta a disponibilidad de material."}
             </p>
             <p className="mt-2">Gracias por su preferencia. Esperamos seguir haciendo negocios con usted.</p>
           </div>

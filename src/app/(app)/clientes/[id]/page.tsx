@@ -68,21 +68,21 @@ export default async function FichaClientePage({
         />
       </section>
 
-      {/* Trabajos repetidos */}
+      {/* Plantillas (trabajos repetibles) */}
       <section className="mt-8">
         <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
-          Trabajos repetidos
+          Plantillas
         </h2>
         {c.trabajos.length === 0 ? (
           <p className="rounded-sm border border-regla bg-hoja px-4 py-6 text-center text-sm text-kraft">
-            Sin trabajos guardados. Al cotizar, marca “guardar también como trabajo repetido”.
+            Sin plantillas guardadas. Al cotizar, marca “guardar también como plantilla”.
           </p>
         ) : (
           <div className="overflow-x-auto rounded-sm border border-regla bg-hoja">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-regla bg-suave text-left text-[10px] uppercase tracking-widest text-kraft">
-                  <th className="px-4 py-2 font-bold">Trabajo</th>
+                  <th className="px-4 py-2 font-bold">Plantilla</th>
                   <th className="px-4 py-2 font-bold">Receta</th>
                   <th className="px-4 py-2" />
                 </tr>

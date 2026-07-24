@@ -37,6 +37,21 @@ export const ETIQUETA_ESTADO: Record<EstadoCotizacion, string> = {
   VENCIDA: "Vencida",
 };
 
+/**
+ * Una cotización APROBADA es, de hecho, una ORDEN DE VENTA: el cliente aceptó y
+ * el trabajo queda comprometido. Es la misma cotización (mismo número), solo que
+ * a partir de aquí se presenta como Orden de Venta y de ella se genera el
+ * trabajo de producción para el taller. No es una tabla aparte.
+ */
+export function esOrdenVenta(estado: EstadoCotizacion): boolean {
+  return estado === "APROBADA";
+}
+
+/** Cómo se llama el documento según su estado (Cotización u Orden de Venta). */
+export function etiquetaDocumento(estado: EstadoCotizacion): string {
+  return esOrdenVenta(estado) ? "Orden de Venta" : "Cotización";
+}
+
 export type ResultadoGuardar =
   | { ok: true; id: string }
   | { ok: false; error: string };

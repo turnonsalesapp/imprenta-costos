@@ -25,15 +25,15 @@ export default async function TallerPage() {
       <header>
         <h1 className="text-lg font-bold tracking-tight">Taller</h1>
         <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">
-          {ordenes.length} {ordenes.length === 1 ? "orden activa" : "órdenes activas"}
+          {ordenes.length} {ordenes.length === 1 ? "trabajo activo" : "trabajos activos"}
         </p>
       </header>
 
       {ordenes.length === 0 ? (
         <div className="mt-6 rounded-sm border border-regla bg-hoja px-4 py-12 text-center">
-          <b className="block text-sm">No hay órdenes en producción</b>
+          <b className="block text-sm">No hay trabajos en producción</b>
           <p className="mt-1 text-sm text-kraft">
-            Las órdenes aparecen aquí al generarse desde una cotización aprobada.
+            Los trabajos aparecen aquí al generarse desde una Orden de Venta (cotización aprobada).
           </p>
         </div>
       ) : (
