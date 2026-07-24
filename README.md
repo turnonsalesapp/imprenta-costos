@@ -5,8 +5,11 @@ del taller, guarda el histórico de cotizaciones y lleva las órdenes de producc
 
 El motor de cálculo (`src/lib/calculo.ts`) está verificado contra la hoja de
 Excel original: reproduce exactamente el trabajo de Jugarte Venezuela
-(3.000 stickers → $724,47 de costo, $0,5372 unitario, $1.611,58 de venta).
+(3.000 stickers → $679,47 de costo, $0,2265 unitario, $1.511,47 de venta).
 Las pruebas en `src/lib/calculo.test.ts` protegen ese resultado.
+
+Una cotización puede tener varios **ítems**; al **aprobarla** se convierte en
+**Orden de Venta** y de ahí se genera el **Trabajo de producción** para el taller.
 
 ## Arrancar
 
@@ -32,7 +35,7 @@ La base de datos es **PostgreSQL en Railway**.
 >
 > Usar la interna desde tu computadora da `Can't reach database server`.
 
-`npm test` corre las 25 pruebas. Córrelas siempre antes de subir cambios.
+`npm test` corre las 42 pruebas. Córrelas siempre antes de subir cambios.
 
 ## Publicarlo
 

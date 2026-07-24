@@ -215,18 +215,19 @@ export function Calculadora({
           {/* Pestañas de ítems: cada cotización puede tener varios. */}
           <div className="itemtabs">
             {items.map((it, i) => (
-              <button key={i} type="button"
-                className={i === activo ? "itemtab on" : "itemtab"}
-                onClick={() => setIdx(i)}>
-                <span>{it.trabajo?.trim() || `Ítem ${i + 1}`}</span>
-                <span className="mono" style={{ color: "#767D76" }}>{fmtNum(n(it.cantidad), 0)}</span>
+              <span key={i} className={i === activo ? "itemtab on" : "itemtab"}>
+                <button type="button" className="itemtab-b" onClick={() => setIdx(i)}
+                  aria-current={i === activo ? "true" : undefined}>
+                  {it.trabajo?.trim() || `Ítem ${i + 1}`}
+                  <span className="mono" style={{ color: "#767D76", marginLeft: 6 }}>{fmtNum(n(it.cantidad), 0)}</span>
+                </button>
                 {items.length > 1 ? (
-                  <span className="x" role="button" aria-label="Quitar ítem"
-                    onClick={(e) => { e.stopPropagation(); quitarItem(i); }}>×</span>
+                  <button type="button" className="x" aria-label={`Quitar ítem ${i + 1}`}
+                    onClick={() => quitarItem(i)}>×</button>
                 ) : null}
-              </button>
+              </span>
             ))}
-            <button type="button" className="itemtab add" onClick={agregarItem}>＋ Ítem</button>
+            <button type="button" className="itemtab-add" onClick={agregarItem}>＋ Ítem</button>
           </div>
 
           <PanelInterpretar

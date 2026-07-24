@@ -132,6 +132,11 @@ export default async function CotizacionesPage({
                         Proveedor
                       </span>
                     )}
+                    {c.nItems > 1 && (
+                      <span className="ml-2 rounded-sm bg-[#E6F4F8] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cian">
+                        {c.nItems} ítems
+                      </span>
+                    )}
                     <div className="text-[11px] text-kraft">
                       {c.clienteNombre ? c.clienteNombre + " · " : ""}
                       {c.tipo === "PROVEEDOR" ? c.papelNombre : `${c.papelNombre} · ${c.tamano}`}

@@ -85,8 +85,11 @@
 
 /* Pestañas de ítems (una cotización puede tener varios) */
 .pr .itemtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
-.pr .itemtab { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--rule); background: var(--sheet); border-radius: 2px; padding: 5px 9px; font-size: 12px; color: var(--ink); cursor: pointer; }
-.pr .itemtab.on { border-color: var(--ink); background: #fff; font-weight: 700; box-shadow: inset 0 -2px 0 var(--mag); }
-.pr .itemtab.add { border-style: dashed; color: var(--kraft); }
-.pr .itemtab .x { color: #C0563B; font-weight: 700; padding: 0 2px; }
+.pr .itemtab { display: inline-flex; align-items: stretch; border: 1px solid var(--rule); background: var(--sheet); border-radius: 2px; overflow: hidden; }
+.pr .itemtab.on { border-color: var(--ink); box-shadow: inset 0 -2px 0 var(--mag); }
+.pr .itemtab-b { border: none; background: transparent; padding: 5px 9px; font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; }
+.pr .itemtab.on .itemtab-b { background: #fff; font-weight: 700; }
+.pr .itemtab .x { border: none; background: transparent; color: #C0563B; font-weight: 700; font-size: 13px; padding: 0 7px 0 3px; cursor: pointer; }
 .pr .itemtab .x:hover { color: #8A1C1C; }
+.pr .itemtab-add { border: 1px dashed var(--rule); background: var(--sheet); border-radius: 2px; padding: 5px 9px; font: inherit; font-size: 12px; color: var(--kraft); cursor: pointer; }
+.pr .itemtab-add:hover { border-color: var(--ink); color: var(--ink); }

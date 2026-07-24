@@ -447,6 +447,7 @@ export type CotizacionFila = {
   precioUnit: number;
   ventaTotal: number;
   costoTotal: number;
+  nItems: number;
 };
 
 export async function listarCotizaciones(f: FiltroLista): Promise<CotizacionFila[]> {
@@ -456,17 +457,21 @@ export async function listarCotizaciones(f: FiltroLista): Promise<CotizacionFila
     select: {
       id: true, numero: true, creadaEn: true, estado: true, tipo: true, clienteNombre: true,
       titulo: true, papelNombre: true, tamano: true, cantidad: true,
-      costoUnit: true, precioUnit: true, ventaTotal: true, costoTotal: true,
+      costoUnit: true, precioUnit: true, ventaTotal: true, costoTotal: true, items: true,
     },
   });
 
-  return filas.map((c) => ({
-    ...c,
-    costoUnit: num(c.costoUnit),
-    precioUnit: num(c.precioUnit),
-    ventaTotal: num(c.ventaTotal),
-    costoTotal: num(c.costoTotal),
-  }));
+  return filas.map((c) => {
+    const { items, ...resto } = c;
+    return {
+      ...resto,
+      costoUnit: num(c.costoUnit),
+      precioUnit: num(c.precioUnit),
+      ventaTotal: num(c.ventaTotal),
+      costoTotal: num(c.costoTotal),
+      nItems: Array.isArray(items) ? items.length : 1,
+    };
+  });
 }
 
 /** Detalle completo de una cotización guardada, leído tal cual se congeló. */
@@ -523,7 +528,13 @@ function aItemDetalle(i: ItemGuardado): ItemDetalle {
 export async function obtenerCotizacion(id: string): Promise<CotizacionDetalle | null> {
   const c = await db.cotizacion.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true, numero: true, creadaEn: true, estado: true, tipo: true,
+      clienteId: true, clienteNombre: true, proveedorNombre: true, proveedorRef: true,
+      proveedorNotas: true, titulo: true, descripcion: true, cantidad: true, ancho: true,
+      alto: true, tamano: true, papelNombre: true, capacidad: true, lineas: true, items: true,
+      pliegos: true, costoTotal: true, costoUnit: true, diferencial: true, margen: true,
+      precioUnit: true, ventaTotal: true, precioML: true, tasaBCV: true, precioBs: true,
       usuario: { select: { nombre: true } },
       orden: { select: { id: true, numero: true } },
     },
