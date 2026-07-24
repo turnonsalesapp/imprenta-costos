@@ -2,15 +2,41 @@ import Link from "next/link";
 import type { Sesion } from "@/lib/auth";
 import { ETIQUETA_ROL, puedeAdministrar, puedeVerPrecios } from "@/lib/roles";
 import { logoutAction } from "@/app/actions/auth";
+import { MenuMovil, type Enlace } from "./MenuMovil";
 
 /**
  * Barra de navegación. Los enlaces se arman según el rol, pero eso es solo
  * comodidad visual: el control real está en el servidor (cada página exige su
  * rol). Nunca dependemos de esconder un enlace para proteger nada.
+ *
+ * En escritorio los enlaces van en fila; en móvil se colapsan en un menú
+ * (MenuMovil) para que no se desborden.
  */
 export function Nav({ usuario }: { usuario: Sesion }) {
+  const enlaces: Enlace[] = [
+    { href: "/", label: "Inicio" },
+    { href: "/taller", label: "Taller" },
+  ];
+  if (puedeVerPrecios(usuario.rol)) {
+    enlaces.push(
+      { href: "/cotizar", label: "Cotizar" },
+      { href: "/cotizar-proveedor", label: "Cotizar prov." },
+      { href: "/cotizaciones", label: "Cotizaciones" },
+      { href: "/clientes", label: "Clientes" },
+    );
+  }
+  if (puedeAdministrar(usuario.rol)) {
+    enlaces.push(
+      { href: "/variables", label: "Variables" },
+      { href: "/inventario", label: "Inventario" },
+      { href: "/consumo", label: "Consumo" },
+      { href: "/usuarios", label: "Usuarios" },
+      { href: "/auditoria", label: "Auditoría" },
+    );
+  }
+
   return (
-    <header className="no-print border-b border-regla bg-hoja">
+    <header className="no-print relative border-b border-regla bg-hoja">
       <div className="mx-auto flex max-w-4xl items-center gap-4 px-6 py-3">
         <Link href="/" className="flex items-center gap-2">
           <span className="flex h-4 w-4 overflow-hidden rounded-[2px]">
@@ -22,48 +48,13 @@ export function Nav({ usuario }: { usuario: Sesion }) {
           <span className="text-sm font-bold tracking-tight">Imprenta</span>
         </Link>
 
-        <nav className="flex items-center gap-3 text-sm">
-          <Link href="/" className="text-kraft hover:text-tinta">
-            Inicio
-          </Link>
-          <Link href="/taller" className="text-kraft hover:text-tinta">
-            Taller
-          </Link>
-          {puedeVerPrecios(usuario.rol) && (
-            <>
-              <Link href="/cotizar" className="text-kraft hover:text-tinta">
-                Cotizar
-              </Link>
-              <Link href="/cotizar-proveedor" className="text-kraft hover:text-tinta">
-                Cotizar prov.
-              </Link>
-              <Link href="/cotizaciones" className="text-kraft hover:text-tinta">
-                Cotizaciones
-              </Link>
-              <Link href="/clientes" className="text-kraft hover:text-tinta">
-                Clientes
-              </Link>
-            </>
-          )}
-          {puedeAdministrar(usuario.rol) && (
-            <>
-              <Link href="/variables" className="text-kraft hover:text-tinta">
-                Variables
-              </Link>
-              <Link href="/inventario" className="text-kraft hover:text-tinta">
-                Inventario
-              </Link>
-              <Link href="/consumo" className="text-kraft hover:text-tinta">
-                Consumo
-              </Link>
-              <Link href="/usuarios" className="text-kraft hover:text-tinta">
-                Usuarios
-              </Link>
-              <Link href="/auditoria" className="text-kraft hover:text-tinta">
-                Auditoría
-              </Link>
-            </>
-          )}
+        {/* Escritorio: enlaces en fila */}
+        <nav className="hidden items-center gap-3 text-sm md:flex">
+          {enlaces.map((e) => (
+            <Link key={e.href} href={e.href} className="text-kraft hover:text-tinta">
+              {e.label}
+            </Link>
+          ))}
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
@@ -81,6 +72,8 @@ export function Nav({ usuario }: { usuario: Sesion }) {
               Salir
             </button>
           </form>
+          {/* Móvil: menú colapsable */}
+          <MenuMovil enlaces={enlaces} />
         </div>
       </div>
     </header>
