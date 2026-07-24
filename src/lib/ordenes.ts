@@ -36,11 +36,60 @@ export type ResultadoOrden =
   | { ok: true; id: string; numero: number }
   | { ok: false; error: string };
 
+/** Ítem de producción para el taller: SOLO datos de fabricación, sin dinero. */
+export type ItemProd = {
+  titulo: string;
+  descripcion: string | null;
+  cantidad: number;
+  ancho: number;
+  alto: number;
+  tamano: string;
+  papelNombre: string;
+  capacidad: number;
+  pliegos: number;
+  acabados: string[];
+};
+
+/** Ítem congelado de la cotización (con dinero) del que se parte. */
+type ItemFuente = {
+  titulo?: string;
+  descripcion?: string | null;
+  cantidad?: number;
+  ancho?: number;
+  alto?: number;
+  tamano?: string;
+  papelNombre?: string;
+  capacidad?: number;
+  pliegos?: number;
+  lineas?: { k: string; label: string }[];
+};
+
+/**
+ * Proyecta los ítems de la cotización a su versión de PRODUCCIÓN: se queda solo
+ * con los datos de fabricación y descarta cualquier campo de dinero. Puro y
+ * testeable. Es lo único que se guarda en `Orden.items` y llega al taller.
+ */
+export function proyeccionProd(items: ItemFuente[] | null | undefined): ItemProd[] {
+  if (!items) return [];
+  return items.map((it) => ({
+    titulo: it.titulo ?? "Ítem",
+    descripcion: it.descripcion ?? null,
+    cantidad: Number(it.cantidad ?? 0),
+    ancho: Number(it.ancho ?? 0),
+    alto: Number(it.alto ?? 0),
+    tamano: it.tamano ?? "",
+    papelNombre: it.papelNombre ?? "",
+    capacidad: Number(it.capacidad ?? 0),
+    pliegos: Number(it.pliegos ?? 0),
+    acabados: (it.lineas ?? []).filter((l) => l.k !== "papel").map((l) => l.label),
+  }));
+}
+
 /** Genera la orden desde una cotización APROBADA. Las etapas salen de sus acabados. */
 export async function generarOrden(cotizacionId: string): Promise<ResultadoOrden> {
   const cot = await db.cotizacion.findUnique({
     where: { id: cotizacionId },
-    select: { id: true, estado: true, lineas: true, orden: { select: { id: true } } },
+    select: { id: true, estado: true, lineas: true, items: true, orden: { select: { id: true } } },
   });
   if (!cot) return { ok: false, error: "La cotización no existe." };
   if (cot.orden) return { ok: false, error: "Esta cotización ya tiene una orden." };
@@ -57,8 +106,15 @@ export async function generarOrden(cotizacionId: string): Promise<ResultadoOrden
   const etapas = (src.length ? src : [{ clave: "produccion", nombre: "Producción", orden: 0 }])
     .map((e, i) => ({ clave: e.clave, nombre: e.nombre, orden: i }));
 
+  // Proyección SIN precios de los ítems, para la hoja del taller.
+  const itemsProd = proyeccionProd(cot.items as unknown as ItemFuente[] | null);
+
   const orden = await db.orden.create({
-    data: { cotizacionId: cot.id, etapas: { create: etapas } },
+    data: {
+      cotizacionId: cot.id,
+      items: itemsProd as unknown as Prisma.InputJsonValue,
+      etapas: { create: etapas },
+    },
     select: { id: true, numero: true },
   });
   return { ok: true, id: orden.id, numero: orden.numero };
@@ -75,6 +131,7 @@ export const SELECT_PROD = {
   prioridad: true,
   instrucciones: true,
   creadaEn: true,
+  items: true, // proyección SIN precios (columna propia de Orden)
   cotizacion: {
     select: {
       numero: true, clienteNombre: true, titulo: true, descripcion: true, cantidad: true,
@@ -115,6 +172,7 @@ export type OrdenProd = {
   alto: number;
   capacidad: number;
   pliegos: number;
+  items: ItemProd[];
   etapas: Etapa[];
 };
 
@@ -140,6 +198,7 @@ function aVista(o: FilaProd): OrdenProd {
     alto: o.cotizacion.alto,
     capacidad: o.cotizacion.capacidad,
     pliegos: Number(o.cotizacion.pliegos),
+    items: (o.items as unknown as ItemProd[]) ?? [],
     etapas: o.etapas,
   };
 }

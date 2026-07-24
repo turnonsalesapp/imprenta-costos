@@ -21,6 +21,7 @@ export default async function OrdenPage({
   if (!o) notFound();
 
   const gestiona = usuario.rol !== "TALLER"; // ADMIN o VENDEDOR
+  const multi = o.items.length > 1;
   const fechaValor = o.fechaEntrega ? o.fechaEntrega.toISOString().slice(0, 10) : "";
 
   // Técnica de impresión, deducida de las etapas de la orden.
@@ -68,17 +69,55 @@ export default async function OrdenPage({
           {/* Datos de producción — sin costos */}
           <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
             <Dato k="Cliente" v={o.cliente ?? "—"} />
-            <Dato k="Trabajo" v={o.titulo} />
-            <Dato k="Cantidad" v={`${fmtNum(o.cantidad, 0)} pzs`} />
-            <Dato k="Medida" v={`${fmtNum(o.ancho, 0)}×${fmtNum(o.alto, 0)} mm`} />
-            <Dato k="Papel" v={o.papelNombre} />
             <Dato k="Técnica" v={tecnica} />
-            <Dato k="Tamaño de corte" v={o.tamano} />
-            <Dato k="Montaje (arte por corte)" v={`${fmtNum(o.capacidad, 0)} pzs`} />
-            <Dato k="Cuartos a imprimir (con merma)" v={fmtNum(o.pliegos, 2)} />
+            {multi ? (
+              <Dato k="Ítems" v={`${o.items.length}`} />
+            ) : (
+              <>
+                <Dato k="Trabajo" v={o.titulo} />
+                <Dato k="Cantidad" v={`${fmtNum(o.cantidad, 0)} pzs`} />
+                <Dato k="Medida" v={`${fmtNum(o.ancho, 0)}×${fmtNum(o.alto, 0)} mm`} />
+                <Dato k="Papel" v={o.papelNombre} />
+                <Dato k="Tamaño de corte" v={o.tamano} />
+                <Dato k="Montaje (arte por corte)" v={`${fmtNum(o.capacidad, 0)} pzs`} />
+                <Dato k="Cuartos a imprimir (con merma)" v={fmtNum(o.pliegos, 2)} />
+              </>
+            )}
           </dl>
 
-          {o.descripcion ? (
+          {multi ? (
+            <div className="mt-4 overflow-x-auto border-t border-regla pt-3">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-regla text-left text-[10px] uppercase tracking-widest text-kraft">
+                    <th className="py-2 pr-2 font-bold">Ítem</th>
+                    <th className="py-2 px-2 text-right font-bold">Cant.</th>
+                    <th className="py-2 px-2 font-bold">Medida</th>
+                    <th className="py-2 px-2 font-bold">Papel</th>
+                    <th className="py-2 px-2 font-bold">Corte</th>
+                    <th className="py-2 px-2 text-right font-bold">Cuartos</th>
+                    <th className="py-2 pl-2 font-bold">Acabados</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-suave align-top">
+                  {o.items.map((it, i) => (
+                    <tr key={i}>
+                      <td className="py-2 pr-2">
+                        <div className="font-medium">{it.titulo}</div>
+                        {it.descripcion ? <div className="text-[11px] text-kraft">{it.descripcion}</div> : null}
+                      </td>
+                      <td className="py-2 px-2 text-right font-mono">{fmtNum(it.cantidad, 0)}</td>
+                      <td className="py-2 px-2 font-mono text-[13px]">{fmtNum(it.ancho, 0)}×{fmtNum(it.alto, 0)} mm</td>
+                      <td className="py-2 px-2 text-[13px]">{it.papelNombre}</td>
+                      <td className="py-2 px-2 font-mono text-[13px]">{it.tamano}</td>
+                      <td className="py-2 px-2 text-right font-mono">{fmtNum(it.pliegos, 2)}</td>
+                      <td className="py-2 pl-2 text-[12px] text-kraft">{it.acabados.join(", ") || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : o.descripcion ? (
             <p className="mt-4 border-t border-regla pt-3 text-sm">{o.descripcion}</p>
           ) : null}
 

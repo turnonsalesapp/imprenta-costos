@@ -288,6 +288,11 @@ model Orden {
   fechaEntrega DateTime? @db.Timestamptz(3)
   prioridad    Int      @default(0)
   instrucciones String?
+  /// Proyección SIN precios de los ítems de la cotización, para la hoja del
+  /// taller. Se construye al generar la orden (contexto ADMIN/VENDEDOR) y por
+  /// diseño NUNCA contiene dinero: así el taller ve el detalle por ítem sin que
+  /// una columna de precio pueda filtrarse por aquí.
+  items        Json?
   inventarioAplicado Boolean @default(false) // si ya descontó el papel al terminar
   creadaEn     DateTime @default(now()) @db.Timestamptz(3)
   cerradaEn    DateTime? @db.Timestamptz(3)

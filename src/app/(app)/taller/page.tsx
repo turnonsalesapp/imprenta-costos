@@ -67,7 +67,9 @@ export default async function TallerPage() {
                 </div>
 
                 <div className="px-4 py-2 text-[12px] text-kraft">
-                  {fmtNum(o.cantidad, 0)} pzs · {o.papelNombre} · {fmtNum(o.ancho, 0)}×{fmtNum(o.alto, 0)} mm
+                  {o.items.length > 1
+                    ? `${fmtNum(o.cantidad, 0)} pzs · ${o.items.length} ítems`
+                    : `${fmtNum(o.cantidad, 0)} pzs · ${o.papelNombre} · ${fmtNum(o.ancho, 0)}×${fmtNum(o.alto, 0)} mm`}
                 </div>
 
                 <div className="space-y-2 px-4 pb-4">

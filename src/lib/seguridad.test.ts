@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SELECT_PROD } from "./ordenes";
+import { SELECT_PROD, proyeccionProd } from "./ordenes";
 import { puedeVerPrecios } from "./roles";
 
 /**
@@ -49,5 +49,28 @@ describe("invariante TALLER-sin-precios", () => {
     expect(puedeVerPrecios("TALLER")).toBe(false);
     expect(puedeVerPrecios("ADMIN")).toBe(true);
     expect(puedeVerPrecios("VENDEDOR")).toBe(true);
+  });
+});
+
+describe("proyección de producción sin precios (Orden.items)", () => {
+  it("descarta cualquier campo de dinero del ítem de la cotización", () => {
+    // Ítem congelado con dinero (como vive en Cotizacion.items).
+    const conDinero = [{
+      titulo: "Volantes", descripcion: "media carta", cantidad: 3000,
+      ancho: 215, alto: 140, tamano: "1/4 Pliego", papelNombre: "Glasé",
+      capacidad: 4, pliegos: 772.5,
+      lineas: [{ k: "papel", label: "Glasé" }, { k: "impTiro", label: "Impresión Tiro" }],
+      // dinero que NUNCA debe llegar al taller:
+      costoTotal: 679.47, costoUnit: 0.2265, precioUnit: 0.5, ventaTotal: 1511,
+      margen: 30, diferencial: 1.39, precioBs: 100, precioML: 0.6, tasaBCV: 473,
+    }];
+    const [p] = proyeccionProd(conDinero as unknown as Parameters<typeof proyeccionProd>[0]);
+    const claves = Object.keys(p);
+    for (const money of ["costoTotal", "costoUnit", "precioUnit", "ventaTotal", "margen",
+      "diferencial", "precioBs", "precioML", "tasaBCV"]) {
+      expect(claves).not.toContain(money);
+    }
+    expect(p.papelNombre).toBe("Glasé");
+    expect(p.acabados).toEqual(["Impresión Tiro"]); // la línea de papel no es acabado
   });
 });
