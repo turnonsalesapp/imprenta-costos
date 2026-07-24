@@ -10,7 +10,7 @@ import { nuevoForm, type FormCotizacion } from "@/lib/cotizacion-form";
 import type { ClienteSimple } from "@/lib/clientes";
 import { guardarCotizacionAction } from "@/app/actions/cotizaciones";
 import { PanelInterpretar } from "./PanelInterpretar";
-import { F, T, PrecioManual } from "./campos";
+import { F, T, PrecioManual, TarjetaTasas } from "./campos";
 import "./calc.css";
 
 const TINTAS = ["#0B8FA8", "#C4177C", "#C79400", "#171B19", "#5B8C5A", "#8A5FBF", "#C0563B"];
@@ -380,34 +380,14 @@ export function Calculadora({
             </div>
           </section>
 
-          <section className="card">
-            <div className="ch"><b>Tasas y utilidad</b><span className="mt mono">diferencial {fmtNum(r.dif, 4)}</span></div>
-            <div className="cb">
-              <div className="rowg c3">
-                <T l="Tasa BCV" v={form.tasaBCV} set={(v) => up("tasaBCV", v)} num />
-                <T l="Binance compra" v={form.binCompra} set={(v) => up("binCompra", v)} num />
-                <T l="Binance venta" v={form.binVenta} set={(v) => up("binVenta", v)} num />
-              </div>
-              <div className="hint mono" style={{ marginTop: 6 }}>
-                Promedio {fmtNum(r.binProm, 2)} ÷ BCV {fmtNum(n(form.tasaBCV), 2)} = {fmtNum(r.difAuto, 4)}
-                <button type="button" className="lnk" onClick={() => setForm((f) => ({
-                  ...f, difManual: !f.difManual, dif: f.difManual ? "" : r.difAuto.toFixed(4),
-                }))}>
-                  {form.difManual ? "volver a automático" : "fijar manualmente"}
-                </button>
-              </div>
-              {form.difManual ? (
-                <div style={{ marginTop: 8, maxWidth: 170 }}>
-                  <T l="Diferencial fijo" v={form.dif} set={(v) => up("dif", v)} num />
-                </div>
-              ) : null}
-              <div className="rowg c3" style={{ marginTop: 12 }}>
-                <T l="Margen (%)" v={form.margen} set={(v) => up("margen", v)} num />
-                <T l="Comisión vendedor (%)" v={form.comision} set={(v) => up("comision", v)} num />
-                <T l="Recargo MercadoLibre (%)" v={form.ml} set={(v) => up("ml", v)} num />
-              </div>
-            </div>
-          </section>
+          <TarjetaTasas
+            tasaBCV={form.tasaBCV} binCompra={form.binCompra} binVenta={form.binVenta}
+            margen={form.margen} comision={form.comision} ml={form.ml}
+            difManual={form.difManual} dif={form.dif}
+            difAuto={r.difAuto} binProm={r.binProm} difActual={r.dif}
+            set={(k, v) => setForm((f) => ({ ...f, [k]: v }))}
+            toggleManual={() => setForm((f) => ({ ...f, difManual: !f.difManual, dif: f.difManual ? "" : r.difAuto.toFixed(4) }))}
+          />
 
           <section className="card">
             <div className="ch">
