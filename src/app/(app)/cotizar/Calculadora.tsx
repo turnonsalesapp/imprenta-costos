@@ -10,6 +10,7 @@ import { nuevoForm, type FormCotizacion } from "@/lib/cotizacion-form";
 import type { ClienteSimple } from "@/lib/clientes";
 import { guardarCotizacionAction } from "@/app/actions/cotizaciones";
 import { PanelInterpretar } from "./PanelInterpretar";
+import { F, T, PrecioManual } from "./campos";
 import "./calc.css";
 
 const TINTAS = ["#0B8FA8", "#C4177C", "#C79400", "#171B19", "#5B8C5A", "#8A5FBF", "#C0563B"];
@@ -658,26 +659,13 @@ export function Calculadora({
               </div>
             </div>
 
-            <div style={{ marginTop: 10 }}>
-              <div className="hint" style={{ cursor: "pointer" }} onClick={alternarManual}>
-                <button type="button" className={manualOn ? "chk on" : "chk"} aria-label="Fijar precio de venta a mano">
-                  {manualOn ? <Check size={10} strokeWidth={4} /> : null}
-                </button>
-                <span>Fijar precio de venta a mano</span>
-              </div>
-              {manualOn ? (
-                <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <input className="in mono" style={{ maxWidth: 150 }} type="text" inputMode="decimal"
-                    value={form.precioManual} onChange={(e) => up("precioManual", e.target.value)} />
-                  <span className="hint mono">
-                    sugerido {usd(rBase.precioUnit, 4)}
-                    {rBase.precioUnit > 0
-                      ? ` · ${n(form.precioManual) >= rBase.precioUnit ? "+" : ""}${fmtNum((n(form.precioManual) / rBase.precioUnit - 1) * 100, 1)}%`
-                      : ""}
-                  </span>
-                </div>
-              ) : null}
-            </div>
+            <PrecioManual
+              valor={form.precioManual}
+              onChange={(v) => up("precioManual", v)}
+              activo={manualOn}
+              onToggle={alternarManual}
+              sugerido={rBase.precioUnit}
+            />
           </div>
           <div className="tear" />
 
@@ -755,27 +743,6 @@ export function Calculadora({
 }
 
 /* ─────────────────────────── subcomponentes ─────────────────────────── */
-
-function F({ l, children, hint }: { l: string; children: React.ReactNode; hint?: string }) {
-  return (
-    <div>
-      <label className="fl">{l}</label>
-      {children}
-      {hint ? <div className="hint">{hint}</div> : null}
-    </div>
-  );
-}
-
-function T({ l, v, set, ph, num }: {
-  l: string; v: string | number; set: (v: string) => void; ph?: string; num?: boolean;
-}) {
-  return (
-    <F l={l}>
-      <input className={num ? "in mono" : "in"} type="text" inputMode={num ? "decimal" : "text"}
-        value={v} placeholder={ph || ""} onChange={(e) => set(e.target.value)} />
-    </F>
-  );
-}
 
 function Montaje({ W, H, w, h, info }: { W: number; H: number; w: number; h: number; info: MontajeInfo }) {
   if (!info.cap || !w || !h) return null;

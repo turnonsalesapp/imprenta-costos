@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Save, RotateCcw, Check } from "lucide-react";
+import { Save, RotateCcw } from "lucide-react";
 import { precioDesdeCosto, n, fmtNum, usd } from "@/lib/calculo";
 import { nuevoFormProveedor, totalProveedor, type FormProveedor } from "@/lib/cotizacion-form";
 import type { Config } from "@/lib/calculo";
 import type { ClienteSimple } from "@/lib/clientes";
 import { guardarProveedorAction } from "@/app/actions/cotizaciones";
+import { F, T, PrecioManual } from "../cotizar/campos";
 import "../cotizar/calc.css";
 
 export function CalculadoraProveedor({
@@ -255,26 +256,13 @@ export function CalculadoraProveedor({
               </div>
             </div>
 
-            <div style={{ marginTop: 10 }}>
-              <div className="hint" style={{ cursor: "pointer" }} onClick={alternarManual}>
-                <button type="button" className={manualOn ? "chk on" : "chk"} aria-label="Fijar precio de venta a mano">
-                  {manualOn ? <Check size={10} strokeWidth={4} /> : null}
-                </button>
-                <span>Fijar precio de venta a mano</span>
-              </div>
-              {manualOn ? (
-                <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <input className="in mono" style={{ maxWidth: 150 }} type="text" inputMode="decimal"
-                    value={form.precioManual} onChange={(e) => up("precioManual", e.target.value)} />
-                  <span className="hint mono">
-                    sugerido {usd(rBase.precioUnit, 4)}
-                    {rBase.precioUnit > 0
-                      ? ` · ${n(form.precioManual) >= rBase.precioUnit ? "+" : ""}${fmtNum((n(form.precioManual) / rBase.precioUnit - 1) * 100, 1)}%`
-                      : ""}
-                  </span>
-                </div>
-              ) : null}
-            </div>
+            <PrecioManual
+              valor={form.precioManual}
+              onChange={(v) => up("precioManual", v)}
+              activo={manualOn}
+              onToggle={alternarManual}
+              sugerido={rBase.precioUnit}
+            />
           </div>
           <div className="tear" />
 
@@ -297,13 +285,3 @@ export function CalculadoraProveedor({
   );
 }
 
-function F({ l, children, hint }: { l: string; children: React.ReactNode; hint?: string }) {
-  return (<div><label className="fl">{l}</label>{children}{hint ? <div className="hint">{hint}</div> : null}</div>);
-}
-function T({ l, v, set, ph, num }: { l: string; v: string | number; set: (v: string) => void; ph?: string; num?: boolean }) {
-  return (
-    <F l={l}>
-      <input className={num ? "in mono" : "in"} type="text" inputMode={num ? "decimal" : "text"} value={v} placeholder={ph || ""} onChange={(e) => set(e.target.value)} />
-    </F>
-  );
-}
