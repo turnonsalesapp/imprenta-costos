@@ -110,6 +110,36 @@ export async function fijarStockMin(papelId: string, min: number): Promise<void>
  * Descuenta del inventario el papel consumido por una orden. Idempotente: solo
  * la primera vez que la orden llega a TERMINADA (Orden.inventarioAplicado).
  */
+/** Forma mínima de un ítem para calcular su consumo de papel. */
+export type ItemConsumo = { entrada?: { papelId?: string } | null; tamano?: string; pliegos?: number };
+
+/** Cotización tal como la ve el descuento de inventario. */
+export type CotizacionConsumo = {
+  items: ItemConsumo[] | null;
+  entrada: { papelId?: string } | null;
+  tamano: string;
+  pliegos: number;
+};
+
+/**
+ * Plan de consumo de papel de una cotización, agrupado por clave de papel.
+ * Cada ÍTEM descuenta su propio papel por (sus pliegos × fracción de su tamaño);
+ * si dos ítems usan el mismo papel se suman. Las cotizaciones viejas (sin items)
+ * caen a las columnas de nivel cotización. Puro y testeable, sin base de datos.
+ */
+export function planConsumo(cot: CotizacionConsumo): Array<[string, number]> {
+  const consumos =
+    cot.items && cot.items.length
+      ? cot.items.map((it) => ({ clave: it.entrada?.papelId, pliegos: num(it.pliegos) * frac(it.tamano ?? "") }))
+      : [{ clave: cot.entrada?.papelId, pliegos: num(cot.pliegos) * frac(cot.tamano) }];
+
+  const porPapel = new Map<string, number>();
+  for (const c of consumos) {
+    if (c.clave && c.pliegos > 0) porPapel.set(c.clave, (porPapel.get(c.clave) ?? 0) + c.pliegos);
+  }
+  return [...porPapel];
+}
+
 export async function descontarPorOrden(ordenId: string): Promise<void> {
   await db.$transaction(async (tx) => {
     // Bloquea la orden y re-verifica la idempotencia DENTRO de la transacción:
@@ -120,15 +150,18 @@ export async function descontarPorOrden(ordenId: string): Promise<void> {
 
     const o = await tx.orden.findUnique({
       where: { id: ordenId },
-      select: { numero: true, cotizacion: { select: { entrada: true, tamano: true, pliegos: true } } },
+      select: { numero: true, cotizacion: { select: { items: true, entrada: true, tamano: true, pliegos: true } } },
     });
     if (!o) return;
 
-    const entrada = o.cotizacion.entrada as unknown as { papelId?: string } | null;
-    const clave = entrada?.papelId;
-    const pliegos = num(o.cotizacion.pliegos) * frac(o.cotizacion.tamano);
+    const plan = planConsumo({
+      items: o.cotizacion.items as unknown as ItemConsumo[] | null,
+      entrada: o.cotizacion.entrada as unknown as { papelId?: string } | null,
+      tamano: o.cotizacion.tamano,
+      pliegos: num(o.cotizacion.pliegos),
+    });
 
-    if (clave && pliegos > 0) {
+    for (const [clave, pliegos] of plan) {
       // Bloquea la fila del papel por su clave única antes de descontar.
       const pl = await tx.$queryRaw<{ id: string; stock: unknown }[]>`
         SELECT "id", "stock" FROM "Papel" WHERE "clave" = ${clave} FOR UPDATE`;
@@ -138,7 +171,7 @@ export async function descontarPorOrden(ordenId: string): Promise<void> {
         await tx.movimientoInventario.create({
           data: {
             papelId: pl[0].id, tipo: "SALIDA", cantidad: -pliegos, saldo,
-            motivo: `Orden N° ${o.numero} terminada`, ordenId,
+            motivo: `Trabajo N° ${o.numero} terminado`, ordenId,
           },
         });
       }
