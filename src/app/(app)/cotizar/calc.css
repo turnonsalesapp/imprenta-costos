@@ -73,6 +73,13 @@
 .pr .btn.sm { padding: 5px 9px; font-size: 11px; }
 .pr .btn.w { width: 100%; margin-top: 10px; }
 
+/* Control segmentado (modo de trabajo) */
+.pr .seg { display: flex; gap: 0; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+.pr .seg-b { flex: 1; padding: 8px 10px; font-size: 12px; font-weight: 700; color: var(--kraft); background: var(--sheet); border: none; border-right: 1px solid var(--rule); cursor: pointer; }
+.pr .seg-b:last-child { border-right: none; }
+.pr .seg-b:hover { background: var(--soft); }
+.pr .seg-b.on { background: var(--ink); color: #fff; }
+
 .pr table { width: 100%; border-collapse: collapse; }
 .pr th { font-size: 9.5px; letter-spacing: .11em; text-transform: uppercase; color: var(--kraft); text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); font-weight: 700; white-space: nowrap; }
 .pr td { padding: 8px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; vertical-align: middle; }

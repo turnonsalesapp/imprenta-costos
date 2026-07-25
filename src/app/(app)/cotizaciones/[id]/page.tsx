@@ -164,15 +164,27 @@ export default async function DetalleCotizacion({
                   {c.proveedorNotas && <Cond k="Notas" v={c.proveedorNotas} />}
                 </>
               ) : c.tipo === "GRAN_FORMATO" ? (
-                <>
-                  <Cond k="Material" v={c.papelNombre} />
-                  <Cond k="Medida" v={`${fmtNum(c.ancho, 0)}×${fmtNum(c.alto, 0)} cm`} />
-                  <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} u`} />
-                  <Cond k="Cobro" v={c.tamano} />
-                  <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
-                  <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
-                  <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
-                </>
+                c.ancho > 0 ? (
+                  <>
+                    <Cond k="Material" v={c.papelNombre} />
+                    <Cond k="Medida" v={`${fmtNum(c.ancho, 0)}×${fmtNum(c.alto, 0)} cm`} />
+                    <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} u`} />
+                    <Cond k="Cobro" v={c.tamano} />
+                    <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
+                    <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
+                    <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
+                  </>
+                ) : (
+                  <>
+                    <Cond k="Producto" v={c.papelNombre} />
+                    {c.tamano && <Cond k="Medida" v={c.tamano} />}
+                    <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} u`} />
+                    <Cond k="Costo por unidad" v={usd(c.costoUnit, 4)} />
+                    <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
+                    <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
+                    <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
+                  </>
+                )
               ) : multi ? (
                 <>
                   {c.items.map((it, i) => (

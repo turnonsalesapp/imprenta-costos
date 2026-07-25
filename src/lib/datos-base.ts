@@ -130,6 +130,35 @@ export const MATERIALES_GF_BASE: MaterialGFBase[] = [
   { clave: "gf-vinil-estandar-uv", nombre: "Vinil Estándar (UV)", categoria: "Vinil UV", costoM2: 18, modo: "ancho_rollo", anchos: "137,152" },
 ];
 
+/**
+ * Productos terminados de GRAN FORMATO (catálogo del proveedor Digital Print 2025).
+ * A diferencia de los materiales, aquí el costo es FIJO por unidad: ya viene armado
+ * (impresión + estructura/acabado). El sistema le aplica el mismo margen por pieza.
+ */
+export type ProductoGFBase = {
+  clave: string; nombre: string; categoria: string; medida: string; costoUnit: number;
+};
+
+export const PRODUCTOS_GF_BASE: ProductoGFBase[] = [
+  // Pendones — banner 13oz con tubo arriba y bolsillo abajo (precio por tamaño).
+  { clave: "gf-pendon-40x60", nombre: "Pendón 40×60", categoria: "Pendón", medida: "40×60 cm", costoUnit: 5 },
+  { clave: "gf-pendon-60x90", nombre: "Pendón 60×90", categoria: "Pendón", medida: "60×90 cm", costoUnit: 8.5 },
+  { clave: "gf-pendon-80x120", nombre: "Pendón 80×120", categoria: "Pendón", medida: "80×120 cm", costoUnit: 12 },
+  { clave: "gf-pendon-100x140", nombre: "Pendón 100×140", categoria: "Pendón", medida: "100×140 cm", costoUnit: 16 },
+  // Roll Up (enrollable) — estructura sola o con banner blackout.
+  { clave: "gf-rollup-85x200", nombre: "Roll Up estructura 85×200", categoria: "Roll Up", medida: "85×200 cm", costoUnit: 45 },
+  { clave: "gf-rollup-blackout-85x200", nombre: "Roll Up + Banner Blackout 85×200", categoria: "Roll Up", medida: "85×200 cm", costoUnit: 65 },
+  // Araña (X-banner) — incluye estructura, banner 13oz y bolso de traslado.
+  { clave: "gf-arana-13oz-60x160", nombre: "Araña + Banner 13oz 60×160", categoria: "Araña", medida: "60×160 cm", costoUnit: 30 },
+  { clave: "gf-arana-13oz-80x170", nombre: "Araña + Banner 13oz 80×170", categoria: "Araña", medida: "80×170 cm", costoUnit: 35 },
+  { clave: "gf-arana-uv-60x160", nombre: "Araña + Banner 13oz UV 60×160", categoria: "Araña", medida: "60×160 cm", costoUnit: 35 },
+  { clave: "gf-arana-uv-80x170", nombre: "Araña + Banner 13oz UV 80×170", categoria: "Araña", medida: "80×170 cm", costoUnit: 45 },
+  // Estructuras solas (porta pendón) — incluyen bolso de traslado.
+  { clave: "gf-porta-arana-60x160", nombre: "Porta pendón Araña 60×160", categoria: "Estructura", medida: "60×160 cm", costoUnit: 20 },
+  { clave: "gf-porta-arana-80x170", nombre: "Porta pendón Araña 80×170", categoria: "Estructura", medida: "80×170 cm", costoUnit: 24 },
+  { clave: "gf-porta-doble-cara", nombre: "Porta pendón doble cara", categoria: "Estructura", medida: "hasta 180 cm", costoUnit: 25 },
+];
+
 export const CONFIG_BASE: Omit<Config, "papeles" | "acabados"> = {
   merma: 3,        // % de error de consumo de papel
   margen: 30,      // % de margen sobre el precio de venta

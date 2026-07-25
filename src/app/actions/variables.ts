@@ -10,6 +10,7 @@ import {
 import { fetchTasasExternas } from "@/lib/tasas";
 import { modeloValido } from "@/lib/modelos-ia";
 import { crearMaterialGF, editarMaterialGF, alternarMaterialGF } from "@/lib/materiales-gf";
+import { crearProductoGF, editarProductoGF, alternarProductoGF } from "@/lib/productos-gf";
 
 export type EstadoVar = { error: string | null; ok?: boolean; msg?: string };
 
@@ -198,5 +199,44 @@ export async function alternarMaterialGFAction(formData: FormData): Promise<void
   await requireRol("ADMIN");
   const id = String(formData.get("id") ?? "");
   if (id) await alternarMaterialGF(id);
+  revalidatePath("/variables");
+}
+
+/* ─────────────── productos terminados de gran formato ─────────────── */
+
+function datosProductoGF(formData: FormData) {
+  return {
+    nombre: String(formData.get("nombre") ?? "").trim(),
+    categoria: String(formData.get("categoria") ?? "").trim() || "Pendón",
+    medida: String(formData.get("medida") ?? "").trim(),
+    costoUnit: n(formData.get("costoUnit")),
+  };
+}
+
+export async function crearProductoGFAction(
+  _prev: EstadoVar,
+  formData: FormData,
+): Promise<EstadoVar> {
+  await requireRol("ADMIN");
+  const d = datosProductoGF(formData);
+  if (!d.nombre) return { error: "El nombre del producto es obligatorio." };
+  const r = await crearProductoGF(d);
+  if (!r.ok) return { error: r.error ?? "No se pudo crear." };
+  revalidatePath("/variables");
+  return { error: null, ok: true };
+}
+
+export async function editarProductoGFAction(formData: FormData): Promise<void> {
+  await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await editarProductoGF(id, datosProductoGF(formData));
+  revalidatePath("/variables");
+}
+
+export async function alternarProductoGFAction(formData: FormData): Promise<void> {
+  await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  if (id) await alternarProductoGF(id);
   revalidatePath("/variables");
 }

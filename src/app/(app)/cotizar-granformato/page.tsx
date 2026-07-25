@@ -4,6 +4,7 @@ import { obtenerConfig } from "@/lib/variables";
 import { listarClientesSimple } from "@/lib/clientes";
 import { cargarGranFormatoEnForm } from "@/lib/cotizaciones";
 import { listarMaterialesGF } from "@/lib/materiales-gf";
+import { listarProductosGF } from "@/lib/productos-gf";
 import { nuevoFormGranFormato, type FormGranFormato } from "@/lib/cotizacion-form";
 import { CalculadoraGranFormato } from "./CalculadoraGranFormato";
 
@@ -20,8 +21,8 @@ export default async function CotizarGranFormatoPage({
   searchParams: Promise<{ desde?: string; editar?: string }>;
 }) {
   await requireRol("ADMIN", "VENDEDOR");
-  const [cfg, clientes, dc, materiales] = await Promise.all([
-    cargarConfig(), listarClientesSimple(), obtenerConfig(), listarMaterialesGF(),
+  const [cfg, clientes, dc, materiales, productos] = await Promise.all([
+    cargarConfig(), listarClientesSimple(), obtenerConfig(), listarMaterialesGF(), listarProductosGF(),
   ]);
   const sp = await searchParams;
 
@@ -48,18 +49,19 @@ export default async function CotizarGranFormatoPage({
         <h1 className="text-lg font-bold tracking-tight">
           {modo === "editar" ? "Editar cotización de gran formato" : "Cotización de gran formato"}
         </h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">Impresión tercerizada · por m²</p>
+        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">Impresión por m² o producto terminado · tercerizado</p>
       </header>
 
-      {materiales.length === 0 ? (
+      {materiales.length === 0 && productos.length === 0 ? (
         <div className="rounded-sm border border-regla bg-hoja px-4 py-8 text-center text-sm text-kraft">
-          No hay materiales de gran formato cargados. Un administrador los agrega en <b>Variables</b>.
+          No hay materiales ni productos de gran formato cargados. Un administrador los agrega en <b>Variables</b>.
         </div>
       ) : (
         <CalculadoraGranFormato
           cfg={cfg}
           clientes={clientes}
           materiales={materiales}
+          productos={productos}
           ojeteCosto={dc.gfOjeteCosto}
           ojeteCm={dc.gfOjeteCm}
           formInicial={formInicial}

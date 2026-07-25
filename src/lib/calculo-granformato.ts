@@ -42,6 +42,39 @@ export interface ResultadoGF extends Precio {
   lineas: LineaCosto[];
 }
 
+/**
+ * Producto terminado de gran formato: costo FIJO por unidad (del catálogo), sin
+ * cálculo por m². Se cobra por pieza y pasa por la misma cola de precio. Devuelve
+ * un ResultadoGF con las medidas de área/ojetes en cero (no aplican).
+ */
+export interface EntradaProductoGF extends ParamsPrecio {
+  productoNombre?: string;
+  costoUnit: number | string;
+  cantidad: number | string;
+}
+
+export function calcularProductoGF(f: EntradaProductoGF): ResultadoGF {
+  const cant = Math.max(0, Math.round(n(f.cantidad)));
+  const costoUnit = Math.max(0, n(f.costoUnit));
+  const costoTotal = costoUnit * cant;
+
+  const lineas: LineaCosto[] = [];
+  if (costoTotal > 0) {
+    lineas.push({
+      k: "producto",
+      label: f.productoNombre || "Producto terminado",
+      detalle: `${cant} x ${usd(costoUnit)}`,
+      monto: costoTotal,
+    });
+  }
+
+  const pr = precioDesdeCosto(costoTotal, cant, f);
+  return {
+    areaPiezaM2: 0, areaCobroM2: 0, areaFactM2: 0,
+    ojetesPorPieza: 0, ojetesTotal: 0, precioM2Venta: 0, lineas, ...pr,
+  };
+}
+
 /** Ojetes por el perímetro de la pieza, uno cada `sepCm`, mínimo 4 (esquinas). */
 export function ojetesPorPerimetro(anchoCm: number, altoCm: number, sepCm: number): number {
   const perim = 2 * (anchoCm + altoCm);

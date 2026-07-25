@@ -140,6 +140,20 @@ model MaterialGF {
   activo     Boolean @default(true)
 }
 
+/// Productos terminados de GRAN FORMATO (pendones, roll up, arañas, estructuras).
+/// Costo FIJO por unidad, del catálogo del proveedor tercerizado. No se calcula
+/// por m²: es un precio armado (impresión + estructura/acabado) que se cobra por
+/// pieza y pasa por la misma cola de precio que todo el sistema.
+model ProductoGF {
+  id        String  @id @default(cuid())
+  clave     String  @unique
+  nombre    String
+  categoria String  @default("Pendón") // Pendón | Roll Up | Araña | Estructura
+  medida    String  @default("")       // etiqueta de tamaño, ej. "60×90 cm"
+  costoUnit Decimal @db.Decimal(12, 4)  // costo USD por unidad (a BCV, del catálogo)
+  activo    Boolean @default(true)
+}
+
 /// Variables del negocio. Fila única con id = "global".
 model Config {
   id            String   @id @default("global")

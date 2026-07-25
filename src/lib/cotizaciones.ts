@@ -5,7 +5,9 @@ import { cargarConfig, snapshot } from "./config";
 import {
   calcular, precioDesdeCosto, n, type LineaCosto, type Entrada, type Config,
 } from "./calculo";
-import { calcularGF, type EntradaGF } from "./calculo-granformato";
+import {
+  calcularGF, calcularProductoGF, type EntradaGF, type EntradaProductoGF, type ResultadoGF,
+} from "./calculo-granformato";
 import {
   formAEntrada, totalProveedor, type FormCotizacion, type FormProveedor, type FormGranFormato,
 } from "./cotizacion-form";
@@ -477,8 +479,8 @@ function datosGranFormato(form: FormGranFormato, mat: MaterialResuelto, ojete: O
       tamano: form.modoCobro === "ancho_rollo" ? `Rollo ${Math.round(n(form.anchoRolloCm))} cm` : "Por mancha",
       papelNombre: mat.nombre,
       capacidad: 0,
-      entrada: { ...entrada, materialId: form.materialId } as unknown as Prisma.InputJsonValue,
-      snapshot: { tipo: "granformato", material: mat } as unknown as Prisma.InputJsonValue,
+      entrada: { ...entrada, modo: "impresion", materialId: form.materialId } as unknown as Prisma.InputJsonValue,
+      snapshot: { tipo: "granformato", subtipo: "impresion", material: mat } as unknown as Prisma.InputJsonValue,
       lineas: r.lineas as unknown as Prisma.InputJsonValue,
       pliegos: 0,
       costoTotal: r.costoTotal, costoUnit: r.costoUnit, diferencial: r.dif,
@@ -489,18 +491,82 @@ function datosGranFormato(form: FormGranFormato, mat: MaterialResuelto, ojete: O
   };
 }
 
+type ProductoResuelto = { nombre: string; categoria: string; medida: string; costoUnit: number };
+
+/** Trae el producto terminado (autoritativo) para calcular en el servidor. */
+async function contextoProductoGF(clave: string): Promise<ProductoResuelto | null> {
+  const p = await db.productoGF.findUnique({
+    where: { clave },
+    select: { nombre: true, categoria: true, medida: true, costoUnit: true },
+  });
+  if (!p) return null;
+  return { nombre: p.nombre, categoria: p.categoria, medida: p.medida, costoUnit: num(p.costoUnit) };
+}
+
+function datosProductoGF(form: FormGranFormato, prod: ProductoResuelto) {
+  const entrada: EntradaProductoGF = {
+    productoNombre: prod.nombre, costoUnit: prod.costoUnit, cantidad: form.cantidad,
+    margen: form.margen, comision: form.comision, ml: form.ml,
+    tasaBCV: form.tasaBCV, binCompra: form.binCompra, binVenta: form.binVenta,
+    difManual: form.difManual, dif: form.dif, precioManual: form.precioManual,
+  };
+  const r = calcularProductoGF(entrada);
+  const descripcion =
+    (form.descripcion ?? "").trim() ||
+    `${prod.nombre}${prod.medida ? ` · ${prod.medida}` : ""}`;
+  return {
+    r,
+    data: {
+      tipo: "GRAN_FORMATO" as const,
+      clienteId: form.clienteId?.trim() || null,
+      clienteNombre: (form.cliente ?? "").trim() || null,
+      titulo: (form.trabajo ?? "").trim() || prod.nombre,
+      descripcion,
+      cantidad: r.cant,
+      ancho: 0, alto: 0, // producto terminado: no aplica medida por m²
+      tamano: prod.medida || "Producto terminado",
+      papelNombre: prod.nombre,
+      capacidad: 0,
+      entrada: { ...entrada, modo: "producto", productoId: form.productoId } as unknown as Prisma.InputJsonValue,
+      snapshot: { tipo: "granformato", subtipo: "producto", producto: prod } as unknown as Prisma.InputJsonValue,
+      lineas: r.lineas as unknown as Prisma.InputJsonValue,
+      pliegos: 0,
+      costoTotal: r.costoTotal, costoUnit: r.costoUnit, diferencial: r.dif,
+      margen: n(form.margen),
+      precioUnit: r.precioUnit, ventaTotal: r.ventaTotal, precioML: r.precioML,
+      tasaBCV: n(form.tasaBCV), precioBs: r.precioBs,
+    },
+  };
+}
+
+/** Arma la cotización de gran formato según el modo (impresión por m² o producto). */
+async function armarGranFormato(
+  form: FormGranFormato,
+): Promise<{ r: ResultadoGF; data: ReturnType<typeof datosGranFormato>["data"] } | { error: string }> {
+  if (form.modo === "producto") {
+    const prod = await contextoProductoGF(form.productoId);
+    if (!prod) return { error: "Elige un producto terminado." };
+    return datosProductoGF(form, prod);
+  }
+  const ctx = await contextoGF(form.materialId);
+  if (!ctx) return { error: "Elige un material de gran formato." };
+  return datosGranFormato(form, ctx.mat, ctx.ojete);
+}
+
 export async function crearCotizacionGranFormato(
   form: FormGranFormato, usuarioId: string,
 ): Promise<ResultadoGuardar> {
   const cliente = (form.cliente ?? "").trim();
   const trabajo = (form.trabajo ?? "").trim();
   if (!cliente && !trabajo) return { ok: false, error: "Falta el cliente o el trabajo." };
-  const ctx = await contextoGF(form.materialId);
-  if (!ctx) return { ok: false, error: "Elige un material de gran formato." };
+  const armado = await armarGranFormato(form);
+  if ("error" in armado) return { ok: false, error: armado.error };
 
-  const { r, data } = datosGranFormato(form, ctx.mat, ctx.ojete);
+  const { r, data } = armado;
   if (r.cant <= 0) return { ok: false, error: "Indica la cantidad." };
-  if (r.costoTotal <= 0) return { ok: false, error: "Indica la medida (ancho y alto)." };
+  if (r.costoTotal <= 0) {
+    return { ok: false, error: form.modo === "producto" ? "El producto no tiene costo." : "Indica la medida (ancho y alto)." };
+  }
 
   const cot = await db.cotizacion.create({
     data: { estado: "BORRADOR", usuarioId, ...data },
@@ -515,12 +581,14 @@ export async function actualizarCotizacionGranFormato(
   const ex = await db.cotizacion.findUnique({ where: { id }, select: { estado: true } });
   if (!ex) return { ok: false, error: "La cotización no existe." };
   if (ex.estado !== "BORRADOR") return { ok: false, error: "Solo se pueden editar cotizaciones en borrador." };
-  const ctx = await contextoGF(form.materialId);
-  if (!ctx) return { ok: false, error: "Elige un material de gran formato." };
+  const armado = await armarGranFormato(form);
+  if ("error" in armado) return { ok: false, error: armado.error };
 
-  const { r, data } = datosGranFormato(form, ctx.mat, ctx.ojete);
+  const { r, data } = armado;
   if (r.cant <= 0) return { ok: false, error: "Indica la cantidad." };
-  if (r.costoTotal <= 0) return { ok: false, error: "Indica la medida (ancho y alto)." };
+  if (r.costoTotal <= 0) {
+    return { ok: false, error: form.modo === "producto" ? "El producto no tiene costo." : "Indica la medida (ancho y alto)." };
+  }
 
   await db.cotizacion.update({ where: { id }, data });
   return { ok: true, id };
@@ -541,6 +609,8 @@ export async function cargarGranFormatoEnForm(
     clienteId: c.clienteId ?? "",
     trabajo: modo === "copia" ? `${c.titulo} (copia)` : c.titulo,
     descripcion: modo === "copia" ? "" : (c.descripcion ?? ""),
+    modo: e.modo === "producto" ? "producto" : "impresion",
+    productoId: (e.productoId ?? "") as string,
     materialId: (e.materialId ?? "") as string,
     anchoCm: v("anchoCm"), altoCm: v("altoCm"), cantidad: v("cantidad"),
     modoCobro: e.modoCobro === "ancho_rollo" ? "ancho_rollo" : "mancha",

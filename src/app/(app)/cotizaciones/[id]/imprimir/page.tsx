@@ -109,7 +109,9 @@ export default async function ImprimirCotizacion({
                       {c.tipo === "PROVEEDOR"
                         ? (c.proveedorNombre ? `Proveedor: ${c.proveedorNombre}` : "Trabajo tercerizado")
                         : c.tipo === "GRAN_FORMATO"
-                          ? `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} cm · ${it.papelNombre}`
+                          ? (it.ancho > 0
+                              ? `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} cm · ${it.papelNombre}`
+                              : `${it.papelNombre}${it.tamano ? ` · ${it.tamano}` : ""}`)
                           : `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} mm · ${it.papelNombre} · ${it.tamano}`}
                     </div>
                   </td>

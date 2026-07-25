@@ -139,6 +139,8 @@ export type FormGranFormato = {
   clienteId: string;
   trabajo: string;
   descripcion: string;
+  modo: "impresion" | "producto"; // impresión por m² | producto terminado por unidad
+  productoId: string;           // clave del producto terminado (modo producto)
   materialId: string;           // clave del material
   anchoCm: number | string;
   altoCm: number | string;
@@ -162,6 +164,7 @@ export type FormGranFormato = {
 export function nuevoFormGranFormato(cfg: Config): FormGranFormato {
   return {
     cliente: "", clienteId: "", trabajo: "", descripcion: "",
+    modo: "impresion", productoId: "",
     materialId: "", anchoCm: "", altoCm: "", cantidad: "1",
     modoCobro: "mancha", anchoRolloCm: "",
     ojetesAuto: false, ojetes: "",

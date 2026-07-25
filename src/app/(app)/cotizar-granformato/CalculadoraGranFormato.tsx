@@ -3,9 +3,13 @@
 import { useMemo, useState, useTransition } from "react";
 import { Save, RotateCcw, Check } from "lucide-react";
 import { n, fmtNum, usd, type Config } from "@/lib/calculo";
-import { calcularGF, ojetesPorPerimetro, type EntradaGF } from "@/lib/calculo-granformato";
+import {
+  calcularGF, calcularProductoGF, ojetesPorPerimetro,
+  type EntradaGF, type EntradaProductoGF, type ResultadoGF,
+} from "@/lib/calculo-granformato";
 import { nuevoFormGranFormato, type FormGranFormato } from "@/lib/cotizacion-form";
 import type { MaterialGFItem } from "@/lib/materiales-gf";
+import type { ProductoGFItem } from "@/lib/productos-gf";
 import type { ClienteSimple } from "@/lib/clientes";
 import { guardarGranFormatoAction } from "@/app/actions/cotizaciones";
 import { F, T, PrecioManual, TarjetaTasas } from "../cotizar/campos";
@@ -19,11 +23,12 @@ function sugerirRollo(anchos: number[], anchoCm: number): number {
 }
 
 export function CalculadoraGranFormato({
-  cfg, clientes, materiales, ojeteCosto, ojeteCm, formInicial, banner, margenMin,
+  cfg, clientes, materiales, productos, ojeteCosto, ojeteCm, formInicial, banner, margenMin,
 }: {
   cfg: Config;
   clientes: ClienteSimple[];
   materiales: MaterialGFItem[];
+  productos: ProductoGFItem[];
   ojeteCosto: number;
   ojeteCm: number;
   formInicial: FormGranFormato;
@@ -38,7 +43,9 @@ export function CalculadoraGranFormato({
   const up = <K extends keyof FormGranFormato>(k: K, v: FormGranFormato[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  const esProducto = form.modo === "producto";
   const material = materiales.find((m) => m.clave === form.materialId) ?? null;
+  const producto = productos.find((p) => p.clave === form.productoId) ?? null;
 
   const elegirCliente = (id: string) => {
     const c = clientes.find((x) => x.id === id);
@@ -56,20 +63,34 @@ export function CalculadoraGranFormato({
   };
 
   const costoM2 = material?.costoM2 ?? 0;
+  const costoUnit = producto?.costoUnit ?? 0;
+
+  // Parte de precio común a los dos modos (tasas, margen, comisión, ML, manual).
+  const comun = () => ({
+    margen: form.margen, comision: form.comision, ml: form.ml,
+    tasaBCV: form.tasaBCV, binCompra: form.binCompra, binVenta: form.binVenta,
+    difManual: form.difManual, dif: form.dif, precioManual: form.precioManual,
+  });
 
   const entrada = (over?: Partial<EntradaGF>): EntradaGF => ({
     materialNombre: material?.nombre ?? "Material",
     anchoCm: form.anchoCm, altoCm: form.altoCm, cantidad: form.cantidad,
     costoM2, modoCobro: form.modoCobro, anchoRolloCm: form.anchoRolloCm,
     ojetesAuto: form.ojetesAuto, ojetes: form.ojetes, ojeteCosto, ojeteCm,
-    margen: form.margen, comision: form.comision, ml: form.ml,
-    tasaBCV: form.tasaBCV, binCompra: form.binCompra, binVenta: form.binVenta,
-    difManual: form.difManual, dif: form.dif, precioManual: form.precioManual,
-    ...over,
+    ...comun(), ...over,
   });
 
-  const r = useMemo(() => calcularGF(entrada()), [form, costoM2, ojeteCosto, ojeteCm]);
-  const rBase = useMemo(() => calcularGF(entrada({ precioManual: "" })), [form, costoM2, ojeteCosto, ojeteCm]);
+  const entradaProd = (over?: Partial<EntradaProductoGF>): EntradaProductoGF => ({
+    productoNombre: producto?.nombre ?? "Producto", costoUnit, cantidad: form.cantidad,
+    ...comun(), ...over,
+  });
+
+  // Un solo motor de cálculo según el modo activo.
+  const calc = (overGF?: Partial<EntradaGF>, overProd?: Partial<EntradaProductoGF>): ResultadoGF =>
+    esProducto ? calcularProductoGF(entradaProd(overProd)) : calcularGF(entrada(overGF));
+
+  const r = useMemo(() => calc(), [form, costoM2, costoUnit, ojeteCosto, ojeteCm]);
+  const rBase = useMemo(() => calc({ precioManual: "" }, { precioManual: "" }), [form, costoM2, costoUnit, ojeteCosto, ojeteCm]);
   const manualOn = n(form.precioManual) > 0;
   const alternarManual = () =>
     setForm((f) => ({ ...f, precioManual: n(f.precioManual) > 0 ? "" : Number(rBase.precioUnit.toFixed(4)) || "" }));
@@ -78,10 +99,10 @@ export function CalculadoraGranFormato({
     const ms = margenes.split(/[,;\s]+/).map((v) => n(v)).filter((v) => v > 0)
       .filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).slice(0, 8);
     return ms.map((mg) => {
-      const c = calcularGF(entrada({ margen: mg, precioManual: "" }));
+      const c = calc({ margen: mg, precioManual: "" }, { margen: mg, precioManual: "" });
       return { margen: mg, precioUnit: c.precioUnit, ventaTotal: c.ventaTotal, gananciaTotal: c.gananciaTotal };
     });
-  }, [margenes, form, costoM2, ojeteCosto, ojeteCm]);
+  }, [margenes, form, costoM2, costoUnit, ojeteCosto, ojeteCm]);
 
   const ojetesAuto = ojetesPorPerimetro(n(form.anchoCm), n(form.altoCm), ojeteCm);
   const rolloSugerido = material ? sugerirRollo(material.anchos, n(form.anchoCm)) : 0;
@@ -97,11 +118,26 @@ export function CalculadoraGranFormato({
     return g;
   }, [materiales]);
 
+  // Productos terminados agrupados por categoría.
+  const gruposProd = useMemo(() => {
+    const g: { cat: string; items: ProductoGFItem[] }[] = [];
+    for (const p of productos) {
+      let x = g.find((y) => y.cat === p.categoria);
+      if (!x) { x = { cat: p.categoria, items: [] }; g.push(x); }
+      x.items.push(p);
+    }
+    return g;
+  }, [productos]);
+
   function guardar() {
     setError(null);
     if (!form.cliente.trim() && !form.trabajo.trim()) { setError("Falta el cliente o el trabajo."); return; }
-    if (!material) { setError("Elige un material."); return; }
-    if (n(form.anchoCm) <= 0 || n(form.altoCm) <= 0) { setError("Indica el ancho y el alto (cm)."); return; }
+    if (esProducto) {
+      if (!producto) { setError("Elige un producto terminado."); return; }
+    } else {
+      if (!material) { setError("Elige un material."); return; }
+      if (n(form.anchoCm) <= 0 || n(form.altoCm) <= 0) { setError("Indica el ancho y el alto (cm)."); return; }
+    }
     startTransition(async () => {
       const res = await guardarGranFormatoAction(form);
       if (res?.error) setError(res.error);
@@ -115,6 +151,37 @@ export function CalculadoraGranFormato({
       ) : null}
       <div className="grid">
         <div>
+          <section className="card">
+            <div className="ch"><b>Tipo de trabajo</b><span className="mt">tercerizado</span></div>
+            <div className="cb">
+              <div className="seg" role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!esProducto}
+                  className={!esProducto ? "seg-b on" : "seg-b"}
+                  onClick={() => up("modo", "impresion")}
+                >
+                  Impresión por m²
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={esProducto}
+                  className={esProducto ? "seg-b on" : "seg-b"}
+                  onClick={() => up("modo", "producto")}
+                >
+                  Producto terminado
+                </button>
+              </div>
+              <div className="hint" style={{ marginTop: 8 }}>
+                {esProducto
+                  ? "Pendones, roll up, arañas y estructuras: costo fijo por unidad del catálogo."
+                  : "Banners y viniles: se cobra por área (mancha o ancho de rollo) más ojetes."}
+              </div>
+            </div>
+          </section>
+
           <section className="card">
             <div className="ch"><b>Datos del trabajo</b><span className="mt">gran formato · tercerizado</span></div>
             <div className="cb">
@@ -137,6 +204,35 @@ export function CalculadoraGranFormato({
             </div>
           </section>
 
+          {esProducto ? (
+            <section className="card">
+              <div className="ch"><b>Producto terminado</b><span className="mt mono">{producto ? usd(costoUnit) + " / u" : "elige producto"}</span></div>
+              <div className="cb">
+                <F l="Producto">
+                  <select className="in" value={form.productoId} onChange={(e) => up("productoId", e.target.value)}>
+                    <option value="">— Selecciona el producto —</option>
+                    {gruposProd.map((g) => (
+                      <optgroup key={g.cat} label={g.cat}>
+                        {g.items.map((p) => (
+                          <option key={p.clave} value={p.clave}>
+                            {p.nombre}{p.medida ? ` (${p.medida})` : ""} · {usd(p.costoUnit)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </F>
+                <div className="rowg c2" style={{ marginTop: 10 }}>
+                  <T l="Cantidad" v={form.cantidad} set={(v) => up("cantidad", v)} num ph="1" />
+                  {producto?.medida ? (
+                    <F l="Medida"><input className="in mono" readOnly value={producto.medida}
+                      style={{ background: "#EFF2EF", color: "#767D76" }} /></F>
+                  ) : null}
+                </div>
+              </div>
+            </section>
+          ) : (
+          <>
           <section className="card">
             <div className="ch"><b>Material y medida</b><span className="mt mono">{material ? usd(costoM2) + " / m²" : "elige material"}</span></div>
             <div className="cb">
@@ -204,6 +300,8 @@ export function CalculadoraGranFormato({
               </div>
             </div>
           </section>
+          </>
+          )}
 
           <TarjetaTasas
             tasaBCV={form.tasaBCV} binCompra={form.binCompra} binVenta={form.binVenta}
@@ -240,7 +338,7 @@ export function CalculadoraGranFormato({
                     </tbody>
                   </table>
                 </div>
-              ) : <div className="hint" style={{ marginTop: 10 }}>Elige material y medida para comparar.</div>}
+              ) : <div className="hint" style={{ marginTop: 10 }}>{esProducto ? "Elige un producto para comparar." : "Elige material y medida para comparar."}</div>}
             </div>
           </section>
         </div>
@@ -248,9 +346,9 @@ export function CalculadoraGranFormato({
         {/* Ticket */}
         <div className="tick">
           <div className="tk">
-            <div className="tkh"><b>Desglose</b><span className="mono">{fmtNum(r.areaFactM2, 2)} m² · {fmtNum(r.cant, 0)} u</span></div>
+            <div className="tkh"><b>Desglose</b><span className="mono">{esProducto ? `${fmtNum(r.cant, 0)} u` : `${fmtNum(r.areaFactM2, 2)} m² · ${fmtNum(r.cant, 0)} u`}</span></div>
             <div style={{ padding: "9px 0 3px" }}>
-              {r.lineas.length === 0 ? <div className="li" style={{ color: "#767D76" }}>Elige material y medida.</div> : null}
+              {r.lineas.length === 0 ? <div className="li" style={{ color: "#767D76" }}>{esProducto ? "Elige un producto." : "Elige material y medida."}</div> : null}
               {r.lineas.map((l) => (
                 <div className="li" key={l.k}>
                   <span style={{ flex: 1, minWidth: 0 }}>{l.label}<span className="d mono">{l.detalle}</span></span>
@@ -260,7 +358,9 @@ export function CalculadoraGranFormato({
             </div>
             <div className="sep" />
             <div className="tot big"><span>Costo total</span><span className="a mono">{usd(r.costoTotal)}</span></div>
-            <div className="tot"><span>Costo por m²</span><span className="a mono">{r.areaFactM2 > 0 ? usd(r.costoTotal / r.areaFactM2, 2) : "—"}</span></div>
+            {esProducto
+              ? <div className="tot"><span>Costo por unidad</span><span className="a mono">{usd(r.costoUnit, 4)}</span></div>
+              : <div className="tot"><span>Costo por m²</span><span className="a mono">{r.areaFactM2 > 0 ? usd(r.costoTotal / r.areaFactM2, 2) : "—"}</span></div>}
             <div className="sep" />
             <div className="tot" style={{ color: "#767D76" }}><span>Costo protegido ×{fmtNum(r.dif, 3)}</span><span className="a mono">{usd(r.costoProt, 4)}</span></div>
             <div className="tot" style={{ color: "#767D76" }}><span>Utilidad protegida</span><span className="a mono">{usd(r.utilProt, 4)}</span></div>
@@ -270,7 +370,7 @@ export function CalculadoraGranFormato({
               <div className="v mono">{usd(r.precioUnit, 4)}</div>
               <div className="sub mono">
                 <span>Venta total <b>{usd(r.ventaTotal)}</b></span>
-                <span>Precio m² <b>{usd(r.precioM2Venta, 2)}</b></span>
+                {esProducto ? <span /> : <span>Precio m² <b>{usd(r.precioM2Venta, 2)}</b></span>}
               </div>
               <div className="sub mono">
                 <span>Bs {fmtNum(r.precioBs, 2)}</span>

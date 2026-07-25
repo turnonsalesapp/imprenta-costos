@@ -6,12 +6,15 @@ import {
 import {
   editarPapelAction, alternarPapelAction, editarAcabadoAction, alternarAcabadoAction,
   editarMaterialGFAction, alternarMaterialGFAction,
+  editarProductoGFAction, alternarProductoGFAction,
 } from "@/app/actions/variables";
 import { listarMaterialesGFAdmin } from "@/lib/materiales-gf";
+import { listarProductosGFAdmin } from "@/lib/productos-gf";
 import { ConfigForm } from "./ConfigForm";
 import { CrearPapelForm } from "./CrearPapelForm";
 import { CrearAcabadoForm } from "./CrearAcabadoForm";
 import { CrearMaterialGFForm } from "./CrearMaterialGFForm";
+import { CrearProductoGFForm } from "./CrearProductoGFForm";
 import { BotonTasas } from "./BotonTasas";
 import { MembreteForm } from "./MembreteForm";
 
@@ -24,9 +27,9 @@ const btnAlt = "rounded-sm border border-regla px-2.5 py-1 text-xs font-medium t
 
 export default async function VariablesPage() {
   await requireRol("ADMIN");
-  const [cfg, membrete, papeles, acabados, tasas, materialesGF] = await Promise.all([
+  const [cfg, membrete, papeles, acabados, tasas, materialesGF, productosGF] = await Promise.all([
     obtenerConfig(), obtenerMembrete(), listarPapeles(), listarAcabados(), historicoTasas(8),
-    listarMaterialesGFAdmin(),
+    listarMaterialesGFAdmin(), listarProductosGFAdmin(),
   ]);
 
   return (
@@ -206,6 +209,46 @@ export default async function VariablesPage() {
             ))}
           </div>
           <CrearMaterialGFForm />
+        </div>
+      </section>
+
+      {/* Productos terminados de gran formato */}
+      <section className="mt-8">
+        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+          Gran formato · productos <span className="normal-case text-kraft">· {productosGF.length} productos · costo por unidad</span>
+        </h2>
+        <div className="rounded-sm border border-regla bg-hoja">
+          <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
+            <span className="flex-1">Producto</span>
+            <span className="w-24">Categoría</span>
+            <span className="w-28">Medida</span>
+            <span className="w-20 text-right">Costo/u</span>
+            <span className="w-32" />
+          </div>
+          <div className="max-h-[28rem] overflow-y-auto">
+            {productosGF.map((p) => (
+              <form key={p.id} action={editarProductoGFAction}
+                className={`flex flex-wrap items-center gap-2 border-b border-suave px-4 py-1.5 ${p.activo ? "" : "opacity-50"}`}>
+                <input type="hidden" name="id" value={p.id} />
+                <input name="nombre" defaultValue={p.nombre} className={`min-w-[11rem] flex-1 ${inCls}`} />
+                <select name="categoria" defaultValue={p.categoria} className={`w-24 ${inCls}`}>
+                  <option value="Pendón">Pendón</option>
+                  <option value="Roll Up">Roll Up</option>
+                  <option value="Araña">Araña</option>
+                  <option value="Estructura">Estructura</option>
+                </select>
+                <input name="medida" defaultValue={p.medida} placeholder="—" className={`w-28 ${inCls}`} />
+                <input name="costoUnit" defaultValue={String(p.costoUnit)} inputMode="decimal" className={`w-20 text-right font-mono ${inCls}`} />
+                <span className="flex w-32 justify-end gap-1.5">
+                  <button type="submit" className={btnGuardar}>Guardar</button>
+                  <button type="submit" formAction={alternarProductoGFAction} className={btnAlt}>
+                    {p.activo ? "Quitar" : "Activar"}
+                  </button>
+                </span>
+              </form>
+            ))}
+          </div>
+          <CrearProductoGFForm />
         </div>
       </section>
 

@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { PAPELES_BASE, ACABADOS_BASE, CONFIG_BASE, MATERIALES_GF_BASE } from "../src/lib/datos-base";
+import { PAPELES_BASE, ACABADOS_BASE, CONFIG_BASE, MATERIALES_GF_BASE, PRODUCTOS_GF_BASE } from "../src/lib/datos-base";
 
 const db = new PrismaClient();
 
@@ -43,6 +43,17 @@ async function main() {
       create: {
         clave: m.clave, nombre: m.nombre, categoria: m.categoria,
         costoM2: m.costoM2, modoCobro: m.modo, anchosRollo: m.anchos,
+      },
+    });
+  }
+
+  for (const p of PRODUCTOS_GF_BASE) {
+    await db.productoGF.upsert({
+      where: { clave: p.clave },
+      update: {},
+      create: {
+        clave: p.clave, nombre: p.nombre, categoria: p.categoria,
+        medida: p.medida, costoUnit: p.costoUnit,
       },
     });
   }

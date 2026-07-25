@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { calcularGF, ojetesPorPerimetro, type EntradaGF } from "./calculo-granformato";
+import {
+  calcularGF, calcularProductoGF, ojetesPorPerimetro, type EntradaGF,
+} from "./calculo-granformato";
 
 const base: Omit<EntradaGF, "anchoCm" | "altoCm" | "cantidad" | "costoM2" | "modoCobro" | "anchoRolloCm"> = {
   materialNombre: "Banner 13 oz",
@@ -40,6 +42,38 @@ describe("gran formato: modo ancho de rollo", () => {
     // 1,37 (rollo) × 0,50 = 0,685 m²  (no 1,00 × 0,50)
     expect(r.areaFactM2).toBeCloseTo(0.685, 6);
     expect(r.lineas.find((l) => l.k === "material")!.monto).toBeCloseTo(5.48, 6);
+  });
+});
+
+describe("gran formato: producto terminado (costo fijo por unidad)", () => {
+  const r = calcularProductoGF({
+    productoNombre: "Pendón 60×90", costoUnit: 8.5, cantidad: 3,
+    margen: 30, comision: 0, ml: 12,
+    tasaBCV: 473, binCompra: 659.71, binVenta: 658.01, difManual: false, dif: "",
+  });
+
+  it("multiplica el costo por unidad × cantidad", () => {
+    expect(r.cant).toBe(3);
+    expect(r.costoTotal).toBeCloseTo(25.5, 6);       // 8,5 × 3
+    expect(r.costoUnit).toBeCloseTo(8.5, 6);
+    expect(r.lineas).toHaveLength(1);
+    expect(r.lineas[0].k).toBe("producto");
+  });
+
+  it("no calcula área ni ojetes, pero aplica la cola de precio", () => {
+    expect(r.areaFactM2).toBe(0);
+    expect(r.ojetesTotal).toBe(0);
+    expect(r.precioM2Venta).toBe(0);
+    expect(r.precioUnit).toBeGreaterThan(r.costoUnit); // protegido + margen
+  });
+
+  it("sin costo no arma líneas", () => {
+    const vacio = calcularProductoGF({
+      costoUnit: 0, cantidad: 1, margen: 30, comision: 0, ml: 12,
+      tasaBCV: 473, binCompra: 659.71, binVenta: 658.01, difManual: false, dif: "",
+    });
+    expect(vacio.lineas).toHaveLength(0);
+    expect(vacio.costoTotal).toBe(0);
   });
 });
 
