@@ -11,6 +11,7 @@ import { fetchTasasExternas } from "@/lib/tasas";
 import { modeloValido } from "@/lib/modelos-ia";
 import { crearMaterialGF, editarMaterialGF, alternarMaterialGF } from "@/lib/materiales-gf";
 import { crearProductoGF, editarProductoGF, alternarProductoGF } from "@/lib/productos-gf";
+import { crearProductoPop, editarProductoPop, alternarProductoPop } from "@/lib/productos-pop";
 
 export type EstadoVar = { error: string | null; ok?: boolean; msg?: string };
 
@@ -238,5 +239,48 @@ export async function alternarProductoGFAction(formData: FormData): Promise<void
   await requireRol("ADMIN");
   const id = String(formData.get("id") ?? "");
   if (id) await alternarProductoGF(id);
+  revalidatePath("/variables");
+}
+
+/* ─────────────── personalizados / material POP ─────────────── */
+
+function datosProductoPop(formData: FormData) {
+  return {
+    nombre: String(formData.get("nombre") ?? "").trim(),
+    categoria: String(formData.get("categoria") ?? "").trim() || "Chapa",
+    modo: String(formData.get("modo") ?? "escalas"),
+    escalas: String(formData.get("escalas") ?? "").trim(),
+    precioLineal: n(formData.get("precioLineal")),
+    anchoCm: n(formData.get("anchoCm")),
+    minCm: n(formData.get("minCm")),
+    unidad: String(formData.get("unidad") ?? "").trim() || "unidad",
+  };
+}
+
+export async function crearProductoPopAction(
+  _prev: EstadoVar,
+  formData: FormData,
+): Promise<EstadoVar> {
+  await requireRol("ADMIN");
+  const d = datosProductoPop(formData);
+  if (!d.nombre) return { error: "El nombre del producto es obligatorio." };
+  const r = await crearProductoPop(d);
+  if (!r.ok) return { error: r.error ?? "No se pudo crear." };
+  revalidatePath("/variables");
+  return { error: null, ok: true };
+}
+
+export async function editarProductoPopAction(formData: FormData): Promise<void> {
+  await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await editarProductoPop(id, datosProductoPop(formData));
+  revalidatePath("/variables");
+}
+
+export async function alternarProductoPopAction(formData: FormData): Promise<void> {
+  await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  if (id) await alternarProductoPop(id);
   revalidatePath("/variables");
 }

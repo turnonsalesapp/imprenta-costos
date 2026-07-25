@@ -11,11 +11,13 @@ import {
   actualizarCotizacionProveedor,
   crearCotizacionGranFormato,
   actualizarCotizacionGranFormato,
+  crearCotizacionPersonalizado,
+  actualizarCotizacionPersonalizado,
   cambiarEstadoCotizacion,
   eliminarCotizacion,
   ESTADOS,
 } from "@/lib/cotizaciones";
-import type { FormCotizacion, FormProveedor, FormGranFormato } from "@/lib/cotizacion-form";
+import type { FormCotizacion, FormProveedor, FormGranFormato, FormPersonalizado } from "@/lib/cotizacion-form";
 import { registrarAuditoria } from "@/lib/auditoria";
 
 export type EstadoGuardar = { error: string | null };
@@ -58,6 +60,19 @@ export async function guardarGranFormatoAction(
   const r = editarId
     ? await actualizarCotizacionGranFormato(editarId, form)
     : await crearCotizacionGranFormato(form, usuario.id);
+  if (!r.ok) return { error: r.error };
+  redirect(`/cotizaciones/${r.id}`);
+}
+
+/** Guarda una cotización de PERSONALIZADO / Material POP (crea o actualiza si es borrador). */
+export async function guardarPersonalizadoAction(
+  form: FormPersonalizado,
+): Promise<EstadoGuardar> {
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
+  const editarId = form.editarId?.trim();
+  const r = editarId
+    ? await actualizarCotizacionPersonalizado(editarId, form)
+    : await crearCotizacionPersonalizado(form, usuario.id);
   if (!r.ok) return { error: r.error };
   redirect(`/cotizaciones/${r.id}`);
 }

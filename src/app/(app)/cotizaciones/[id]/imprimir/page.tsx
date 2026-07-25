@@ -112,7 +112,9 @@ export default async function ImprimirCotizacion({
                           ? (it.ancho > 0
                               ? `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} cm · ${it.papelNombre}`
                               : `${it.papelNombre}${it.tamano ? ` · ${it.tamano}` : ""}`)
-                          : `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} mm · ${it.papelNombre} · ${it.tamano}`}
+                          : c.tipo === "PERSONALIZADO"
+                            ? `${it.papelNombre}${it.tamano ? ` · ${it.tamano}` : ""}`
+                            : `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} mm · ${it.papelNombre} · ${it.tamano}`}
                     </div>
                   </td>
                   <td className="py-3 text-right font-mono">{fmtNum(it.cantidad, 0)}</td>

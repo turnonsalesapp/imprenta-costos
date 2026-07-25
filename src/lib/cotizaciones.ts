@@ -8,8 +8,10 @@ import {
 import {
   calcularGF, calcularProductoGF, type EntradaGF, type EntradaProductoGF, type ResultadoGF,
 } from "./calculo-granformato";
+import { calcularPop, type EntradaPop } from "./calculo-personalizado";
 import {
   formAEntrada, totalProveedor, type FormCotizacion, type FormProveedor, type FormGranFormato,
+  type FormPersonalizado,
 } from "./cotizacion-form";
 import { crearTrabajoDesdeForm } from "./trabajos";
 
@@ -616,6 +618,129 @@ export async function cargarGranFormatoEnForm(
     modoCobro: e.modoCobro === "ancho_rollo" ? "ancho_rollo" : "mancha",
     anchoRolloCm: v("anchoRolloCm"),
     ojetesAuto: Boolean(e.ojetesAuto), ojetes: v("ojetes"),
+    margen: v("margen"), comision: v("comision"), ml: v("ml"),
+    tasaBCV: v("tasaBCV"), binCompra: v("binCompra"), binVenta: v("binVenta"),
+    difManual: Boolean(e.difManual), dif: v("dif"), precioManual: v("precioManual"),
+    editarId: modo === "editar" ? id : "",
+  };
+}
+
+/* ─────────────────── cotizaciones de personalizados (POP) ─────────────────── */
+
+type PopResuelto = {
+  nombre: string; categoria: string; modo: string; escalas: string;
+  precioLineal: number; anchoCm: number; minCm: number; unidad: string;
+};
+
+async function contextoPop(clave: string): Promise<PopResuelto | null> {
+  const p = await db.productoPop.findUnique({
+    where: { clave },
+    select: { nombre: true, categoria: true, modo: true, escalas: true, precioLineal: true, anchoCm: true, minCm: true, unidad: true },
+  });
+  if (!p) return null;
+  return {
+    nombre: p.nombre, categoria: p.categoria, modo: p.modo, escalas: p.escalas,
+    precioLineal: num(p.precioLineal), anchoCm: p.anchoCm, minCm: p.minCm, unidad: p.unidad,
+  };
+}
+
+function datosPersonalizado(form: FormPersonalizado, prod: PopResuelto) {
+  const lineal = prod.modo === "lineal";
+  const entrada: EntradaPop = {
+    nombre: prod.nombre, modo: lineal ? "lineal" : "escalas",
+    cantidad: form.cantidad, escalas: prod.escalas,
+    largoCm: form.largoCm, precioLineal: prod.precioLineal, anchoCm: prod.anchoCm, minCm: prod.minCm,
+    margen: form.margen, comision: form.comision, ml: form.ml,
+    tasaBCV: form.tasaBCV, binCompra: form.binCompra, binVenta: form.binVenta,
+    difManual: form.difManual, dif: form.dif, precioManual: form.precioManual,
+  };
+  const r = calcularPop(entrada);
+  const medida = lineal && r.facturableCm > 0
+    ? `${Math.round(r.facturableCm)} cm (ancho ${prod.anchoCm} cm)`
+    : "";
+  const descripcion =
+    (form.descripcion ?? "").trim() ||
+    `${prod.nombre}${medida ? ` · ${medida}` : ""}`;
+  return {
+    r,
+    data: {
+      tipo: "PERSONALIZADO" as const,
+      clienteId: form.clienteId?.trim() || null,
+      clienteNombre: (form.cliente ?? "").trim() || null,
+      titulo: (form.trabajo ?? "").trim() || prod.nombre,
+      descripcion,
+      cantidad: r.cant,
+      ancho: lineal ? Math.round(r.facturableCm) : 0, alto: 0,
+      tamano: lineal ? `Metro lineal · ancho ${prod.anchoCm} cm` : "Por cantidad",
+      papelNombre: prod.nombre,
+      capacidad: 0,
+      entrada: { ...entrada, productoId: form.productoId } as unknown as Prisma.InputJsonValue,
+      snapshot: { tipo: "personalizado", producto: prod } as unknown as Prisma.InputJsonValue,
+      lineas: r.lineas as unknown as Prisma.InputJsonValue,
+      pliegos: 0,
+      costoTotal: r.costoTotal, costoUnit: r.costoUnit, diferencial: r.dif,
+      margen: n(form.margen),
+      precioUnit: r.precioUnit, ventaTotal: r.ventaTotal, precioML: r.precioML,
+      tasaBCV: n(form.tasaBCV), precioBs: r.precioBs,
+    },
+  };
+}
+
+export async function crearCotizacionPersonalizado(
+  form: FormPersonalizado, usuarioId: string,
+): Promise<ResultadoGuardar> {
+  const cliente = (form.cliente ?? "").trim();
+  const trabajo = (form.trabajo ?? "").trim();
+  if (!cliente && !trabajo) return { ok: false, error: "Falta el cliente o el trabajo." };
+  const prod = await contextoPop(form.productoId);
+  if (!prod) return { ok: false, error: "Elige un producto personalizado." };
+
+  const { r, data } = datosPersonalizado(form, prod);
+  if (r.cant <= 0) return { ok: false, error: "Indica la cantidad." };
+  if (r.costoTotal <= 0) return { ok: false, error: prod.modo === "lineal" ? "Indica el largo (cm)." : "El producto no tiene costo para esa cantidad." };
+
+  const cot = await db.cotizacion.create({
+    data: { estado: "BORRADOR", usuarioId, ...data },
+    select: { id: true },
+  });
+  return { ok: true, id: cot.id };
+}
+
+export async function actualizarCotizacionPersonalizado(
+  id: string, form: FormPersonalizado,
+): Promise<ResultadoGuardar> {
+  const ex = await db.cotizacion.findUnique({ where: { id }, select: { estado: true } });
+  if (!ex) return { ok: false, error: "La cotización no existe." };
+  if (ex.estado !== "BORRADOR") return { ok: false, error: "Solo se pueden editar cotizaciones en borrador." };
+  const prod = await contextoPop(form.productoId);
+  if (!prod) return { ok: false, error: "Elige un producto personalizado." };
+
+  const { r, data } = datosPersonalizado(form, prod);
+  if (r.cant <= 0) return { ok: false, error: "Indica la cantidad." };
+  if (r.costoTotal <= 0) return { ok: false, error: prod.modo === "lineal" ? "Indica el largo (cm)." : "El producto no tiene costo para esa cantidad." };
+
+  await db.cotizacion.update({ where: { id }, data });
+  return { ok: true, id };
+}
+
+export async function cargarPersonalizadoEnForm(
+  id: string, modo: "copia" | "editar",
+): Promise<Partial<FormPersonalizado> | null> {
+  const c = await db.cotizacion.findUnique({
+    where: { id },
+    select: { entrada: true, titulo: true, descripcion: true, clienteNombre: true, clienteId: true },
+  });
+  if (!c) return null;
+  const e = (c.entrada as unknown as Record<string, unknown>) ?? {};
+  const v = (k: string) => (e[k] ?? "") as number | string;
+  return {
+    cliente: c.clienteNombre ?? "",
+    clienteId: c.clienteId ?? "",
+    trabajo: modo === "copia" ? `${c.titulo} (copia)` : c.titulo,
+    descripcion: modo === "copia" ? "" : (c.descripcion ?? ""),
+    productoId: (e.productoId ?? "") as string,
+    modo: e.modo === "lineal" ? "lineal" : "escalas",
+    cantidad: v("cantidad"), largoCm: v("largoCm"),
     margen: v("margen"), comision: v("comision"), ml: v("ml"),
     tasaBCV: v("tasaBCV"), binCompra: v("binCompra"), binVenta: v("binVenta"),
     difManual: Boolean(e.difManual), dif: v("dif"), precioManual: v("precioManual"),

@@ -159,6 +159,36 @@ export const PRODUCTOS_GF_BASE: ProductoGFBase[] = [
   { clave: "gf-porta-doble-cara", nombre: "Porta pendón doble cara", categoria: "Estructura", medida: "hasta 180 cm", costoUnit: 25 },
 ];
 
+/**
+ * Productos PERSONALIZADOS / Material POP (catálogo Digital Print 2025).
+ * Tercerizados. `modo` define cómo viene el costo del proveedor:
+ *   escalas = precio por unidad según el volumen ("desde:precio" separados por coma)
+ *   lineal  = precio por metro lineal con ancho fijo y mínimo en cm (DTF UV)
+ */
+export type ProductoPopBase = {
+  clave: string; nombre: string; categoria: string;
+  modo: "escalas" | "lineal";
+  escalas: string; precioLineal: number; anchoCm: number; minCm: number; unidad: string;
+};
+
+const E = (escalas: string, categoria: string): Pick<ProductoPopBase, "modo" | "escalas" | "precioLineal" | "anchoCm" | "minCm" | "unidad" | "categoria"> =>
+  ({ modo: "escalas", escalas, precioLineal: 0, anchoCm: 0, minCm: 0, unidad: "unidad", categoria });
+
+export const PRODUCTOS_POP_BASE: ProductoPopBase[] = [
+  // Chapas (botones) — precio por unidad según volumen.
+  { clave: "pop-chapa-prendedor", nombre: "Chapa prendedor", ...E("1:3.5,12:2.2,50:2.1,100:1.5", "Chapa") },
+  { clave: "pop-chapa-llavero", nombre: "Chapa llavero liso", ...E("1:4.2,12:3.4,50:3.5,100:2.6", "Chapa") },
+  { clave: "pop-chapa-destapador", nombre: "Chapa destapador", ...E("1:5,12:4.2,50:4,100:3.5", "Chapa") },
+  // Sublimación de objetos.
+  { clave: "pop-boligrafo-3en1", nombre: "Bolígrafo 3 en 1 (sublimado)", ...E("1:4,12:3.5,50:3.2,100:3", "Bolígrafo") },
+  // Corte / grabado láser.
+  { clave: "pop-llavero-acrilico-transp", nombre: "Llavero grabado acrílico transparente", ...E("1:3,12:2.2,50:2,100:1.6", "Llavero") },
+  { clave: "pop-llavero-acrilico-metal", nombre: "Llavero grabado acrílico metalizado", ...E("1:3.5,12:2.3,50:2.2,100:1.8", "Llavero") },
+  { clave: "pop-llavero-mdf", nombre: "Llavero grabado MDF", ...E("1:3,12:2.2,50:1.8,100:1.5", "Llavero") },
+  // DTF UV — por metro lineal (ancho fijo 57 cm, mínimo 30 cm).
+  { clave: "pop-dtf-uv", nombre: "DTF UV", categoria: "DTF", modo: "lineal", escalas: "", precioLineal: 30, anchoCm: 57, minCm: 30, unidad: "metro" },
+];
+
 export const CONFIG_BASE: Omit<Config, "papeles" | "acabados"> = {
   merma: 3,        // % de error de consumo de papel
   margen: 30,      // % de margen sobre el precio de venta

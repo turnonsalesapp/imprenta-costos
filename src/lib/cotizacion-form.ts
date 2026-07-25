@@ -6,6 +6,7 @@
 import type { Config, Entrada, AcabadoSel } from "./calculo";
 import { n } from "./calculo";
 import type { ModoCobroGF } from "./calculo-granformato";
+import type { ModoPop } from "./calculo-personalizado";
 
 export type FormCotizacion = {
   // Meta (no entra al motor)
@@ -168,6 +169,39 @@ export function nuevoFormGranFormato(cfg: Config): FormGranFormato {
     materialId: "", anchoCm: "", altoCm: "", cantidad: "1",
     modoCobro: "mancha", anchoRolloCm: "",
     ojetesAuto: false, ojetes: "",
+    margen: cfg.margen, comision: cfg.comision, ml: cfg.ml,
+    tasaBCV: cfg.tasaBCV, binCompra: cfg.binCompra, binVenta: cfg.binVenta,
+    difManual: false, dif: "", precioManual: "", editarId: "",
+  };
+}
+
+/* ─────────────────── personalizados / material POP ─────────────────── */
+
+export type FormPersonalizado = {
+  cliente: string;
+  clienteId: string;
+  trabajo: string;
+  descripcion: string;
+  productoId: string;           // clave del producto POP
+  modo: ModoPop;                // "escalas" | "lineal" (del producto elegido)
+  cantidad: number | string;
+  largoCm: number | string;     // modo lineal (DTF)
+  margen: number | string;
+  comision: number | string;
+  ml: number | string;
+  tasaBCV: number | string;
+  binCompra: number | string;
+  binVenta: number | string;
+  difManual: boolean;
+  dif: number | string;
+  precioManual: number | string;
+  editarId: string;
+};
+
+export function nuevoFormPersonalizado(cfg: Config): FormPersonalizado {
+  return {
+    cliente: "", clienteId: "", trabajo: "", descripcion: "",
+    productoId: "", modo: "escalas", cantidad: "1", largoCm: "",
     margen: cfg.margen, comision: cfg.comision, ml: cfg.ml,
     tasaBCV: cfg.tasaBCV, binCompra: cfg.binCompra, binVenta: cfg.binVenta,
     difManual: false, dif: "", precioManual: "", editarId: "",

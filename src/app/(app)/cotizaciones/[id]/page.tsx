@@ -27,8 +27,9 @@ export default async function DetalleCotizacion({
   const rutaCotizar =
     c.tipo === "PROVEEDOR" ? "/cotizar-proveedor"
     : c.tipo === "GRAN_FORMATO" ? "/cotizar-granformato"
+    : c.tipo === "PERSONALIZADO" ? "/cotizar-personalizado"
     : "/cotizar";
-  const tercerizado = c.tipo === "PROVEEDOR" || c.tipo === "GRAN_FORMATO";
+  const tercerizado = c.tipo === "PROVEEDOR" || c.tipo === "GRAN_FORMATO" || c.tipo === "PERSONALIZADO";
   const multi = c.items.length > 1;
   const ov = esOrdenVenta(c.estado);
 
@@ -185,6 +186,16 @@ export default async function DetalleCotizacion({
                     <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
                   </>
                 )
+              ) : c.tipo === "PERSONALIZADO" ? (
+                <>
+                  <Cond k="Producto" v={c.papelNombre} />
+                  {c.tamano && <Cond k="Cobro" v={c.tamano} />}
+                  <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} u`} />
+                  <Cond k="Costo por unidad" v={usd(c.costoUnit, 4)} />
+                  <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
+                  <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
+                  <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
+                </>
               ) : multi ? (
                 <>
                   {c.items.map((it, i) => (

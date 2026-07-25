@@ -137,6 +137,11 @@ export default async function CotizacionesPage({
                         Gran formato
                       </span>
                     )}
+                    {c.tipo === "PERSONALIZADO" && (
+                      <span className="ml-2 rounded-sm bg-[#FFF4E0] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#9A6A00]">
+                        Personalizado
+                      </span>
+                    )}
                     {c.nItems > 1 && (
                       <span className="ml-2 rounded-sm bg-[#E6F4F8] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cian">
                         {c.nItems} ítems
