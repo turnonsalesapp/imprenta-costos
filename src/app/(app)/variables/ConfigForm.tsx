@@ -30,6 +30,10 @@ export function ConfigForm({ cfg }: { cfg: DatosConfig }) {
         <Campo l="Margen mínimo (%)" name="margenMin" v={cfg.margenMin} />
         <Campo l="IVA (%)" name="iva" v={cfg.iva} />
       </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:max-w-xs">
+        <Campo l="Ojete gran formato ($)" name="gfOjeteCosto" v={cfg.gfOjeteCosto} />
+        <Campo l="Ojetes cada (cm)" name="gfOjeteCm" v={cfg.gfOjeteCm} />
+      </div>
 
       <label className="mt-4 flex items-start gap-2.5 rounded-sm border border-regla bg-suave px-3 py-2.5">
         <input type="checkbox" name="interpretarIA" defaultChecked={cfg.interpretarIA} className="mt-0.5 h-4 w-4 accent-tinta" />

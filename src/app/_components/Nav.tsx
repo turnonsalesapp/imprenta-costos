@@ -21,6 +21,7 @@ export function Nav({ usuario }: { usuario: Sesion }) {
     enlaces.push(
       { href: "/cotizar", label: "Cotizar" },
       { href: "/cotizar-proveedor", label: "Cotizar prov." },
+      { href: "/cotizar-granformato", label: "Gran formato" },
       { href: "/cotizaciones", label: "Cotizaciones" },
       { href: "/clientes", label: "Clientes" },
     );

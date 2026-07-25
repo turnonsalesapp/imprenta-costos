@@ -5,8 +5,9 @@ import { cargarConfig, snapshot } from "./config";
 import {
   calcular, precioDesdeCosto, n, type LineaCosto, type Entrada, type Config,
 } from "./calculo";
+import { calcularGF, type EntradaGF } from "./calculo-granformato";
 import {
-  formAEntrada, totalProveedor, type FormCotizacion, type FormProveedor,
+  formAEntrada, totalProveedor, type FormCotizacion, type FormProveedor, type FormGranFormato,
 } from "./cotizacion-form";
 import { crearTrabajoDesdeForm } from "./trabajos";
 
@@ -422,6 +423,129 @@ export async function cargarProveedorEnForm(
     costoModo: e.costoModo === "unitario" ? "unitario" : "total",
     costoTotal: v("costoTotal"),
     costoUnitario: v("costoUnitario"),
+    margen: v("margen"), comision: v("comision"), ml: v("ml"),
+    tasaBCV: v("tasaBCV"), binCompra: v("binCompra"), binVenta: v("binVenta"),
+    difManual: Boolean(e.difManual), dif: v("dif"), precioManual: v("precioManual"),
+    editarId: modo === "editar" ? id : "",
+  };
+}
+
+/* ─────────────────────── cotizaciones de gran formato ─────────────────────── */
+
+type MaterialResuelto = { nombre: string; costoM2: number; modoCobro: string };
+type OjeteCfg = { costo: number; cm: number };
+
+/** Trae el material (autoritativo) y la config de ojetes para calcular en el servidor. */
+async function contextoGF(materialClave: string): Promise<{ mat: MaterialResuelto; ojete: OjeteCfg } | null> {
+  const [mat, cfg] = await Promise.all([
+    db.materialGF.findUnique({ where: { clave: materialClave }, select: { nombre: true, costoM2: true, modoCobro: true } }),
+    db.config.findUnique({ where: { id: "global" }, select: { gfOjeteCosto: true, gfOjeteCm: true } }),
+  ]);
+  if (!mat) return null;
+  return {
+    mat: { nombre: mat.nombre, costoM2: num(mat.costoM2), modoCobro: mat.modoCobro },
+    ojete: { costo: cfg ? num(cfg.gfOjeteCosto) : 0.8, cm: cfg?.gfOjeteCm ?? 40 },
+  };
+}
+
+function datosGranFormato(form: FormGranFormato, mat: MaterialResuelto, ojete: OjeteCfg) {
+  const entrada: EntradaGF = {
+    materialNombre: mat.nombre,
+    anchoCm: form.anchoCm, altoCm: form.altoCm, cantidad: form.cantidad,
+    costoM2: mat.costoM2, modoCobro: form.modoCobro, anchoRolloCm: form.anchoRolloCm,
+    ojetesAuto: form.ojetesAuto, ojetes: form.ojetes, ojeteCosto: ojete.costo, ojeteCm: ojete.cm,
+    margen: form.margen, comision: form.comision, ml: form.ml,
+    tasaBCV: form.tasaBCV, binCompra: form.binCompra, binVenta: form.binVenta,
+    difManual: form.difManual, dif: form.dif, precioManual: form.precioManual,
+  };
+  const r = calcularGF(entrada);
+  const anchoCm = Math.round(n(form.anchoCm));
+  const altoCm = Math.round(n(form.altoCm));
+  const descripcion =
+    (form.descripcion ?? "").trim() ||
+    `${mat.nombre} · ${anchoCm}×${altoCm} cm${r.ojetesTotal > 0 ? ` · ${r.ojetesTotal} ojetes` : ""}`;
+  return {
+    r,
+    data: {
+      tipo: "GRAN_FORMATO" as const,
+      clienteId: form.clienteId?.trim() || null,
+      clienteNombre: (form.cliente ?? "").trim() || null,
+      titulo: (form.trabajo ?? "").trim() || "Gran formato",
+      descripcion,
+      cantidad: r.cant,
+      ancho: anchoCm, alto: altoCm, // en CENTÍMETROS para gran formato
+      tamano: form.modoCobro === "ancho_rollo" ? `Rollo ${Math.round(n(form.anchoRolloCm))} cm` : "Por mancha",
+      papelNombre: mat.nombre,
+      capacidad: 0,
+      entrada: { ...entrada, materialId: form.materialId } as unknown as Prisma.InputJsonValue,
+      snapshot: { tipo: "granformato", material: mat } as unknown as Prisma.InputJsonValue,
+      lineas: r.lineas as unknown as Prisma.InputJsonValue,
+      pliegos: 0,
+      costoTotal: r.costoTotal, costoUnit: r.costoUnit, diferencial: r.dif,
+      margen: n(form.margen),
+      precioUnit: r.precioUnit, ventaTotal: r.ventaTotal, precioML: r.precioML,
+      tasaBCV: n(form.tasaBCV), precioBs: r.precioBs,
+    },
+  };
+}
+
+export async function crearCotizacionGranFormato(
+  form: FormGranFormato, usuarioId: string,
+): Promise<ResultadoGuardar> {
+  const cliente = (form.cliente ?? "").trim();
+  const trabajo = (form.trabajo ?? "").trim();
+  if (!cliente && !trabajo) return { ok: false, error: "Falta el cliente o el trabajo." };
+  const ctx = await contextoGF(form.materialId);
+  if (!ctx) return { ok: false, error: "Elige un material de gran formato." };
+
+  const { r, data } = datosGranFormato(form, ctx.mat, ctx.ojete);
+  if (r.cant <= 0) return { ok: false, error: "Indica la cantidad." };
+  if (r.costoTotal <= 0) return { ok: false, error: "Indica la medida (ancho y alto)." };
+
+  const cot = await db.cotizacion.create({
+    data: { estado: "BORRADOR", usuarioId, ...data },
+    select: { id: true },
+  });
+  return { ok: true, id: cot.id };
+}
+
+export async function actualizarCotizacionGranFormato(
+  id: string, form: FormGranFormato,
+): Promise<ResultadoGuardar> {
+  const ex = await db.cotizacion.findUnique({ where: { id }, select: { estado: true } });
+  if (!ex) return { ok: false, error: "La cotización no existe." };
+  if (ex.estado !== "BORRADOR") return { ok: false, error: "Solo se pueden editar cotizaciones en borrador." };
+  const ctx = await contextoGF(form.materialId);
+  if (!ctx) return { ok: false, error: "Elige un material de gran formato." };
+
+  const { r, data } = datosGranFormato(form, ctx.mat, ctx.ojete);
+  if (r.cant <= 0) return { ok: false, error: "Indica la cantidad." };
+  if (r.costoTotal <= 0) return { ok: false, error: "Indica la medida (ancho y alto)." };
+
+  await db.cotizacion.update({ where: { id }, data });
+  return { ok: true, id };
+}
+
+export async function cargarGranFormatoEnForm(
+  id: string, modo: "copia" | "editar",
+): Promise<Partial<FormGranFormato> | null> {
+  const c = await db.cotizacion.findUnique({
+    where: { id },
+    select: { entrada: true, titulo: true, descripcion: true, clienteNombre: true, clienteId: true },
+  });
+  if (!c) return null;
+  const e = (c.entrada as unknown as Record<string, unknown>) ?? {};
+  const v = (k: string) => (e[k] ?? "") as number | string;
+  return {
+    cliente: c.clienteNombre ?? "",
+    clienteId: c.clienteId ?? "",
+    trabajo: modo === "copia" ? `${c.titulo} (copia)` : c.titulo,
+    descripcion: modo === "copia" ? "" : (c.descripcion ?? ""),
+    materialId: (e.materialId ?? "") as string,
+    anchoCm: v("anchoCm"), altoCm: v("altoCm"), cantidad: v("cantidad"),
+    modoCobro: e.modoCobro === "ancho_rollo" ? "ancho_rollo" : "mancha",
+    anchoRolloCm: v("anchoRolloCm"),
+    ojetesAuto: Boolean(e.ojetesAuto), ojetes: v("ojetes"),
     margen: v("margen"), comision: v("comision"), ml: v("ml"),
     tasaBCV: v("tasaBCV"), binCompra: v("binCompra"), binVenta: v("binVenta"),
     difManual: Boolean(e.difManual), dif: v("dif"), precioManual: v("precioManual"),

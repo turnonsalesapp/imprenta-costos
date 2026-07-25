@@ -22,6 +22,7 @@ export type DatosConfig = {
   tasaBCV: number; binCompra: number; binVenta: number;
   pinza: number; sep: number; margenMin: number; iva: number;
   interpretarIA: boolean; interpretarModelo: string;
+  gfOjeteCosto: number; gfOjeteCm: number;
 };
 
 export async function obtenerConfig(): Promise<DatosConfig> {
@@ -33,6 +34,7 @@ export async function obtenerConfig(): Promise<DatosConfig> {
     margenMin: c ? num(c.margenMin) : 15, iva: c ? num(c.iva) : 16,
     interpretarIA: Boolean(c?.interpretarIA),
     interpretarModelo: c?.interpretarModelo ?? "",
+    gfOjeteCosto: c ? num(c.gfOjeteCosto) : 0.8, gfOjeteCm: c?.gfOjeteCm ?? 40,
   };
 }
 

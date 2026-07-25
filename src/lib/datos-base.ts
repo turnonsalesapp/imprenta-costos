@@ -96,6 +96,40 @@ export const ACABADOS_BASE: Acabado[] = [
   { id: "prueba", label: "Prueba de Color", costo: 5, unidad: "trabajo", escala: "fija" },
 ];
 
+/**
+ * Materiales de GRAN FORMATO, tomados del catálogo de revendedores del proveedor
+ * (Digital Print 2025). Son COSTOS base por m² a BCV; el sistema les aplica el
+ * margen con la misma cola de precio. `modo` es el valor por defecto del cobro:
+ *   mancha      = se cobra el área impresa (ancho de la pieza × alto)
+ *   ancho_rollo = se cobra el ancho completo del rollo × alto
+ * `anchos` son los anchos de rollo disponibles en cm.
+ */
+export type MaterialGFBase = {
+  clave: string; nombre: string; categoria: string;
+  costoM2: number; modo: "mancha" | "ancho_rollo"; anchos: string;
+};
+
+export const MATERIALES_GF_BASE: MaterialGFBase[] = [
+  // Banners — se cobran por la mancha de impresión.
+  { clave: "gf-banner-13oz", nombre: "Banner 13 oz", categoria: "Banner", costoM2: 7, modo: "mancha", anchos: "" },
+  { clave: "gf-banner-reciclaje", nombre: "Banner Reciclaje", categoria: "Banner", costoM2: 6, modo: "mancha", anchos: "" },
+  { clave: "gf-banner-backlight", nombre: "Banner Backlight", categoria: "Banner", costoM2: 8, modo: "mancha", anchos: "" },
+  { clave: "gf-banner-blackout", nombre: "Banner Blackout", categoria: "Banner", costoM2: 8, modo: "mancha", anchos: "" },
+  { clave: "gf-banner-mesh", nombre: "Banner Mesh", categoria: "Banner", costoM2: 10, modo: "mancha", anchos: "320" },
+  // Banners impresos en UV (mayor costo).
+  { clave: "gf-banner-13oz-uv", nombre: "Banner 13 oz (UV)", categoria: "Banner UV", costoM2: 15, modo: "mancha", anchos: "" },
+  { clave: "gf-banner-blackout-uv", nombre: "Banner Blackout (UV)", categoria: "Banner UV", costoM2: 16, modo: "mancha", anchos: "" },
+  { clave: "gf-banner-backlight-uv", nombre: "Banner Backlight (UV)", categoria: "Banner UV", costoM2: 18, modo: "mancha", anchos: "90,115,140,160,180" },
+  // Viniles — se cobran por el ancho del rollo.
+  { clave: "gf-vinil-estandar", nombre: "Vinil Estándar 140gr", categoria: "Vinil", costoM2: 7, modo: "ancho_rollo", anchos: "105,137,152" },
+  { clave: "gf-vinil-matte", nombre: "Vinil Matte", categoria: "Vinil", costoM2: 8, modo: "ancho_rollo", anchos: "137" },
+  { clave: "gf-vinil-blackout", nombre: "Vinil Blackout", categoria: "Vinil", costoM2: 8, modo: "ancho_rollo", anchos: "137" },
+  { clave: "gf-clear", nombre: "Clear Brillante", categoria: "Vinil", costoM2: 8, modo: "ancho_rollo", anchos: "137" },
+  { clave: "gf-microperforado", nombre: "Vinil Microperforado", categoria: "Vinil", costoM2: 11, modo: "ancho_rollo", anchos: "137" },
+  { clave: "gf-holografico", nombre: "Vinil Holográfico", categoria: "Vinil", costoM2: 13, modo: "ancho_rollo", anchos: "127" },
+  { clave: "gf-vinil-estandar-uv", nombre: "Vinil Estándar (UV)", categoria: "Vinil UV", costoM2: 18, modo: "ancho_rollo", anchos: "137,152" },
+];
+
 export const CONFIG_BASE: Omit<Config, "papeles" | "acabados"> = {
   merma: 3,        // % de error de consumo de papel
   margen: 30,      // % de margen sobre el precio de venta

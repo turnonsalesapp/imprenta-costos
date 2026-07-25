@@ -132,6 +132,11 @@ export default async function CotizacionesPage({
                         Proveedor
                       </span>
                     )}
+                    {c.tipo === "GRAN_FORMATO" && (
+                      <span className="ml-2 rounded-sm bg-[#FDECED] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#B23A48]">
+                        Gran formato
+                      </span>
+                    )}
                     {c.nItems > 1 && (
                       <span className="ml-2 rounded-sm bg-[#E6F4F8] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cian">
                         {c.nItems} ítems
@@ -139,7 +144,7 @@ export default async function CotizacionesPage({
                     )}
                     <div className="text-[11px] text-kraft">
                       {c.clienteNombre ? c.clienteNombre + " · " : ""}
-                      {c.tipo === "PROVEEDOR" ? c.papelNombre : `${c.papelNombre} · ${c.tamano}`}
+                      {c.tipo === "PROPIA" ? `${c.papelNombre} · ${c.tamano}` : c.papelNombre}
                     </div>
                   </td>
                   <td className="px-4 py-2.5 text-right font-mono">{fmtNum(c.cantidad, 0)}</td>

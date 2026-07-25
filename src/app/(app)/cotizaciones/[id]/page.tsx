@@ -24,7 +24,11 @@ export default async function DetalleCotizacion({
   if (!c) notFound();
 
   const puedeBorrar = esAdmin(usuario.rol) && c.estado === "BORRADOR" && !c.orden;
-  const rutaCotizar = c.tipo === "PROVEEDOR" ? "/cotizar-proveedor" : "/cotizar";
+  const rutaCotizar =
+    c.tipo === "PROVEEDOR" ? "/cotizar-proveedor"
+    : c.tipo === "GRAN_FORMATO" ? "/cotizar-granformato"
+    : "/cotizar";
+  const tercerizado = c.tipo === "PROVEEDOR" || c.tipo === "GRAN_FORMATO";
   const multi = c.items.length > 1;
   const ov = esOrdenVenta(c.estado);
 
@@ -159,6 +163,16 @@ export default async function DetalleCotizacion({
                   <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
                   {c.proveedorNotas && <Cond k="Notas" v={c.proveedorNotas} />}
                 </>
+              ) : c.tipo === "GRAN_FORMATO" ? (
+                <>
+                  <Cond k="Material" v={c.papelNombre} />
+                  <Cond k="Medida" v={`${fmtNum(c.ancho, 0)}×${fmtNum(c.alto, 0)} cm`} />
+                  <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} u`} />
+                  <Cond k="Cobro" v={c.tamano} />
+                  <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
+                  <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
+                  <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
+                </>
               ) : multi ? (
                 <>
                   {c.items.map((it, i) => (
@@ -207,7 +221,7 @@ export default async function DetalleCotizacion({
             <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
               Trabajo de producción
             </div>
-            {c.tipo === "PROVEEDOR" ? (
+            {tercerizado ? (
               <p className="text-[11px] text-kraft">
                 Trabajo tercerizado: lo produce el proveedor, no genera trabajo de taller.
               </p>

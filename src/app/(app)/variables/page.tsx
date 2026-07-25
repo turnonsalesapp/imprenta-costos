@@ -5,10 +5,13 @@ import {
 } from "@/lib/variables";
 import {
   editarPapelAction, alternarPapelAction, editarAcabadoAction, alternarAcabadoAction,
+  editarMaterialGFAction, alternarMaterialGFAction,
 } from "@/app/actions/variables";
+import { listarMaterialesGFAdmin } from "@/lib/materiales-gf";
 import { ConfigForm } from "./ConfigForm";
 import { CrearPapelForm } from "./CrearPapelForm";
 import { CrearAcabadoForm } from "./CrearAcabadoForm";
+import { CrearMaterialGFForm } from "./CrearMaterialGFForm";
 import { BotonTasas } from "./BotonTasas";
 import { MembreteForm } from "./MembreteForm";
 
@@ -21,8 +24,9 @@ const btnAlt = "rounded-sm border border-regla px-2.5 py-1 text-xs font-medium t
 
 export default async function VariablesPage() {
   await requireRol("ADMIN");
-  const [cfg, membrete, papeles, acabados, tasas] = await Promise.all([
+  const [cfg, membrete, papeles, acabados, tasas, materialesGF] = await Promise.all([
     obtenerConfig(), obtenerMembrete(), listarPapeles(), listarAcabados(), historicoTasas(8),
+    listarMaterialesGFAdmin(),
   ]);
 
   return (
@@ -162,6 +166,46 @@ export default async function VariablesPage() {
             ))}
           </div>
           <CrearPapelForm medidas={medidas} />
+        </div>
+      </section>
+
+      {/* Materiales de gran formato */}
+      <section className="mt-8">
+        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+          Gran formato <span className="normal-case text-kraft">· {materialesGF.length} materiales · costo por m²</span>
+        </h2>
+        <div className="rounded-sm border border-regla bg-hoja">
+          <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
+            <span className="flex-1">Material</span>
+            <span className="w-24">Categoría</span>
+            <span className="w-20 text-right">Costo/m²</span>
+            <span className="w-28">Cobro</span>
+            <span className="w-28">Anchos (cm)</span>
+            <span className="w-32" />
+          </div>
+          <div className="max-h-[28rem] overflow-y-auto">
+            {materialesGF.map((m) => (
+              <form key={m.id} action={editarMaterialGFAction}
+                className={`flex flex-wrap items-center gap-2 border-b border-suave px-4 py-1.5 ${m.activo ? "" : "opacity-50"}`}>
+                <input type="hidden" name="id" value={m.id} />
+                <input name="nombre" defaultValue={m.nombre} className={`min-w-[11rem] flex-1 ${inCls}`} />
+                <input name="categoria" defaultValue={m.categoria} className={`w-24 ${inCls}`} />
+                <input name="costoM2" defaultValue={String(m.costoM2)} inputMode="decimal" className={`w-20 text-right font-mono ${inCls}`} />
+                <select name="modoCobro" defaultValue={m.modoCobro} className={`w-28 ${inCls}`}>
+                  <option value="mancha">Por mancha</option>
+                  <option value="ancho_rollo">Ancho de rollo</option>
+                </select>
+                <input name="anchosRollo" defaultValue={m.anchosRollo} placeholder="—" className={`w-28 font-mono ${inCls}`} />
+                <span className="flex w-32 justify-end gap-1.5">
+                  <button type="submit" className={btnGuardar}>Guardar</button>
+                  <button type="submit" formAction={alternarMaterialGFAction} className={btnAlt}>
+                    {m.activo ? "Quitar" : "Activar"}
+                  </button>
+                </span>
+              </form>
+            ))}
+          </div>
+          <CrearMaterialGFForm />
         </div>
       </section>
 

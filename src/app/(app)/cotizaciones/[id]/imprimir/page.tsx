@@ -108,7 +108,9 @@ export default async function ImprimirCotizacion({
                     <div className="mt-1 text-[11px] text-kraft">
                       {c.tipo === "PROVEEDOR"
                         ? (c.proveedorNombre ? `Proveedor: ${c.proveedorNombre}` : "Trabajo tercerizado")
-                        : `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} mm · ${it.papelNombre} · ${it.tamano}`}
+                        : c.tipo === "GRAN_FORMATO"
+                          ? `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} cm · ${it.papelNombre}`
+                          : `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} mm · ${it.papelNombre} · ${it.tamano}`}
                     </div>
                   </td>
                   <td className="py-3 text-right font-mono">{fmtNum(it.cantidad, 0)}</td>

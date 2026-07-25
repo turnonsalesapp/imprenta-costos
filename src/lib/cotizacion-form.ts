@@ -5,6 +5,7 @@
  */
 import type { Config, Entrada, AcabadoSel } from "./calculo";
 import { n } from "./calculo";
+import type { ModoCobroGF } from "./calculo-granformato";
 
 export type FormCotizacion = {
   // Meta (no entra al motor)
@@ -126,6 +127,48 @@ export function nuevoFormProveedor(cfg: Config): FormProveedor {
 export function totalProveedor(f: FormProveedor): number {
   const cant = Math.max(0, Math.round(n(f.cantidad)));
   return f.costoModo === "unitario" ? n(f.costoUnitario) * cant : n(f.costoTotal);
+}
+
+/**
+ * Formulario de cotización de GRAN FORMATO (impresión tercerizada por m²).
+ * El costo del material lo pone el servidor desde el catálogo (autoritativo);
+ * aquí solo viaja qué material se eligió (`materialId` = clave) y la medida.
+ */
+export type FormGranFormato = {
+  cliente: string;
+  clienteId: string;
+  trabajo: string;
+  descripcion: string;
+  materialId: string;           // clave del material
+  anchoCm: number | string;
+  altoCm: number | string;
+  cantidad: number | string;
+  modoCobro: ModoCobroGF;
+  anchoRolloCm: number | string;
+  ojetesAuto: boolean;
+  ojetes: number | string;      // ojetes por pieza (si es a mano)
+  margen: number | string;
+  comision: number | string;
+  ml: number | string;
+  tasaBCV: number | string;
+  binCompra: number | string;
+  binVenta: number | string;
+  difManual: boolean;
+  dif: number | string;
+  precioManual: number | string;
+  editarId: string;
+};
+
+export function nuevoFormGranFormato(cfg: Config): FormGranFormato {
+  return {
+    cliente: "", clienteId: "", trabajo: "", descripcion: "",
+    materialId: "", anchoCm: "", altoCm: "", cantidad: "1",
+    modoCobro: "mancha", anchoRolloCm: "",
+    ojetesAuto: false, ojetes: "",
+    margen: cfg.margen, comision: cfg.comision, ml: cfg.ml,
+    tasaBCV: cfg.tasaBCV, binCompra: cfg.binCompra, binVenta: cfg.binVenta,
+    difManual: false, dif: "", precioManual: "", editarId: "",
+  };
 }
 
 /** Extrae del formulario solo lo que el motor entiende. */

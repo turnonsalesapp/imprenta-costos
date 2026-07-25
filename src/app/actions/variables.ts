@@ -9,6 +9,7 @@ import {
 } from "@/lib/variables";
 import { fetchTasasExternas } from "@/lib/tasas";
 import { modeloValido } from "@/lib/modelos-ia";
+import { crearMaterialGF, editarMaterialGF, alternarMaterialGF } from "@/lib/materiales-gf";
 
 export type EstadoVar = { error: string | null; ok?: boolean; msg?: string };
 
@@ -47,6 +48,7 @@ export async function guardarConfigAction(
     pinza: f("pinza"), sep: f("sep"), margenMin: f("margenMin"), iva: f("iva"),
     interpretarIA: formData.get("interpretarIA") === "on",
     interpretarModelo: modeloValido(String(formData.get("interpretarModelo") ?? "")),
+    gfOjeteCosto: f("gfOjeteCosto"), gfOjeteCm: Math.max(1, Math.round(f("gfOjeteCm")) || 40),
   });
   revalidatePath("/variables");
   return { error: null, ok: true };
@@ -156,5 +158,45 @@ export async function alternarAcabadoAction(formData: FormData): Promise<void> {
   await requireRol("ADMIN");
   const id = String(formData.get("id") ?? "");
   if (id) await alternarAcabado(id);
+  revalidatePath("/variables");
+}
+
+/* ─────────────────────── materiales de gran formato ─────────────────────── */
+
+function datosMaterialGF(formData: FormData) {
+  return {
+    nombre: String(formData.get("nombre") ?? "").trim(),
+    categoria: String(formData.get("categoria") ?? "").trim() || "Banner",
+    costoM2: n(formData.get("costoM2")),
+    modoCobro: String(formData.get("modoCobro") ?? "mancha"),
+    anchosRollo: String(formData.get("anchosRollo") ?? "").trim(),
+  };
+}
+
+export async function crearMaterialGFAction(
+  _prev: EstadoVar,
+  formData: FormData,
+): Promise<EstadoVar> {
+  await requireRol("ADMIN");
+  const d = datosMaterialGF(formData);
+  if (!d.nombre) return { error: "El nombre del material es obligatorio." };
+  const r = await crearMaterialGF(d);
+  if (!r.ok) return { error: r.error ?? "No se pudo crear." };
+  revalidatePath("/variables");
+  return { error: null, ok: true };
+}
+
+export async function editarMaterialGFAction(formData: FormData): Promise<void> {
+  await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await editarMaterialGF(id, datosMaterialGF(formData));
+  revalidatePath("/variables");
+}
+
+export async function alternarMaterialGFAction(formData: FormData): Promise<void> {
+  await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  if (id) await alternarMaterialGF(id);
   revalidatePath("/variables");
 }
