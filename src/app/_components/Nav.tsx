@@ -20,6 +20,7 @@ export function Nav({ usuario }: { usuario: Sesion }) {
   if (puedeVerPrecios(usuario.rol)) {
     enlaces.push(
       { href: "/cotizar", label: "Cotizar" },
+      { href: "/cotizar-offset", label: "Offset" },
       { href: "/cotizar-proveedor", label: "Cotizar prov." },
       { href: "/cotizar-granformato", label: "Gran formato" },
       { href: "/cotizar-personalizado", label: "Personalizados" },

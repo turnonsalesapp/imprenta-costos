@@ -1,0 +1,71 @@
+import { requireRol } from "@/lib/auth";
+import { cargarConfig } from "@/lib/config";
+import { obtenerConfig } from "@/lib/variables";
+import { listarClientesSimple } from "@/lib/clientes";
+import { cargarOffsetEnForm } from "@/lib/cotizaciones";
+import { nuevoFormOffset, type FormOffset } from "@/lib/cotizacion-form";
+import { CalculadoraOffset } from "./CalculadoraOffset";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * Cotización de OFFSET (producción propia). Solo ADMIN/VENDEDOR. El motor suma
+ * papel + planchas + arranque + impresión por millar + acabados, y pasa por el
+ * mismo diferencial y margen. Al aprobarse genera orden de taller.
+ * ?desde=<id> duplica, ?editar=<id> edita un borrador.
+ */
+export default async function CotizarOffsetPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ desde?: string; editar?: string }>;
+}) {
+  await requireRol("ADMIN", "VENDEDOR");
+  const [cfg, clientes, dc] = await Promise.all([
+    cargarConfig(), listarClientesSimple(), obtenerConfig(),
+  ]);
+  const sp = await searchParams;
+  const offDefaults = { plancha: dc.offPlancha, arranque: dc.offArranque, millar: dc.offMillar };
+
+  let cargado: Partial<FormOffset> | null = null;
+  let modo: "nueva" | "copia" | "editar" = "nueva";
+  if (sp.editar) {
+    cargado = await cargarOffsetEnForm(sp.editar, "editar");
+    if (cargado) modo = "editar";
+  } else if (sp.desde) {
+    cargado = await cargarOffsetEnForm(sp.desde, "copia");
+    if (cargado) modo = "copia";
+  }
+
+  const formInicial: FormOffset = { ...nuevoFormOffset(cfg, offDefaults), ...(cargado ?? {}) };
+  const banners = {
+    nueva: "",
+    copia: "Copiada de otra cotización · revisa y guarda como nueva",
+    editar: "Editando un borrador · al guardar se actualiza esta misma cotización",
+  };
+
+  return (
+    <>
+      <header className="mb-5">
+        <h1 className="text-lg font-bold tracking-tight">
+          {modo === "editar" ? "Editar cotización offset" : "Cotización de offset"}
+        </h1>
+        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">Producción propia · planchas + arranque + tiraje por millar</p>
+      </header>
+
+      {cfg.papeles.length === 0 ? (
+        <div className="rounded-sm border border-regla bg-hoja px-4 py-8 text-center text-sm text-kraft">
+          No hay papeles cargados. Un administrador los agrega en <b>Variables</b>.
+        </div>
+      ) : (
+        <CalculadoraOffset
+          cfg={cfg}
+          clientes={clientes}
+          offDefaults={offDefaults}
+          formInicial={formInicial}
+          banner={banners[modo]}
+          margenMin={dc.margenMin}
+        />
+      )}
+    </>
+  );
+}

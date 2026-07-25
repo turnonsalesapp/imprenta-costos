@@ -13,6 +13,7 @@ import { descontarPorOrden } from "./inventario";
 /** Orden en que se ejecutan los acabados en el taller. */
 export const ORDEN_ETAPAS: Record<string, number> = {
   prueba: 0,
+  planchas: 5, arranque: 6, impresion: 12, // etapas de offset (producción propia)
   impTiro: 10, impRetiro: 11,
   lamTiro: 20, lamRetiro: 21,
   troqDig: 30, troquel: 31, troquelado: 32,

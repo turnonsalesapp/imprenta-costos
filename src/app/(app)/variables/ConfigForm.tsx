@@ -34,6 +34,12 @@ export function ConfigForm({ cfg }: { cfg: DatosConfig }) {
         <Campo l="Ojete gran formato ($)" name="gfOjeteCosto" v={cfg.gfOjeteCosto} />
         <Campo l="Ojetes cada (cm)" name="gfOjeteCm" v={cfg.gfOjeteCm} />
       </div>
+      <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-kraft">Offset (producción propia)</div>
+      <div className="mt-1 grid grid-cols-3 gap-3 sm:max-w-md">
+        <Campo l="Plancha ($)" name="offPlancha" v={cfg.offPlancha} />
+        <Campo l="Arranque/cara ($)" name="offArranque" v={cfg.offArranque} />
+        <Campo l="Millar impresión ($)" name="offMillar" v={cfg.offMillar} />
+      </div>
 
       <label className="mt-4 flex items-start gap-2.5 rounded-sm border border-regla bg-suave px-3 py-2.5">
         <input type="checkbox" name="interpretarIA" defaultChecked={cfg.interpretarIA} className="mt-0.5 h-4 w-4 accent-tinta" />

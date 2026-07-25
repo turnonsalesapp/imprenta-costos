@@ -208,6 +208,53 @@ export function nuevoFormPersonalizado(cfg: Config): FormPersonalizado {
   };
 }
 
+/* ─────────────────────── offset (producción propia) ─────────────────────── */
+
+export type FormOffset = {
+  cliente: string;
+  clienteId: string;
+  trabajo: string;
+  descripcion: string;
+  papelId: string;
+  anchoPza: number | string;    // pieza en mm
+  altoPza: number | string;
+  capacidad: number | string;   // piezas por pliego
+  capAuto: boolean;
+  cantidad: number | string;
+  merma: number | string;
+  colores: number | string;     // colores por cara
+  caras: number | string;       // 1 | 2
+  costoPlancha: number | string;
+  costoArranque: number | string;
+  costoMillar: number | string;
+  acabados: Record<string, AcabadoSel>;
+  margen: number | string;
+  comision: number | string;
+  ml: number | string;
+  tasaBCV: number | string;
+  binCompra: number | string;
+  binVenta: number | string;
+  difManual: boolean;
+  dif: number | string;
+  precioManual: number | string;
+  editarId: string;
+};
+
+export type OffsetDefaults = { plancha: number; arranque: number; millar: number };
+
+export function nuevoFormOffset(cfg: Config, off?: OffsetDefaults): FormOffset {
+  return {
+    cliente: "", clienteId: "", trabajo: "", descripcion: "",
+    papelId: "", anchoPza: "", altoPza: "", capacidad: "", capAuto: true,
+    cantidad: "1000", merma: cfg.merma, colores: "4", caras: "1",
+    costoPlancha: off?.plancha ?? "", costoArranque: off?.arranque ?? "", costoMillar: off?.millar ?? "",
+    acabados: {},
+    margen: cfg.margen, comision: cfg.comision, ml: cfg.ml,
+    tasaBCV: cfg.tasaBCV, binCompra: cfg.binCompra, binVenta: cfg.binVenta,
+    difManual: false, dif: "", precioManual: "", editarId: "",
+  };
+}
+
 /** Extrae del formulario solo lo que el motor entiende. */
 export function formAEntrada(f: FormCotizacion): Entrada {
   return {

@@ -1,0 +1,8 @@
+-- AlterEnum
+ALTER TYPE "TipoCotizacion" ADD VALUE 'OFFSET';
+
+-- AlterTable
+ALTER TABLE "Config" ADD COLUMN     "offArranque" DECIMAL(12,4) NOT NULL DEFAULT 15,
+ADD COLUMN     "offMillar" DECIMAL(12,4) NOT NULL DEFAULT 6,
+ADD COLUMN     "offPlancha" DECIMAL(12,4) NOT NULL DEFAULT 8;
+

@@ -23,6 +23,7 @@ export type DatosConfig = {
   pinza: number; sep: number; margenMin: number; iva: number;
   interpretarIA: boolean; interpretarModelo: string;
   gfOjeteCosto: number; gfOjeteCm: number;
+  offPlancha: number; offArranque: number; offMillar: number;
 };
 
 export async function obtenerConfig(): Promise<DatosConfig> {
@@ -35,6 +36,9 @@ export async function obtenerConfig(): Promise<DatosConfig> {
     interpretarIA: Boolean(c?.interpretarIA),
     interpretarModelo: c?.interpretarModelo ?? "",
     gfOjeteCosto: c ? num(c.gfOjeteCosto) : 0.8, gfOjeteCm: c?.gfOjeteCm ?? 40,
+    offPlancha: c ? num(c.offPlancha) : 8,
+    offArranque: c ? num(c.offArranque) : 15,
+    offMillar: c ? num(c.offMillar) : 6,
   };
 }
 

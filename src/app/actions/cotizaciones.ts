@@ -13,11 +13,13 @@ import {
   actualizarCotizacionGranFormato,
   crearCotizacionPersonalizado,
   actualizarCotizacionPersonalizado,
+  crearCotizacionOffset,
+  actualizarCotizacionOffset,
   cambiarEstadoCotizacion,
   eliminarCotizacion,
   ESTADOS,
 } from "@/lib/cotizaciones";
-import type { FormCotizacion, FormProveedor, FormGranFormato, FormPersonalizado } from "@/lib/cotizacion-form";
+import type { FormCotizacion, FormProveedor, FormGranFormato, FormPersonalizado, FormOffset } from "@/lib/cotizacion-form";
 import { registrarAuditoria } from "@/lib/auditoria";
 
 export type EstadoGuardar = { error: string | null };
@@ -73,6 +75,19 @@ export async function guardarPersonalizadoAction(
   const r = editarId
     ? await actualizarCotizacionPersonalizado(editarId, form)
     : await crearCotizacionPersonalizado(form, usuario.id);
+  if (!r.ok) return { error: r.error };
+  redirect(`/cotizaciones/${r.id}`);
+}
+
+/** Guarda una cotización de OFFSET (producción propia; crea o actualiza si es borrador). */
+export async function guardarOffsetAction(
+  form: FormOffset,
+): Promise<EstadoGuardar> {
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
+  const editarId = form.editarId?.trim();
+  const r = editarId
+    ? await actualizarCotizacionOffset(editarId, form)
+    : await crearCotizacionOffset(form, usuario.id);
   if (!r.ok) return { error: r.error };
   redirect(`/cotizaciones/${r.id}`);
 }

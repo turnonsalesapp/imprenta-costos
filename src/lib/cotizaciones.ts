@@ -9,9 +9,10 @@ import {
   calcularGF, calcularProductoGF, type EntradaGF, type EntradaProductoGF, type ResultadoGF,
 } from "./calculo-granformato";
 import { calcularPop, type EntradaPop } from "./calculo-personalizado";
+import { calcularOffset, type EntradaOffset, type OffsetAcab } from "./calculo-offset";
 import {
   formAEntrada, totalProveedor, type FormCotizacion, type FormProveedor, type FormGranFormato,
-  type FormPersonalizado,
+  type FormPersonalizado, type FormOffset,
 } from "./cotizacion-form";
 import { crearTrabajoDesdeForm } from "./trabajos";
 
@@ -741,6 +742,157 @@ export async function cargarPersonalizadoEnForm(
     productoId: (e.productoId ?? "") as string,
     modo: e.modo === "lineal" ? "lineal" : "escalas",
     cantidad: v("cantidad"), largoCm: v("largoCm"),
+    margen: v("margen"), comision: v("comision"), ml: v("ml"),
+    tasaBCV: v("tasaBCV"), binCompra: v("binCompra"), binVenta: v("binVenta"),
+    difManual: Boolean(e.difManual), dif: v("dif"), precioManual: v("precioManual"),
+    editarId: modo === "editar" ? id : "",
+  };
+}
+
+/* ─────────────────────── cotizaciones de offset (propio) ─────────────────────── */
+
+function catalogoAcabOffset(cfg: Config): OffsetAcab[] {
+  return cfg.acabados.map((a) => ({ id: a.id, label: a.label, costo: a.costo, unidad: a.unidad, escala: a.escala }));
+}
+
+function datosOffset(form: FormOffset, cfg: Config) {
+  const papel = cfg.papeles.find((p) => p.id === form.papelId) ?? null;
+  const precioPliego = papel ? n(papel.precio) / Math.max(1, n(papel.hojas)) : 0;
+  const medida = papel ? papel.med : "70x100";
+
+  const entrada: EntradaOffset = {
+    papelNombre: papel?.nombre ?? "Papel", precioPliego, medida,
+    anchoPza: form.anchoPza, altoPza: form.altoPza, capacidadManual: form.capAuto ? "" : form.capacidad,
+    cantidad: form.cantidad, merma: form.merma, pinza: cfg.pinza, sep: cfg.sep,
+    colores: form.colores, caras: form.caras,
+    costoPlancha: form.costoPlancha, costoArranque: form.costoArranque, costoMillar: form.costoMillar,
+    acabados: form.acabados, catalogoAcab: catalogoAcabOffset(cfg),
+    margen: form.margen, comision: form.comision, ml: form.ml,
+    tasaBCV: form.tasaBCV, binCompra: form.binCompra, binVenta: form.binVenta,
+    difManual: form.difManual, dif: form.dif, precioManual: form.precioManual,
+  };
+  const r = calcularOffset(entrada);
+
+  const anchoPza = Math.round(n(form.anchoPza));
+  const altoPza = Math.round(n(form.altoPza));
+  const acabadosLabels = cfg.acabados.filter((a) => form.acabados[a.id]?.on).map((a) => a.label);
+  const carasTxt = r.caras === 2 ? "tiro y retiro" : "tiro";
+  const tamano = `${r.colores}×${r.caras} plancha${r.nPlanchas !== 1 ? "s" : ""} · ${carasTxt}`;
+  const descripcion =
+    (form.descripcion ?? "").trim() ||
+    [
+      anchoPza > 0 && altoPza > 0 ? `${anchoPza}×${altoPza} mm` : "",
+      papel?.nombre ?? "", `${r.colores} color${r.colores !== 1 ? "es" : ""} ${carasTxt}`,
+      acabadosLabels.join(", "),
+    ].filter(Boolean).join(" · ");
+
+  // Ítem congelado (para el taller y la impresión) — mismo formato que digital.
+  const item = {
+    titulo: (form.trabajo ?? "").trim() || "Offset",
+    descripcion,
+    cantidad: r.cant,
+    ancho: anchoPza, alto: altoPza,
+    tamano, papelNombre: papel?.nombre ?? "Papel", capacidad: r.cap,
+    entrada: { ...entrada, papelId: form.papelId },
+    lineas: r.lineas, pliegos: r.pliegos,
+    costoTotal: r.costoTotal, costoUnit: r.costoUnit, diferencial: r.dif,
+    margen: n(form.margen), precioUnit: r.precioUnit, ventaTotal: r.ventaTotal,
+    precioML: r.precioML, precioBs: r.precioBs, tasaBCV: n(form.tasaBCV),
+  };
+
+  return {
+    r,
+    data: {
+      tipo: "OFFSET" as const,
+      clienteId: form.clienteId?.trim() || null,
+      clienteNombre: (form.cliente ?? "").trim() || null,
+      titulo: item.titulo,
+      descripcion,
+      cantidad: r.cant,
+      ancho: anchoPza, alto: altoPza, tamano,
+      papelNombre: papel?.nombre ?? "Papel",
+      capacidad: r.cap,
+      entrada: {
+        papelId: form.papelId, anchoPza: form.anchoPza, altoPza: form.altoPza,
+        capacidad: form.capacidad, capAuto: form.capAuto, cantidad: form.cantidad, merma: form.merma,
+        colores: form.colores, caras: form.caras,
+        costoPlancha: form.costoPlancha, costoArranque: form.costoArranque, costoMillar: form.costoMillar,
+        acabados: form.acabados,
+        margen: form.margen, comision: form.comision, ml: form.ml,
+        tasaBCV: form.tasaBCV, binCompra: form.binCompra, binVenta: form.binVenta,
+        difManual: form.difManual, dif: form.dif, precioManual: form.precioManual,
+      } as unknown as Prisma.InputJsonValue,
+      snapshot: snapshot(cfg) as unknown as Prisma.InputJsonValue,
+      lineas: r.lineas as unknown as Prisma.InputJsonValue,
+      items: [item] as unknown as Prisma.InputJsonValue,
+      pliegos: r.pliegos,
+      costoTotal: r.costoTotal, costoUnit: r.costoUnit, diferencial: r.dif,
+      margen: n(form.margen),
+      precioUnit: r.precioUnit, ventaTotal: r.ventaTotal, precioML: r.precioML,
+      tasaBCV: n(form.tasaBCV), precioBs: r.precioBs,
+    },
+  };
+}
+
+export async function crearCotizacionOffset(
+  form: FormOffset, usuarioId: string,
+): Promise<ResultadoGuardar> {
+  const cliente = (form.cliente ?? "").trim();
+  const trabajo = (form.trabajo ?? "").trim();
+  if (!cliente && !trabajo) return { ok: false, error: "Falta el cliente o el trabajo." };
+  const cfg = await cargarConfig();
+  if (!cfg.papeles.find((p) => p.id === form.papelId)) return { ok: false, error: "Elige el papel." };
+
+  const { r, data } = datosOffset(form, cfg);
+  if (r.cant <= 0) return { ok: false, error: "Indica la cantidad." };
+  if (r.pliegos <= 0) return { ok: false, error: "Indica la medida de la pieza y el papel." };
+
+  const cot = await db.cotizacion.create({
+    data: { estado: "BORRADOR", usuarioId, ...data },
+    select: { id: true },
+  });
+  return { ok: true, id: cot.id };
+}
+
+export async function actualizarCotizacionOffset(
+  id: string, form: FormOffset,
+): Promise<ResultadoGuardar> {
+  const ex = await db.cotizacion.findUnique({ where: { id }, select: { estado: true } });
+  if (!ex) return { ok: false, error: "La cotización no existe." };
+  if (ex.estado !== "BORRADOR") return { ok: false, error: "Solo se pueden editar cotizaciones en borrador." };
+  const cfg = await cargarConfig();
+  if (!cfg.papeles.find((p) => p.id === form.papelId)) return { ok: false, error: "Elige el papel." };
+
+  const { r, data } = datosOffset(form, cfg);
+  if (r.cant <= 0) return { ok: false, error: "Indica la cantidad." };
+  if (r.pliegos <= 0) return { ok: false, error: "Indica la medida de la pieza y el papel." };
+
+  await db.cotizacion.update({ where: { id }, data });
+  return { ok: true, id };
+}
+
+export async function cargarOffsetEnForm(
+  id: string, modo: "copia" | "editar",
+): Promise<Partial<FormOffset> | null> {
+  const c = await db.cotizacion.findUnique({
+    where: { id },
+    select: { entrada: true, titulo: true, descripcion: true, clienteNombre: true, clienteId: true },
+  });
+  if (!c) return null;
+  const e = (c.entrada as unknown as Record<string, unknown>) ?? {};
+  const v = (k: string) => (e[k] ?? "") as number | string;
+  return {
+    cliente: c.clienteNombre ?? "",
+    clienteId: c.clienteId ?? "",
+    trabajo: modo === "copia" ? `${c.titulo} (copia)` : c.titulo,
+    descripcion: modo === "copia" ? "" : (c.descripcion ?? ""),
+    papelId: (e.papelId ?? "") as string,
+    anchoPza: v("anchoPza"), altoPza: v("altoPza"),
+    capacidad: v("capacidad"), capAuto: e.capAuto == null ? true : Boolean(e.capAuto),
+    cantidad: v("cantidad"), merma: v("merma"),
+    colores: v("colores"), caras: v("caras"),
+    costoPlancha: v("costoPlancha"), costoArranque: v("costoArranque"), costoMillar: v("costoMillar"),
+    acabados: (e.acabados as Record<string, { on: boolean; q: number | string }>) ?? {},
     margen: v("margen"), comision: v("comision"), ml: v("ml"),
     tasaBCV: v("tasaBCV"), binCompra: v("binCompra"), binVenta: v("binVenta"),
     difManual: Boolean(e.difManual), dif: v("dif"), precioManual: v("precioManual"),
