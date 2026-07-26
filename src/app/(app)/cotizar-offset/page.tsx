@@ -3,6 +3,7 @@ import { cargarConfig } from "@/lib/config";
 import { obtenerConfig } from "@/lib/variables";
 import { listarClientesSimple } from "@/lib/clientes";
 import { cargarOffsetEnForm } from "@/lib/cotizaciones";
+import { listarEquipos } from "@/lib/equipos";
 import { nuevoFormOffset, type FormOffset } from "@/lib/cotizacion-form";
 import { CalculadoraOffset } from "./CalculadoraOffset";
 
@@ -20,8 +21,8 @@ export default async function CotizarOffsetPage({
   searchParams: Promise<{ desde?: string; editar?: string }>;
 }) {
   await requireRol("ADMIN", "VENDEDOR");
-  const [cfg, clientes, dc] = await Promise.all([
-    cargarConfig(), listarClientesSimple(), obtenerConfig(),
+  const [cfg, clientes, dc, equipos] = await Promise.all([
+    cargarConfig(), listarClientesSimple(), obtenerConfig(), listarEquipos(),
   ]);
   const sp = await searchParams;
   const offDefaults = { plancha: dc.offPlancha, arranque: dc.offArranque, millar: dc.offMillar };
@@ -60,6 +61,7 @@ export default async function CotizarOffsetPage({
         <CalculadoraOffset
           cfg={cfg}
           clientes={clientes}
+          equipos={equipos}
           offDefaults={offDefaults}
           formInicial={formInicial}
           banner={banners[modo]}

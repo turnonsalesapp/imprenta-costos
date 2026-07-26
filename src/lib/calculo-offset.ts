@@ -29,10 +29,11 @@ export interface EntradaOffset extends ParamsPrecio {
   pinza: number | string;
   sep: number | string;
   colores: number | string;        // colores por cara (1..4+)
+  coloresPasada: number | string;  // colores que imprime la prensa por pasada
   caras: number | string;          // 1 (tiro) | 2 (tiro y retiro)
   costoPlancha: number | string;
   costoArranque: number | string;  // por cara
-  costoMillar: number | string;    // por millar de pliegos, por cara
+  costoMillar: number | string;    // por millar de pliegos, por pasada
   acabados: Record<string, AcabadoSel>;
   catalogoAcab: OffsetAcab[];
 }
@@ -41,7 +42,7 @@ export interface ResultadoOffset extends Precio {
   cap: number; capAuto: number; cols: number; filas: number; rot: boolean;
   corteW: number; corteH: number;
   pliegosBase: number; pliegos: number; millaresImp: number;
-  colores: number; caras: number; nPlanchas: number;
+  colores: number; caras: number; nPlanchas: number; pasadas: number;
   lineas: LineaCosto[];
 }
 
@@ -63,6 +64,9 @@ export function calcularOffset(f: EntradaOffset): ResultadoOffset {
   const caras = n(f.caras) >= 2 ? 2 : 1;
   const colores = Math.max(0, Math.round(n(f.colores)));
   const nPlanchas = colores * caras;
+  // Pasadas por cara: una prensa de N colores imprime hasta N colores por pasada.
+  const coloresPasada = Math.max(1, Math.round(n(f.coloresPasada)) || 1);
+  const pasadas = colores > 0 ? Math.ceil(colores / coloresPasada) : 0;
 
   const lineas: LineaCosto[] = [];
 
@@ -94,11 +98,12 @@ export function calcularOffset(f: EntradaOffset): ResultadoOffset {
   }
 
   const cMillar = n(f.costoMillar);
-  const impresion = millaresImp * cMillar * caras;
+  const impresion = millaresImp * cMillar * pasadas * caras;
   if (impresion > 0) {
+    const pasTxt = pasadas !== 1 ? ` × ${pasadas} pasadas` : "";
     lineas.push({
       k: "impresion", label: "Impresión",
-      detalle: `${millaresImp} millar${millaresImp !== 1 ? "es" : ""} × ${caras} cara${caras !== 1 ? "s" : ""} x ${usd(cMillar, 2)}`,
+      detalle: `${millaresImp} millar${millaresImp !== 1 ? "es" : ""} × ${caras} cara${caras !== 1 ? "s" : ""}${pasTxt} x ${usd(cMillar, 2)}`,
       monto: impresion,
     });
   }
@@ -139,6 +144,6 @@ export function calcularOffset(f: EntradaOffset): ResultadoOffset {
   return {
     cap, capAuto, cols: mont.cols, filas: mont.filas, rot: mont.rot,
     corteW: W, corteH: H, pliegosBase, pliegos, millaresImp,
-    colores, caras, nPlanchas, lineas, ...pr,
+    colores, caras, nPlanchas, pasadas, lineas, ...pr,
   };
 }

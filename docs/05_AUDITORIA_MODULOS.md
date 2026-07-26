@@ -196,7 +196,32 @@ margen mínimo.
 
 ---
 
-## Prioridad recomendada
+## Estado (decisiones del negocio)
+
+| # | Hallazgo | Decisión | Estado |
+|---|---|---|---|
+| A | Escalas no monótonas | Rediseñar escalas que **motiven volumen** + empujón "sube a X" | ✅ Resuelto |
+| C | Offset no cuenta colores | **Definir equipos (prensas) en Variables**; el offset usa las pasadas del equipo | ✅ Resuelto |
+| B | Ancho de rollo | **No forzar**; se elige de la lista estándar de anchos | ✔️ Por diseño |
+| F | Diferencial doble | **Dejar así** | ✔️ Por diseño |
+| D | Merma offset | (no priorizado) | ⏸️ |
+| E | DTF ancho | Dejar así | ⏸️ |
+| G | Montaje 1 orientación | Dejar así | ⏸️ |
+| H | Diseño / mínimo venta | Dejar así | ⏸️ |
+
+**A — resuelto:** las escalas de la semilla ahora **siempre bajan** al subir la
+cantidad (se corrigió *Chapa llavero*: 50 u pasó de $3,50 → **$3,00**) y suman
+tramos 250/500 para empujar pedidos grandes. La calculadora muestra un empujón
+"💡 subiendo a X u el precio baja a $Y". Crear un producto con escalas que suban
+queda **bloqueado** (deben motivar el volumen).
+
+**C — resuelto:** nuevo catálogo **Equipos** en Variables (nombre, colores por
+pasada, millar y arranque). En offset se elige la prensa y el costo de impresión
+se multiplica por las **pasadas = ⌈colores ÷ colores por pasada⌉**: un 4/0 en una
+prensa de 1 color cuesta 4× la impresión de una prensa de 4 colores (las planchas
+no cambian: una por color). Semilla: prensa de 4, 2 y 1 color.
+
+## Prioridad recomendada (histórica)
 
 1. **A** — Validación de escalas monótonas (barato, evita cotizar de más al cliente).
 2. **C** y **D** — Precisión de offset (colores por pasada + arranque en hojas): son

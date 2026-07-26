@@ -9,6 +9,7 @@ import {
 import { calcularOffset, type EntradaOffset, type OffsetAcab } from "@/lib/calculo-offset";
 import { nuevoFormOffset, type FormOffset } from "@/lib/cotizacion-form";
 import type { ClienteSimple } from "@/lib/clientes";
+import type { EquipoItem } from "@/lib/equipos";
 import { guardarOffsetAction } from "@/app/actions/cotizaciones";
 import { F, T, PrecioManual, TarjetaTasas } from "../cotizar/campos";
 import "../cotizar/calc.css";
@@ -16,10 +17,11 @@ import "../cotizar/calc.css";
 const TINTAS = ["#0B8FA8", "#C4177C", "#C79400", "#171B19", "#5B8C5A", "#8A5FBF", "#C0563B"];
 
 export function CalculadoraOffset({
-  cfg, clientes, offDefaults, formInicial, banner, margenMin,
+  cfg, clientes, equipos, offDefaults, formInicial, banner, margenMin,
 }: {
   cfg: Config;
   clientes: ClienteSimple[];
+  equipos: EquipoItem[];
   offDefaults: { plancha: number; arranque: number; millar: number };
   formInicial: FormOffset;
   banner?: string;
@@ -38,6 +40,14 @@ export function CalculadoraOffset({
   const elegirCliente = (id: string) => {
     const c = clientes.find((x) => x.id === id);
     setForm((f) => ({ ...f, clienteId: id, cliente: id ? (c?.nombre ?? f.cliente) : f.cliente }));
+  };
+
+  // Al elegir prensa: toma sus colores por pasada y costos de corrida.
+  const elegirEquipo = (id: string) => {
+    const eq = equipos.find((x) => x.id === id);
+    setForm((f) => eq
+      ? { ...f, equipoId: id, coloresPasada: eq.coloresPasada, costoMillar: eq.costoMillar, costoArranque: eq.costoArranque }
+      : { ...f, equipoId: id });
   };
 
   const papel = cfg.papeles.find((p) => p.id === form.papelId) ?? null;
@@ -62,7 +72,7 @@ export function CalculadoraOffset({
     anchoPza: form.anchoPza, altoPza: form.altoPza,
     capacidadManual: form.capAuto ? "" : form.capacidad,
     cantidad: form.cantidad, merma: form.merma, pinza: cfg.pinza, sep: cfg.sep,
-    colores: form.colores, caras: form.caras,
+    colores: form.colores, coloresPasada: form.coloresPasada, caras: form.caras,
     costoPlancha: form.costoPlancha, costoArranque: form.costoArranque, costoMillar: form.costoMillar,
     acabados: form.acabados, catalogoAcab,
     margen: form.margen, comision: form.comision, ml: form.ml,
@@ -206,10 +216,23 @@ export function CalculadoraOffset({
           </section>
 
           <section className="card">
-            <div className="ch"><b>Impresión offset</b><span className="mt mono">{r.nPlanchas} plancha{r.nPlanchas !== 1 ? "s" : ""}</span></div>
+            <div className="ch"><b>Impresión offset</b><span className="mt mono">{r.nPlanchas} plancha{r.nPlanchas !== 1 ? "s" : ""} · {r.pasadas} pasada{r.pasadas !== 1 ? "s" : ""}</span></div>
             <div className="cb">
-              <div className="rowg c2">
+              <F l="Prensa (equipo)">
+                {equipos.length ? (
+                  <select className="in" value={form.equipoId} onChange={(e) => elegirEquipo(e.target.value)}>
+                    <option value="">— Sin especificar —</option>
+                    {equipos.map((eq) => (
+                      <option key={eq.id} value={eq.id}>{eq.nombre} · {eq.coloresPasada} color{eq.coloresPasada !== 1 ? "es" : ""}/pasada</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="hint">No hay equipos cargados. Un administrador los define en <b>Variables</b>.</div>
+                )}
+              </F>
+              <div className="rowg c3" style={{ marginTop: 10 }}>
                 <T l="Colores por cara" v={form.colores} set={(v) => up("colores", v)} num ph="4" />
+                <T l="Colores por pasada" v={form.coloresPasada} set={(v) => up("coloresPasada", v)} num ph="4" />
                 <F l="Caras">
                   <select className="in" value={String(form.caras)} onChange={(e) => up("caras", e.target.value)}>
                     <option value="1">Solo tiro (1 cara)</option>
@@ -220,10 +243,10 @@ export function CalculadoraOffset({
               <div className="rowg c3" style={{ marginTop: 10 }}>
                 <T l="Plancha ($)" v={form.costoPlancha} set={(v) => up("costoPlancha", v)} num ph={String(offDefaults.plancha)} />
                 <T l="Arranque/cara ($)" v={form.costoArranque} set={(v) => up("costoArranque", v)} num ph={String(offDefaults.arranque)} />
-                <T l="Millar impr. ($)" v={form.costoMillar} set={(v) => up("costoMillar", v)} num ph={String(offDefaults.millar)} />
+                <T l="Millar/pasada ($)" v={form.costoMillar} set={(v) => up("costoMillar", v)} num ph={String(offDefaults.millar)} />
               </div>
               <div className="hint mono" style={{ marginTop: 8 }}>
-                {fmtNum(r.pliegos, 0)} pliegos · {r.millaresImp} millar{r.millaresImp !== 1 ? "es" : ""} · {caras2 ? "2 caras" : "1 cara"}
+                {fmtNum(r.pliegos, 0)} pliegos · {r.millaresImp} millar{r.millaresImp !== 1 ? "es" : ""} · {r.pasadas} pasada{r.pasadas !== 1 ? "s" : ""}/cara · {caras2 ? "2 caras" : "1 cara"}
               </div>
             </div>
           </section>

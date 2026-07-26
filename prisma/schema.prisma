@@ -172,6 +172,19 @@ model ProductoPop {
   activo       Boolean @default(true)
 }
 
+/// Equipos con los que cuenta el taller (prensas offset, etc.). En offset, los
+/// colores por pasada definen cuántas pasadas hace un trabajo de N colores:
+/// una prensa de 4 colores imprime un 4/0 en una pasada; una de 1 color, en 4.
+model Equipo {
+  id            String  @id @default(cuid())
+  clave         String  @unique
+  nombre        String
+  coloresPasada Int     @default(4)          // colores que imprime por pasada
+  costoMillar   Decimal @db.Decimal(12, 4) @default(6)  // costo por millar de pliegos, por pasada
+  costoArranque Decimal @db.Decimal(12, 4) @default(15) // arranque/montaje por cara
+  activo        Boolean @default(true)
+}
+
 /// Variables del negocio. Fila única con id = "global".
 model Config {
   id            String   @id @default("global")

@@ -12,6 +12,7 @@ import { modeloValido } from "@/lib/modelos-ia";
 import { crearMaterialGF, editarMaterialGF, alternarMaterialGF } from "@/lib/materiales-gf";
 import { crearProductoGF, editarProductoGF, alternarProductoGF } from "@/lib/productos-gf";
 import { crearProductoPop, editarProductoPop, alternarProductoPop } from "@/lib/productos-pop";
+import { crearEquipo, editarEquipo, alternarEquipo } from "@/lib/equipos";
 
 export type EstadoVar = { error: string | null; ok?: boolean; msg?: string };
 
@@ -283,5 +284,44 @@ export async function alternarProductoPopAction(formData: FormData): Promise<voi
   await requireRol("ADMIN");
   const id = String(formData.get("id") ?? "");
   if (id) await alternarProductoPop(id);
+  revalidatePath("/variables");
+}
+
+/* ─────────────── equipos (prensas offset, etc.) ─────────────── */
+
+function datosEquipo(formData: FormData) {
+  return {
+    nombre: String(formData.get("nombre") ?? "").trim(),
+    coloresPasada: n(formData.get("coloresPasada")),
+    costoMillar: n(formData.get("costoMillar")),
+    costoArranque: n(formData.get("costoArranque")),
+  };
+}
+
+export async function crearEquipoAction(
+  _prev: EstadoVar,
+  formData: FormData,
+): Promise<EstadoVar> {
+  await requireRol("ADMIN");
+  const d = datosEquipo(formData);
+  if (!d.nombre) return { error: "El nombre del equipo es obligatorio." };
+  const r = await crearEquipo(d);
+  if (!r.ok) return { error: r.error ?? "No se pudo crear." };
+  revalidatePath("/variables");
+  return { error: null, ok: true };
+}
+
+export async function editarEquipoAction(formData: FormData): Promise<void> {
+  await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await editarEquipo(id, datosEquipo(formData));
+  revalidatePath("/variables");
+}
+
+export async function alternarEquipoAction(formData: FormData): Promise<void> {
+  await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  if (id) await alternarEquipo(id);
   revalidatePath("/variables");
 }

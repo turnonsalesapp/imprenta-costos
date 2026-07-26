@@ -85,6 +85,15 @@ export function CalculadoraPersonalizado({
   const escalas = useMemo(() => (producto && !lineal ? parseEscalas(producto.escalas) : []), [producto, lineal]);
   const cantAplica = Math.max(0, Math.round(n(form.cantidad)));
 
+  // Empujón de venta: el próximo tramo baja el costo unitario → sugiere subir la cantidad.
+  const nudge = useMemo(() => {
+    if (lineal || !escalas.length || cantAplica <= 0) return null;
+    const sig = escalas.find((e) => e.desde > cantAplica);
+    if (!sig || sig.precio >= r.costoUnitBase) return null;
+    const c = calcularPop(entrada({ cantidad: sig.desde, precioManual: "" }));
+    return { desde: sig.desde, precioUnit: c.precioUnit, ventaTotal: c.ventaTotal };
+  }, [escalas, cantAplica, lineal, r.costoUnitBase, form, producto]);
+
   function guardar() {
     setError(null);
     if (!form.cliente.trim() && !form.trabajo.trim()) { setError("Falta el cliente o el trabajo."); return; }
@@ -187,6 +196,14 @@ export function CalculadoraPersonalizado({
                       })}
                     </tbody>
                   </table>
+                </div>
+              ) : null}
+
+              {nudge ? (
+                <div className="hint" style={{ marginTop: 10, background: "#EDF9F1", border: "1px solid #B7E0C4", borderRadius: 3, padding: "7px 9px", color: "#15794F", display: "block" }}>
+                  💡 Subiendo a <b>{fmtNum(nudge.desde, 0)} u</b> el precio baja a <b>{usd(nudge.precioUnit, 4)}</b> c/u
+                  {" "}(venta {usd(nudge.ventaTotal)}).{" "}
+                  <button type="button" className="lnk" onClick={() => up("cantidad", nudge.desde)}>subir a {fmtNum(nudge.desde, 0)}</button>
                 </div>
               ) : null}
             </div>

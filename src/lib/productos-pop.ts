@@ -75,9 +75,19 @@ function saneaDatos(d: DatosProductoPop) {
   };
 }
 
+/** Las escalas deben bajar (o mantenerse) al subir la cantidad: motivan volumen. */
+function escalasBajan(escalas: string): boolean {
+  const e = parseEscalas(escalas);
+  for (let i = 1; i < e.length; i++) if (e[i].precio > e[i - 1].precio) return false;
+  return true;
+}
+
 export async function crearProductoPop(d: DatosProductoPop): Promise<{ ok: boolean; error?: string }> {
   const s = saneaDatos(d);
   if (s.modo === "escalas" && !s.escalas) return { ok: false, error: "Indica al menos un tramo (ej. 1:3.5,12:2.2)." };
+  if (s.modo === "escalas" && !escalasBajan(s.escalas)) {
+    return { ok: false, error: "Las escalas deben bajar al subir la cantidad (para motivar el volumen)." };
+  }
   if (s.modo === "lineal" && s.precioLineal <= 0) return { ok: false, error: "Indica el precio por metro lineal." };
   try {
     await db.productoPop.create({

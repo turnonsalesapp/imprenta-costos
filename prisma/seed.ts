@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { PAPELES_BASE, ACABADOS_BASE, CONFIG_BASE, MATERIALES_GF_BASE, PRODUCTOS_GF_BASE, PRODUCTOS_POP_BASE } from "../src/lib/datos-base";
+import { PAPELES_BASE, ACABADOS_BASE, CONFIG_BASE, MATERIALES_GF_BASE, PRODUCTOS_GF_BASE, PRODUCTOS_POP_BASE, EQUIPOS_BASE } from "../src/lib/datos-base";
 
 const db = new PrismaClient();
 
@@ -66,6 +66,17 @@ async function main() {
         clave: p.clave, nombre: p.nombre, categoria: p.categoria, modo: p.modo,
         escalas: p.escalas, precioLineal: p.precioLineal, anchoCm: p.anchoCm,
         minCm: p.minCm, unidad: p.unidad,
+      },
+    });
+  }
+
+  for (const e of EQUIPOS_BASE) {
+    await db.equipo.upsert({
+      where: { clave: e.clave },
+      update: {},
+      create: {
+        clave: e.clave, nombre: e.nombre, coloresPasada: e.coloresPasada,
+        costoMillar: e.costoMillar, costoArranque: e.costoArranque,
       },
     });
   }

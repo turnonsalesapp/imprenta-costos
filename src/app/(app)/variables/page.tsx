@@ -8,16 +8,19 @@ import {
   editarMaterialGFAction, alternarMaterialGFAction,
   editarProductoGFAction, alternarProductoGFAction,
   editarProductoPopAction, alternarProductoPopAction,
+  editarEquipoAction, alternarEquipoAction,
 } from "@/app/actions/variables";
 import { listarMaterialesGFAdmin } from "@/lib/materiales-gf";
 import { listarProductosGFAdmin } from "@/lib/productos-gf";
 import { listarProductosPopAdmin } from "@/lib/productos-pop";
+import { listarEquiposAdmin } from "@/lib/equipos";
 import { ConfigForm } from "./ConfigForm";
 import { CrearPapelForm } from "./CrearPapelForm";
 import { CrearAcabadoForm } from "./CrearAcabadoForm";
 import { CrearMaterialGFForm } from "./CrearMaterialGFForm";
 import { CrearProductoGFForm } from "./CrearProductoGFForm";
 import { CrearProductoPopForm } from "./CrearProductoPopForm";
+import { CrearEquipoForm } from "./CrearEquipoForm";
 import { BotonTasas } from "./BotonTasas";
 import { MembreteForm } from "./MembreteForm";
 
@@ -30,9 +33,9 @@ const btnAlt = "rounded-sm border border-regla px-2.5 py-1 text-xs font-medium t
 
 export default async function VariablesPage() {
   await requireRol("ADMIN");
-  const [cfg, membrete, papeles, acabados, tasas, materialesGF, productosGF, productosPop] = await Promise.all([
+  const [cfg, membrete, papeles, acabados, tasas, materialesGF, productosGF, productosPop, equipos] = await Promise.all([
     obtenerConfig(), obtenerMembrete(), listarPapeles(), listarAcabados(), historicoTasas(8),
-    listarMaterialesGFAdmin(), listarProductosGFAdmin(), listarProductosPopAdmin(),
+    listarMaterialesGFAdmin(), listarProductosGFAdmin(), listarProductosPopAdmin(), listarEquiposAdmin(),
   ]);
 
   return (
@@ -304,6 +307,41 @@ export default async function VariablesPage() {
             ))}
           </div>
           <CrearProductoPopForm />
+        </div>
+      </section>
+
+      {/* Equipos (prensas offset) */}
+      <section className="mt-8">
+        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+          Equipos <span className="normal-case text-kraft">· {equipos.length} equipos · prensas (colores por pasada)</span>
+        </h2>
+        <div className="rounded-sm border border-regla bg-hoja">
+          <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
+            <span className="flex-1">Equipo</span>
+            <span className="w-28 text-right">Colores/pasada</span>
+            <span className="w-28 text-right">Millar/pasada</span>
+            <span className="w-28 text-right">Arranque/cara</span>
+            <span className="w-32" />
+          </div>
+          <div className="max-h-[28rem] overflow-y-auto">
+            {equipos.map((eq) => (
+              <form key={eq.id} action={editarEquipoAction}
+                className={`flex flex-wrap items-center gap-2 border-b border-suave px-4 py-1.5 ${eq.activo ? "" : "opacity-50"}`}>
+                <input type="hidden" name="id" value={eq.id} />
+                <input name="nombre" defaultValue={eq.nombre} className={`min-w-[11rem] flex-1 ${inCls}`} />
+                <input name="coloresPasada" defaultValue={String(eq.coloresPasada)} inputMode="numeric" className={`w-28 text-right font-mono ${inCls}`} />
+                <input name="costoMillar" defaultValue={String(eq.costoMillar)} inputMode="decimal" className={`w-28 text-right font-mono ${inCls}`} />
+                <input name="costoArranque" defaultValue={String(eq.costoArranque)} inputMode="decimal" className={`w-28 text-right font-mono ${inCls}`} />
+                <span className="flex w-32 justify-end gap-1.5">
+                  <button type="submit" className={btnGuardar}>Guardar</button>
+                  <button type="submit" formAction={alternarEquipoAction} className={btnAlt}>
+                    {eq.activo ? "Quitar" : "Activar"}
+                  </button>
+                </span>
+              </form>
+            ))}
+          </div>
+          <CrearEquipoForm />
         </div>
       </section>
 

@@ -9,7 +9,7 @@ const tasas = {
 const base: EntradaOffset = {
   papelNombre: "Glasé 150g", precioPliego: 0.5, medida: "70x100",
   anchoPza: 350, altoPza: 500, cantidad: 1000, merma: 3,
-  pinza: 5, sep: 3, colores: 4, caras: 1,
+  pinza: 5, sep: 3, colores: 4, coloresPasada: 4, caras: 1,
   costoPlancha: 8, costoArranque: 15, costoMillar: 6,
   acabados: {}, catalogoAcab: [], ...tasas,
 };
@@ -43,6 +43,24 @@ describe("offset: producción propia", () => {
     expect(r2.lineas.find((l) => l.k === "planchas")!.monto).toBeCloseTo(64, 6);
     expect(r2.lineas.find((l) => l.k === "arranque")!.monto).toBeCloseTo(30, 6);   // 2 caras × $15
     expect(r2.lineas.find((l) => l.k === "impresion")!.monto).toBeCloseTo(12, 6);  // 1 millar × $6 × 2
+  });
+
+  it("una prensa 4 colores imprime el 4/0 en una pasada", () => {
+    expect(r.pasadas).toBe(1);
+    expect(r.lineas.find((l) => l.k === "impresion")!.monto).toBeCloseTo(6, 6); // 1 millar × $6 × 1 pasada × 1 cara
+  });
+
+  it("una prensa de 1 color imprime el 4/0 en 4 pasadas (impresión ×4)", () => {
+    const r1 = calcularOffset({ ...base, coloresPasada: 1 });
+    expect(r1.pasadas).toBe(4);
+    expect(r1.nPlanchas).toBe(4); // las planchas no cambian: una por color
+    expect(r1.lineas.find((l) => l.k === "impresion")!.monto).toBeCloseTo(24, 6); // 1 millar × $6 × 4 pasadas
+  });
+
+  it("una prensa de 2 colores imprime el 4/0 en 2 pasadas", () => {
+    const r2 = calcularOffset({ ...base, coloresPasada: 2 });
+    expect(r2.pasadas).toBe(2);
+    expect(r2.lineas.find((l) => l.k === "impresion")!.monto).toBeCloseTo(12, 6);
   });
 
   it("aplica acabados por pliego con el factor del pliego completo", () => {

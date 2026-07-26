@@ -82,7 +82,7 @@ const offsets: { nombre: string; ancho: number; alto: number; cant: number; pape
     const r = calcularOffset({
       papelNombre: papel.nombre, precioPliego: papel.precio / Math.max(1, papel.hojas), medida: papel.med,
       anchoPza: d.ancho, altoPza: d.alto, cantidad: d.cant, merma: cfg.merma, pinza: cfg.pinza, sep: cfg.sep,
-      colores: d.colores, caras: d.caras, costoPlancha: 8, costoArranque: 15, costoMillar: 6,
+      colores: d.colores, coloresPasada: 4, caras: d.caras, costoPlancha: 8, costoArranque: 15, costoMillar: 6,
       acabados, catalogoAcab: cfg.acabados.map((a) => ({ id: a.id, label: a.label, costo: a.costo, unidad: a.unidad, escala: a.escala })), ...tasas,
     });
     return [d.nombre, String(d.cant), `${d.colores}/${d.caras === 2 ? d.colores : 0}`, String(r.cap || "—"), String(r.pliegos), String(r.nPlanchas), money(r.costoTotal), money(r.costoUnit, 4), money(r.precioUnit, 4)];

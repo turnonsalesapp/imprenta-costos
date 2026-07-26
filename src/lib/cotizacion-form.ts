@@ -222,7 +222,9 @@ export type FormOffset = {
   capAuto: boolean;
   cantidad: number | string;
   merma: number | string;
+  equipoId: string;             // prensa elegida
   colores: number | string;     // colores por cara
+  coloresPasada: number | string; // colores por pasada de la prensa
   caras: number | string;       // 1 | 2
   costoPlancha: number | string;
   costoArranque: number | string;
@@ -246,7 +248,7 @@ export function nuevoFormOffset(cfg: Config, off?: OffsetDefaults): FormOffset {
   return {
     cliente: "", clienteId: "", trabajo: "", descripcion: "",
     papelId: "", anchoPza: "", altoPza: "", capacidad: "", capAuto: true,
-    cantidad: "1000", merma: cfg.merma, colores: "4", caras: "1",
+    cantidad: "1000", merma: cfg.merma, equipoId: "", colores: "4", coloresPasada: "4", caras: "1",
     costoPlancha: off?.plancha ?? "", costoArranque: off?.arranque ?? "", costoMillar: off?.millar ?? "",
     acabados: {},
     margen: cfg.margen, comision: cfg.comision, ml: cfg.ml,

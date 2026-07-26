@@ -174,19 +174,36 @@ export type ProductoPopBase = {
 const E = (escalas: string, categoria: string): Pick<ProductoPopBase, "modo" | "escalas" | "precioLineal" | "anchoCm" | "minCm" | "unidad" | "categoria"> =>
   ({ modo: "escalas", escalas, precioLineal: 0, anchoCm: 0, minCm: 0, unidad: "unidad", categoria });
 
+// Escalas propuestas: SIEMPRE bajan al subir la cantidad (motivan volumen) y
+// agregan tramos altos (250, 500) para empujar pedidos grandes. Los tramos 1–100
+// respetan el catálogo del proveedor; 250/500 son propuestas ajustables en Variables.
 export const PRODUCTOS_POP_BASE: ProductoPopBase[] = [
   // Chapas (botones) — precio por unidad según volumen.
-  { clave: "pop-chapa-prendedor", nombre: "Chapa prendedor", ...E("1:3.5,12:2.2,50:2.1,100:1.5", "Chapa") },
-  { clave: "pop-chapa-llavero", nombre: "Chapa llavero liso", ...E("1:4.2,12:3.4,50:3.5,100:2.6", "Chapa") },
-  { clave: "pop-chapa-destapador", nombre: "Chapa destapador", ...E("1:5,12:4.2,50:4,100:3.5", "Chapa") },
+  { clave: "pop-chapa-prendedor", nombre: "Chapa prendedor", ...E("1:3.5,12:2.2,50:2.1,100:1.5,250:1.3,500:1.1", "Chapa") },
+  { clave: "pop-chapa-llavero", nombre: "Chapa llavero liso", ...E("1:4.2,12:3.4,50:3,100:2.6,250:2.3,500:2", "Chapa") },
+  { clave: "pop-chapa-destapador", nombre: "Chapa destapador", ...E("1:5,12:4.2,50:4,100:3.5,250:3.2,500:3", "Chapa") },
   // Sublimación de objetos.
-  { clave: "pop-boligrafo-3en1", nombre: "Bolígrafo 3 en 1 (sublimado)", ...E("1:4,12:3.5,50:3.2,100:3", "Bolígrafo") },
+  { clave: "pop-boligrafo-3en1", nombre: "Bolígrafo 3 en 1 (sublimado)", ...E("1:4,12:3.5,50:3.2,100:3,250:2.8,500:2.6", "Bolígrafo") },
   // Corte / grabado láser.
-  { clave: "pop-llavero-acrilico-transp", nombre: "Llavero grabado acrílico transparente", ...E("1:3,12:2.2,50:2,100:1.6", "Llavero") },
-  { clave: "pop-llavero-acrilico-metal", nombre: "Llavero grabado acrílico metalizado", ...E("1:3.5,12:2.3,50:2.2,100:1.8", "Llavero") },
-  { clave: "pop-llavero-mdf", nombre: "Llavero grabado MDF", ...E("1:3,12:2.2,50:1.8,100:1.5", "Llavero") },
+  { clave: "pop-llavero-acrilico-transp", nombre: "Llavero grabado acrílico transparente", ...E("1:3,12:2.2,50:2,100:1.6,250:1.4,500:1.2", "Llavero") },
+  { clave: "pop-llavero-acrilico-metal", nombre: "Llavero grabado acrílico metalizado", ...E("1:3.5,12:2.3,50:2.2,100:1.8,250:1.6,500:1.4", "Llavero") },
+  { clave: "pop-llavero-mdf", nombre: "Llavero grabado MDF", ...E("1:3,12:2.2,50:1.8,100:1.5,250:1.3,500:1.1", "Llavero") },
   // DTF UV — por metro lineal (ancho fijo 57 cm, mínimo 30 cm).
   { clave: "pop-dtf-uv", nombre: "DTF UV", categoria: "DTF", modo: "lineal", escalas: "", precioLineal: 30, anchoCm: 57, minCm: 30, unidad: "metro" },
+];
+
+/**
+ * Equipos del taller (prensas offset). `coloresPasada` = cuántos colores imprime
+ * la prensa en una sola pasada. Costos base ajustables en Variables.
+ */
+export type EquipoBase = {
+  clave: string; nombre: string; coloresPasada: number; costoMillar: number; costoArranque: number;
+};
+
+export const EQUIPOS_BASE: EquipoBase[] = [
+  { clave: "prensa-4c", nombre: "Prensa 4 colores", coloresPasada: 4, costoMillar: 6, costoArranque: 15 },
+  { clave: "prensa-2c", nombre: "Prensa 2 colores", coloresPasada: 2, costoMillar: 5, costoArranque: 12 },
+  { clave: "prensa-1c", nombre: "Prensa 1 color", coloresPasada: 1, costoMillar: 4, costoArranque: 10 },
 ];
 
 export const CONFIG_BASE: Omit<Config, "papeles" | "acabados"> = {
