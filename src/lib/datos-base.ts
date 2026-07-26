@@ -200,10 +200,13 @@ export type EquipoBase = {
   clave: string; nombre: string; coloresPasada: number; costoMillar: number; costoArranque: number;
 };
 
+// Prensa grande (4 colores) = más costo por pasada pero imprime todo de una;
+// prensa de 1 color = pasada barata pero un full color son 4 pasadas. Estimados
+// para PYME en Venezuela (USD a BCV); afinar en Variables con los costos reales.
 export const EQUIPOS_BASE: EquipoBase[] = [
-  { clave: "prensa-4c", nombre: "Prensa 4 colores", coloresPasada: 4, costoMillar: 6, costoArranque: 15 },
+  { clave: "prensa-4c", nombre: "Prensa 4 colores", coloresPasada: 4, costoMillar: 8, costoArranque: 18 },
   { clave: "prensa-2c", nombre: "Prensa 2 colores", coloresPasada: 2, costoMillar: 5, costoArranque: 12 },
-  { clave: "prensa-1c", nombre: "Prensa 1 color", coloresPasada: 1, costoMillar: 4, costoArranque: 10 },
+  { clave: "prensa-1c", nombre: "Prensa 1 color", coloresPasada: 1, costoMillar: 3, costoArranque: 8 },
 ];
 
 export const CONFIG_BASE: Omit<Config, "papeles" | "acabados"> = {

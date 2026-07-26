@@ -204,12 +204,12 @@ model Config {
   /// Modelo de IA elegido para el intérprete (null = el de por defecto).
   interpretarModelo String?
   /// Gran formato: costo por ojete y separación por defecto entre ojetes (cm).
-  gfOjeteCosto  Decimal @db.Decimal(10, 4) @default(0.8)
+  gfOjeteCosto  Decimal @db.Decimal(10, 4) @default(0.5)
   gfOjeteCm     Int     @default(40)
   /// Offset (producción propia): costos base, ajustables por cotización.
-  offPlancha    Decimal @db.Decimal(12, 4) @default(8)   // costo por plancha (una por color/cara)
-  offArranque   Decimal @db.Decimal(12, 4) @default(15)  // arranque/montaje por cara (makeready)
-  offMillar     Decimal @db.Decimal(12, 4) @default(6)   // costo por millar de pliegos impresos (por cara)
+  offPlancha    Decimal @db.Decimal(12, 4) @default(4)   // costo por plancha (poliéster; CTP metal ~$10)
+  offArranque   Decimal @db.Decimal(12, 4) @default(12)  // arranque/montaje por cara (makeready)
+  offMillar     Decimal @db.Decimal(12, 4) @default(5)   // costo por millar de pliegos impresos (por pasada)
   // Membrete para la cotización que se envía al cliente.
   empresaNombre    String?
   empresaRif       String?

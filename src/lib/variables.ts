@@ -35,10 +35,10 @@ export async function obtenerConfig(): Promise<DatosConfig> {
     margenMin: c ? num(c.margenMin) : 15, iva: c ? num(c.iva) : 16,
     interpretarIA: Boolean(c?.interpretarIA),
     interpretarModelo: c?.interpretarModelo ?? "",
-    gfOjeteCosto: c ? num(c.gfOjeteCosto) : 0.8, gfOjeteCm: c?.gfOjeteCm ?? 40,
-    offPlancha: c ? num(c.offPlancha) : 8,
-    offArranque: c ? num(c.offArranque) : 15,
-    offMillar: c ? num(c.offMillar) : 6,
+    gfOjeteCosto: c ? num(c.gfOjeteCosto) : 0.5, gfOjeteCm: c?.gfOjeteCm ?? 40,
+    offPlancha: c ? num(c.offPlancha) : 4,
+    offArranque: c ? num(c.offArranque) : 12,
+    offMillar: c ? num(c.offMillar) : 5,
   };
 }
 
