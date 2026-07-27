@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Save, RotateCcw, Check } from "lucide-react";
 import {
-  calcular, calcCapacidad, medidaCorte, TAMANOS, n, fmtNum, usd,
+  calcular, calcCapacidad, medidaCorte, TAMANOS, TAMANOS_DIGITAL, n, fmtNum, usd,
   type Config, type Acabado, type Montaje as MontajeInfo,
 } from "@/lib/calculo";
 import { nuevoForm, type FormCotizacion } from "@/lib/cotizacion-form";
@@ -85,6 +85,7 @@ export function Calculadora({
     const sueltos: Acabado[] = [];
     const grupos: Record<string, Acabado[]> = {};
     for (const a of cfg.acabados) {
+      if (a.modulo === "offset") continue; // los acabados de offset no aplican al digital
       if (a.grupo) (grupos[a.grupo] ??= []).push(a);
       else sueltos.push(a);
     }
@@ -154,7 +155,7 @@ export function Calculadora({
   // Sugeridor: compara los 4 tamaños de corte para este mismo trabajo.
   const opcionesTamano = useMemo(() => {
     if (!papel || n(form.ancho) <= 0 || n(form.alto) <= 0 || n(form.cantidad) <= 0) return [];
-    return TAMANOS.map((t) => {
+    return TAMANOS_DIGITAL.map((t) => {
       const [W, H] = medidaCorte(papel.med, t.frac);
       const cap = calcCapacidad(n(form.ancho), n(form.alto), W, H, n(cfg.pinza), n(cfg.sep)).cap;
       if (cap <= 0) return { id: t.id, cap: 0, precioUnit: Infinity, costoTotal: 0, entra: false };
@@ -270,9 +271,9 @@ export function Calculadora({
                 <T l="Ancho (mm)" v={form.ancho} set={(v) => up("ancho", v)} num ph="140" />
                 <T l="Alto (mm)" v={form.alto} set={(v) => up("alto", v)} num ph="140" />
                 <T l="Cantidad" v={form.cantidad} set={(v) => up("cantidad", v)} num ph="3000" />
-                <F l="Tamaño de corte">
+                <F l="Tamaño de corte" hint="La digital imprime hasta 1/4 de pliego">
                   <select className="in" value={form.tamano} onChange={(e) => up("tamano", e.target.value)}>
-                    {TAMANOS.map((t) => <option key={t.id} value={t.id}>{t.id}</option>)}
+                    {TAMANOS_DIGITAL.map((t) => <option key={t.id} value={t.id}>{t.id}</option>)}
                   </select>
                 </F>
               </div>

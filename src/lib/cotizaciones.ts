@@ -791,7 +791,9 @@ export async function cargarPersonalizadoEnForm(
 /* ─────────────────────── cotizaciones de offset (propio) ─────────────────────── */
 
 function catalogoAcabOffset(cfg: Config): OffsetAcab[] {
-  return cfg.acabados.map((a) => ({ id: a.id, label: a.label, costo: a.costo, unidad: a.unidad, escala: a.escala }));
+  return cfg.acabados
+    .filter((a) => a.modulo === "offset")
+    .map((a) => ({ id: a.id, label: a.label, costo: a.costo, unidad: a.unidad, escala: a.escala }));
 }
 
 function datosOffset(form: FormOffset, cfg: Config) {

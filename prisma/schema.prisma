@@ -121,6 +121,8 @@ model Acabado {
   escala String  // area | min | fija   (solo aplica a unidad "pliego")
   orden  Int     @default(0)
   activo Boolean @default(true)
+  /// Módulo al que pertenece el acabado: "digital" u "offset" (costos distintos).
+  modulo String  @default("digital")
   /// Acabados con el mismo grupo son excluyentes en la calculadora (ej. troquel).
   grupo  String?
 }

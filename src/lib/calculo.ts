@@ -28,6 +28,7 @@ export interface Acabado {
   costo: number;   // tarifa base, referida a 1/4 de pliego
   unidad: Unidad;
   escala: Escala;  // solo aplica cuando unidad === "pliego"
+  modulo?: string; // "digital" | "offset" (costos distintos por proceso)
   /**
    * Acabados que comparten `grupo` son mutuamente excluyentes en la
    * calculadora (se eligen con un selector, no con casillas). Ej.: los tres
@@ -115,6 +116,13 @@ export const TAMANOS = [
   { id: "1/4 Pliego", frac: 0.25 },
   { id: "1/8 Pliego", frac: 0.125 },
 ] as const;
+
+/**
+ * Tamaños que la impresora DIGITAL puede imprimir: como máximo 1/4 de pliego.
+ * (El motor sigue soportando todos los TAMANOS; esto solo limita la calculadora
+ * digital. Offset imprime el pliego completo y usa su propio flujo.)
+ */
+export const TAMANOS_DIGITAL = TAMANOS.filter((t) => t.frac <= 0.25);
 
 export const MEDIDAS: Record<MedidaKey, [number, number]> = {
   "66x96": [660, 960],

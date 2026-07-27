@@ -98,6 +98,7 @@ export default async function VariablesPage() {
           <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
             <span className="flex-1">Acabado</span>
             <span className="w-20 text-right">Costo</span>
+            <span className="w-24">Módulo</span>
             <span className="w-24">Se cobra</span>
             <span className="w-28">Al cambiar tamaño</span>
             <span className="w-14 text-right">Orden</span>
@@ -110,6 +111,10 @@ export default async function VariablesPage() {
               <input type="hidden" name="id" value={a.id} />
               <input name="label" defaultValue={a.label} className={`min-w-[10rem] flex-1 ${inCls}`} />
               <input name="costo" defaultValue={String(a.costo)} inputMode="decimal" className={`w-20 text-right font-mono ${inCls}`} />
+              <select name="modulo" defaultValue={a.modulo} className={`w-24 ${inCls}`}>
+                <option value="digital">Digital</option>
+                <option value="offset">Offset</option>
+              </select>
               <select name="unidad" defaultValue={a.unidad} className={`w-24 ${inCls}`}>
                 <option value="pliego">Por corte</option>
                 <option value="elemento">Por pieza</option>

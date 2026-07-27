@@ -60,9 +60,11 @@ export function CalculadoraOffset({
     }
   }, [auto.cap, form.capAuto, form.capacidad]);
 
+  // Solo los acabados del módulo OFFSET (costos propios, distintos al digital).
+  const acabadosOffset = useMemo(() => cfg.acabados.filter((a) => a.modulo === "offset"), [cfg.acabados]);
   const catalogoAcab: OffsetAcab[] = useMemo(
-    () => cfg.acabados.map((a) => ({ id: a.id, label: a.label, costo: a.costo, unidad: a.unidad, escala: a.escala })),
-    [cfg.acabados],
+    () => acabadosOffset.map((a) => ({ id: a.id, label: a.label, costo: a.costo, unidad: a.unidad, escala: a.escala })),
+    [acabadosOffset],
   );
 
   const entrada = (over?: Partial<EntradaOffset>): EntradaOffset => ({
@@ -111,12 +113,12 @@ export function CalculadoraOffset({
   const { sueltos, grupos } = useMemo(() => {
     const sueltos: Acabado[] = [];
     const grupos: Record<string, Acabado[]> = {};
-    for (const a of cfg.acabados) {
+    for (const a of acabadosOffset) {
       if (a.grupo) (grupos[a.grupo] ??= []).push(a); else sueltos.push(a);
     }
     for (const g of Object.values(grupos)) g.sort((x, y) => x.costo - y.costo);
     return { sueltos, grupos };
-  }, [cfg.acabados]);
+  }, [acabadosOffset]);
 
   const elegirGrupo = (opciones: Acabado[], id: string) =>
     setForm((f) => {
@@ -251,7 +253,7 @@ export function CalculadoraOffset({
             </div>
           </section>
 
-          {cfg.acabados.length ? (
+          {acabadosOffset.length ? (
             <section className="card">
               <div className="ch"><b>Acabados</b><span className="mt">marca lo que lleva el trabajo</span></div>
               <div className="cb">

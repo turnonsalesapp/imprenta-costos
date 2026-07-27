@@ -22,6 +22,13 @@ export function CrearAcabadoForm() {
         <input name="costo" type="text" inputMode="decimal" defaultValue="0" className={`mt-1 block w-24 font-mono ${inCls}`} />
       </label>
       <label className="block">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Módulo</span>
+        <select name="modulo" defaultValue="digital" className={`mt-1 block ${inCls}`}>
+          <option value="digital">Digital</option>
+          <option value="offset">Offset</option>
+        </select>
+      </label>
+      <label className="block">
         <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Se cobra</span>
         <select name="unidad" defaultValue="pliego" className={`mt-1 block ${inCls}`}>
           <option value="pliego">Por corte</option>

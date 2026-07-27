@@ -137,6 +137,7 @@ export async function crearAcabadoAction(
     escala: String(formData.get("escala") ?? "area"),
     orden: Math.round(n(formData.get("orden"))),
     grupo: String(formData.get("grupo") ?? "").trim() || null,
+    modulo: String(formData.get("modulo") ?? "digital") === "offset" ? "offset" : "digital",
   });
   if (!r.ok) return { error: r.error ?? "No se pudo crear." };
   revalidatePath("/variables");
@@ -154,6 +155,7 @@ export async function editarAcabadoAction(formData: FormData): Promise<void> {
     escala: String(formData.get("escala") ?? "area"),
     orden: Math.round(n(formData.get("orden"))),
     grupo: String(formData.get("grupo") ?? "").trim() || null,
+    modulo: String(formData.get("modulo") ?? "digital") === "offset" ? "offset" : "digital",
   });
   revalidatePath("/variables");
 }

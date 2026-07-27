@@ -94,6 +94,14 @@ export const ACABADOS_BASE: Acabado[] = [
   { id: "acetato", label: "Acetato Dangler", costo: 0.05, unidad: "elemento", escala: "fija" },
   { id: "guillotina", label: "Guillotina", costo: 5, unidad: "trabajo", escala: "fija" },
   { id: "prueba", label: "Prueba de Color", costo: 5, unidad: "trabajo", escala: "fija" },
+  // Acabados de OFFSET (costos propios del proceso, distintos al digital).
+  // Estimados PYME; ajustar en Variables con los costos reales del taller.
+  { id: "off-guillotina", label: "Guillotina / refilado", costo: 8, unidad: "trabajo", escala: "fija", modulo: "offset" },
+  { id: "off-doblez", label: "Doblez / plegado", costo: 8, unidad: "millar", escala: "fija", modulo: "offset" },
+  { id: "off-engrapado", label: "Engrapado (caballete)", costo: 0.05, unidad: "elemento", escala: "fija", modulo: "offset" },
+  { id: "off-numerado", label: "Numeración", costo: 10, unidad: "millar", escala: "fija", modulo: "offset" },
+  { id: "off-barniz", label: "Barniz UV", costo: 0.2, unidad: "pliego", escala: "area", modulo: "offset" },
+  { id: "off-encuadernado", label: "Encuadernado", costo: 20, unidad: "trabajo", escala: "fija", modulo: "offset" },
 ];
 
 /**
