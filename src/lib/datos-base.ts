@@ -106,8 +106,14 @@ export const ACABADOS_BASE: Acabado[] = [
  */
 export type MaterialGFBase = {
   clave: string; nombre: string; categoria: string;
-  costoM2: number; modo: "mancha" | "ancho_rollo"; anchos: string;
+  costoM2: number; modo: "mancha" | "ancho_rollo" | "etiqueta"; anchos: string;
+  montaje?: string; tabla?: string; // solo modo etiqueta
 };
+
+// Rendimientos de etiquetas por lámina de montaje (del catálogo Digital Print).
+const ETQ_A = { montaje: "125x70", tabla: "3x3:660,4x4:510,5x5:310,6x6:220,7x7:170" };
+const ETQ_B = { montaje: "115x70", tabla: "3x3:600,4x4:450,5x5:280,6x6:190,7x7:160" };
+const ETQ_C = { montaje: "50x90", tabla: "4x4:252,5x5:153,6x6:112,7x7:84" };
 
 // Catálogo completo de Digital Print (revendedores 2025), precios a BCV por m².
 // Banners: se cobra la mancha. Viniles: se cobra el ancho del rollo.
@@ -151,6 +157,21 @@ export const MATERIALES_GF_BASE: MaterialGFBase[] = [
   { clave: "gf-microperforado-uv", nombre: "Vinil Microperforado UV (sin reserva)", categoria: "Vinil UV", costoM2: 22, modo: "ancho_rollo", anchos: "137" },
   { clave: "gf-holografico-uv", nombre: "Vinil Holográfico UV (sin reserva)", categoria: "Vinil UV", costoM2: 22, modo: "ancho_rollo", anchos: "127" },
   { clave: "gf-holografico-uv-cr", nombre: "Vinil Holográfico UV (con reserva)", categoria: "Vinil UV", costoM2: 30, modo: "ancho_rollo", anchos: "127" },
+  // ── Etiquetas / stickers (por lámina de montaje; se elige tamaño y cantidad) ──
+  { clave: "gf-etq-estandar", nombre: "Etiqueta Vinil Estándar 140gr", categoria: "Etiqueta", costoM2: 12, modo: "etiqueta", anchos: "", ...ETQ_A },
+  { clave: "gf-etq-estandar-lam", nombre: "Etiqueta Vinil Estándar laminado", categoria: "Etiqueta", costoM2: 16, modo: "etiqueta", anchos: "", ...ETQ_A },
+  { clave: "gf-etq-matte", nombre: "Etiqueta Vinil Matte / Blackout", categoria: "Etiqueta", costoM2: 13, modo: "etiqueta", anchos: "", ...ETQ_A },
+  { clave: "gf-etq-matte-lam", nombre: "Etiqueta Vinil Matte / Blackout laminado", categoria: "Etiqueta", costoM2: 17, modo: "etiqueta", anchos: "", ...ETQ_A },
+  { clave: "gf-etq-clear", nombre: "Etiqueta Vinil Clear Brillante", categoria: "Etiqueta", costoM2: 13, modo: "etiqueta", anchos: "", ...ETQ_A },
+  { clave: "gf-etq-clear-lam", nombre: "Etiqueta Vinil Clear laminado", categoria: "Etiqueta", costoM2: 17, modo: "etiqueta", anchos: "", ...ETQ_A },
+  { clave: "gf-etq-uv-vinil", nombre: "Etiqueta UV Vinil (sin reserva)", categoria: "Etiqueta UV", costoM2: 22, modo: "etiqueta", anchos: "", ...ETQ_A },
+  { clave: "gf-etq-uv-vinil-cr", nombre: "Etiqueta UV Vinil (con reserva)", categoria: "Etiqueta UV", costoM2: 28, modo: "etiqueta", anchos: "", ...ETQ_A },
+  { clave: "gf-etq-uv-clear", nombre: "Etiqueta UV Clear (sin reserva)", categoria: "Etiqueta UV", costoM2: 22, modo: "etiqueta", anchos: "", ...ETQ_A },
+  { clave: "gf-etq-uv-clear-cr", nombre: "Etiqueta UV Clear (con reserva)", categoria: "Etiqueta UV", costoM2: 28, modo: "etiqueta", anchos: "", ...ETQ_A },
+  { clave: "gf-etq-uv-holo", nombre: "Etiqueta UV Holográfico (sin reserva)", categoria: "Etiqueta UV", costoM2: 26, modo: "etiqueta", anchos: "", ...ETQ_B },
+  { clave: "gf-etq-uv-holo-cr", nombre: "Etiqueta UV Holográfico (con reserva)", categoria: "Etiqueta UV", costoM2: 34, modo: "etiqueta", anchos: "", ...ETQ_B },
+  { clave: "gf-etq-uv-dorado", nombre: "Etiqueta UV Dorado / Rose Gold (sin reserva)", categoria: "Etiqueta UV", costoM2: 14, modo: "etiqueta", anchos: "", ...ETQ_C },
+  { clave: "gf-etq-uv-dorado-cr", nombre: "Etiqueta UV Dorado / Rose Gold (con reserva)", categoria: "Etiqueta UV", costoM2: 17, modo: "etiqueta", anchos: "", ...ETQ_C },
 ];
 
 /**

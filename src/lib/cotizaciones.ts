@@ -6,7 +6,8 @@ import {
   calcular, precioDesdeCosto, n, type LineaCosto, type Entrada, type Config,
 } from "./calculo";
 import {
-  calcularGF, calcularProductoGF, type EntradaGF, type EntradaProductoGF, type ResultadoGF,
+  calcularGF, calcularProductoGF, calcularEtiquetaGF, parseTablaEtq,
+  type EntradaGF, type EntradaProductoGF, type EntradaEtiquetaGF, type ResultadoGF,
 } from "./calculo-granformato";
 import { calcularPop, type EntradaPop } from "./calculo-personalizado";
 import { calcularOffset, type EntradaOffset, type OffsetAcab } from "./calculo-offset";
@@ -437,23 +438,61 @@ export async function cargarProveedorEnForm(
 
 /* ─────────────────────── cotizaciones de gran formato ─────────────────────── */
 
-type MaterialResuelto = { nombre: string; costoM2: number; modoCobro: string };
+type MaterialResuelto = { nombre: string; costoM2: number; modoCobro: string; montaje: string; tablaEtq: string };
 type OjeteCfg = { costo: number; cm: number };
 
 /** Trae el material (autoritativo) y la config de ojetes para calcular en el servidor. */
 async function contextoGF(materialClave: string): Promise<{ mat: MaterialResuelto; ojete: OjeteCfg } | null> {
   const [mat, cfg] = await Promise.all([
-    db.materialGF.findUnique({ where: { clave: materialClave }, select: { nombre: true, costoM2: true, modoCobro: true } }),
+    db.materialGF.findUnique({ where: { clave: materialClave }, select: { nombre: true, costoM2: true, modoCobro: true, montaje: true, tablaEtq: true } }),
     db.config.findUnique({ where: { id: "global" }, select: { gfOjeteCosto: true, gfOjeteCm: true } }),
   ]);
   if (!mat) return null;
   return {
-    mat: { nombre: mat.nombre, costoM2: num(mat.costoM2), modoCobro: mat.modoCobro },
+    mat: { nombre: mat.nombre, costoM2: num(mat.costoM2), modoCobro: mat.modoCobro, montaje: mat.montaje, tablaEtq: mat.tablaEtq },
     ojete: { costo: cfg ? num(cfg.gfOjeteCosto) : 0.8, cm: cfg?.gfOjeteCm ?? 40 },
   };
 }
 
 function datosGranFormato(form: FormGranFormato, mat: MaterialResuelto, ojete: OjeteCfg) {
+  // Etiquetas: por lámina de montaje (tamaño + cantidad), no por medida en cm.
+  if (mat.modoCobro === "etiqueta") {
+    const uds = parseTablaEtq(mat.tablaEtq).find((e) => e.tam === form.etqTamano)?.uds ?? 0;
+    const entradaE: EntradaEtiquetaGF = {
+      materialNombre: mat.nombre, tamano: form.etqTamano, cantidad: form.cantidad,
+      costoM2: mat.costoM2, montaje: mat.montaje, unidadesMontaje: uds,
+      margen: form.margen, comision: form.comision, ml: form.ml,
+      tasaBCV: form.tasaBCV, binCompra: form.binCompra, binVenta: form.binVenta,
+      difManual: form.difManual, dif: form.dif, precioManual: form.precioManual,
+    };
+    const r = calcularEtiquetaGF(entradaE);
+    const descripcion = (form.descripcion ?? "").trim() ||
+      `${mat.nombre} · etiqueta ${form.etqTamano} · ${r.cant} u`;
+    return {
+      r,
+      data: {
+        tipo: "GRAN_FORMATO" as const,
+        clienteId: form.clienteId?.trim() || null,
+        clienteNombre: (form.cliente ?? "").trim() || null,
+        titulo: (form.trabajo ?? "").trim() || "Etiquetas",
+        descripcion,
+        cantidad: r.cant,
+        ancho: 0, alto: 0,
+        tamano: `Etiqueta ${form.etqTamano} · ${r.montajes} montaje${r.montajes !== 1 ? "s" : ""}`,
+        papelNombre: mat.nombre,
+        capacidad: 0,
+        entrada: { ...entradaE, modo: "impresion", modoCobro: "etiqueta", materialId: form.materialId, etqTamano: form.etqTamano } as unknown as Prisma.InputJsonValue,
+        snapshot: { tipo: "granformato", subtipo: "etiqueta", material: mat } as unknown as Prisma.InputJsonValue,
+        lineas: r.lineas as unknown as Prisma.InputJsonValue,
+        pliegos: 0,
+        costoTotal: r.costoTotal, costoUnit: r.costoUnit, diferencial: r.dif,
+        margen: n(form.margen),
+        precioUnit: r.precioUnit, ventaTotal: r.ventaTotal, precioML: r.precioML,
+        tasaBCV: n(form.tasaBCV), precioBs: r.precioBs,
+      },
+    };
+  }
+
   const entrada: EntradaGF = {
     materialNombre: mat.nombre,
     anchoCm: form.anchoCm, altoCm: form.altoCm, cantidad: form.cantidad,
@@ -616,8 +655,8 @@ export async function cargarGranFormatoEnForm(
     productoId: (e.productoId ?? "") as string,
     materialId: (e.materialId ?? "") as string,
     anchoCm: v("anchoCm"), altoCm: v("altoCm"), cantidad: v("cantidad"),
-    modoCobro: e.modoCobro === "ancho_rollo" ? "ancho_rollo" : "mancha",
-    anchoRolloCm: v("anchoRolloCm"),
+    modoCobro: e.modoCobro === "ancho_rollo" ? "ancho_rollo" : e.modoCobro === "etiqueta" ? "etiqueta" : "mancha",
+    anchoRolloCm: v("anchoRolloCm"), etqTamano: (e.etqTamano ?? "") as string,
     ojetesAuto: Boolean(e.ojetesAuto), ojetes: v("ojetes"),
     margen: v("margen"), comision: v("comision"), ml: v("ml"),
     tasaBCV: v("tasaBCV"), binCompra: v("binCompra"), binVenta: v("binVenta"),

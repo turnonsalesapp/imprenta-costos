@@ -43,6 +43,7 @@ async function main() {
       create: {
         clave: m.clave, nombre: m.nombre, categoria: m.categoria,
         costoM2: m.costoM2, modoCobro: m.modo, anchosRollo: m.anchos,
+        montaje: m.montaje ?? "", tablaEtq: m.tabla ?? "",
       },
     });
   }

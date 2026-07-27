@@ -24,6 +24,7 @@ export function parseAnchos(s: string): number[] {
 export type MaterialGFItem = {
   id: string; clave: string; nombre: string; categoria: string;
   costoM2: number; modoCobro: ModoCobroGF; anchos: number[];
+  montaje: string; tablaEtq: string;
 };
 
 export async function listarMaterialesGF(): Promise<MaterialGFItem[]> {
@@ -34,6 +35,7 @@ export async function listarMaterialesGF(): Promise<MaterialGFItem[]> {
   return filas.map((m) => ({
     id: m.id, clave: m.clave, nombre: m.nombre, categoria: m.categoria,
     costoM2: num(m.costoM2), modoCobro: m.modoCobro as ModoCobroGF, anchos: parseAnchos(m.anchosRollo),
+    montaje: m.montaje, tablaEtq: m.tablaEtq,
   }));
 }
 
@@ -41,23 +43,26 @@ export async function listarMaterialesGF(): Promise<MaterialGFItem[]> {
 
 export type MaterialGFFila = {
   id: string; clave: string; nombre: string; categoria: string;
-  costoM2: number; modoCobro: string; anchosRollo: string; activo: boolean;
+  costoM2: number; modoCobro: string; anchosRollo: string;
+  montaje: string; tablaEtq: string; activo: boolean;
 };
 
 export async function listarMaterialesGFAdmin(): Promise<MaterialGFFila[]> {
   const filas = await db.materialGF.findMany({ orderBy: [{ activo: "desc" }, { categoria: "asc" }, { nombre: "asc" }] });
   return filas.map((m) => ({
     id: m.id, clave: m.clave, nombre: m.nombre, categoria: m.categoria,
-    costoM2: num(m.costoM2), modoCobro: m.modoCobro, anchosRollo: m.anchosRollo, activo: m.activo,
+    costoM2: num(m.costoM2), modoCobro: m.modoCobro, anchosRollo: m.anchosRollo,
+    montaje: m.montaje, tablaEtq: m.tablaEtq, activo: m.activo,
   }));
 }
 
 export type DatosMaterialGF = {
-  nombre: string; categoria: string; costoM2: number; modoCobro: string; anchosRollo: string;
+  nombre: string; categoria: string; costoM2: number; modoCobro: string;
+  anchosRollo: string; montaje: string; tablaEtq: string;
 };
 
 function normalizaModo(m: string): string {
-  return m === "ancho_rollo" ? "ancho_rollo" : "mancha";
+  return m === "ancho_rollo" ? "ancho_rollo" : m === "etiqueta" ? "etiqueta" : "mancha";
 }
 
 export async function crearMaterialGF(d: DatosMaterialGF): Promise<{ ok: boolean; error?: string }> {
@@ -67,6 +72,7 @@ export async function crearMaterialGF(d: DatosMaterialGF): Promise<{ ok: boolean
         clave: d.nombre + "-" + Date.now().toString(36),
         nombre: d.nombre, categoria: d.categoria || "Banner",
         costoM2: d.costoM2, modoCobro: normalizaModo(d.modoCobro), anchosRollo: d.anchosRollo,
+        montaje: d.montaje, tablaEtq: d.tablaEtq,
       },
     });
     return { ok: true };
@@ -84,6 +90,7 @@ export async function editarMaterialGF(id: string, d: DatosMaterialGF): Promise<
     data: {
       nombre: d.nombre || "Material", categoria: d.categoria || "Banner",
       costoM2: d.costoM2, modoCobro: normalizaModo(d.modoCobro), anchosRollo: d.anchosRollo,
+      montaje: d.montaje, tablaEtq: d.tablaEtq,
     },
   });
 }

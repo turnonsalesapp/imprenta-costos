@@ -135,8 +135,10 @@ model MaterialGF {
   nombre     String
   categoria  String  @default("Banner")
   costoM2    Decimal @db.Decimal(12, 4) // costo USD por m² (a BCV, del catálogo)
-  modoCobro  String  @default("mancha") // "mancha" | "ancho_rollo"
+  modoCobro  String  @default("mancha") // "mancha" | "ancho_rollo" | "etiqueta"
   anchosRollo String @default("")       // "105,137,152" en cm
+  montaje    String  @default("")       // lámina de montaje "125x70" (modo etiqueta)
+  tablaEtq   String  @default("")       // rendimiento "3x3:660,4x4:510,…" (modo etiqueta)
   activo     Boolean @default(true)
 }
 

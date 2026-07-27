@@ -189,7 +189,8 @@ export default async function VariablesPage() {
             <span className="w-24">Categoría</span>
             <span className="w-20 text-right">Costo/m²</span>
             <span className="w-28">Cobro</span>
-            <span className="w-28">Anchos (cm)</span>
+            <span className="w-24">Anchos (cm)</span>
+            <span className="w-44">Montaje · tabla etiqueta</span>
             <span className="w-32" />
           </div>
           <div className="max-h-[28rem] overflow-y-auto">
@@ -203,8 +204,13 @@ export default async function VariablesPage() {
                 <select name="modoCobro" defaultValue={m.modoCobro} className={`w-28 ${inCls}`}>
                   <option value="mancha">Por mancha</option>
                   <option value="ancho_rollo">Ancho de rollo</option>
+                  <option value="etiqueta">Etiqueta</option>
                 </select>
-                <input name="anchosRollo" defaultValue={m.anchosRollo} placeholder="—" className={`w-28 font-mono ${inCls}`} />
+                <input name="anchosRollo" defaultValue={m.anchosRollo} placeholder="—" className={`w-24 font-mono ${inCls}`} />
+                <span className="flex w-44 items-center gap-1">
+                  <input name="montaje" defaultValue={m.montaje} placeholder="125x70" title="Montaje (cm)" className={`w-16 font-mono ${inCls}`} />
+                  <input name="tablaEtq" defaultValue={m.tablaEtq} placeholder="3x3:660,…" title="Tabla etiqueta" className={`min-w-0 flex-1 font-mono ${inCls}`} />
+                </span>
                 <span className="flex w-32 justify-end gap-1.5">
                   <button type="submit" className={btnGuardar}>Guardar</button>
                   <button type="submit" formAction={alternarMaterialGFAction} className={btnAlt}>

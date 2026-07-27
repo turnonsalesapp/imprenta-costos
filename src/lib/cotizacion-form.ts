@@ -148,6 +148,7 @@ export type FormGranFormato = {
   cantidad: number | string;
   modoCobro: ModoCobroGF;
   anchoRolloCm: number | string;
+  etqTamano: string;            // tamaño de etiqueta (modo etiqueta), ej "4x4"
   ojetesAuto: boolean;
   ojetes: number | string;      // ojetes por pieza (si es a mano)
   margen: number | string;
@@ -167,7 +168,7 @@ export function nuevoFormGranFormato(cfg: Config): FormGranFormato {
     cliente: "", clienteId: "", trabajo: "", descripcion: "",
     modo: "impresion", productoId: "",
     materialId: "", anchoCm: "", altoCm: "", cantidad: "1",
-    modoCobro: "mancha", anchoRolloCm: "",
+    modoCobro: "mancha", anchoRolloCm: "", etqTamano: "",
     ojetesAuto: false, ojetes: "",
     margen: cfg.margen, comision: cfg.comision, ml: cfg.ml,
     tasaBCV: cfg.tasaBCV, binCompra: cfg.binCompra, binVenta: cfg.binVenta,

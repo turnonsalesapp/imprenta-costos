@@ -4,8 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import { Save, RotateCcw, Check } from "lucide-react";
 import { n, fmtNum, usd, type Config } from "@/lib/calculo";
 import {
-  calcularGF, calcularProductoGF, ojetesPorPerimetro,
-  type EntradaGF, type EntradaProductoGF, type ResultadoGF,
+  calcularGF, calcularProductoGF, calcularEtiquetaGF, ojetesPorPerimetro, parseTablaEtq,
+  type EntradaGF, type EntradaProductoGF, type EntradaEtiquetaGF, type ResultadoGF,
 } from "@/lib/calculo-granformato";
 import { nuevoFormGranFormato, type FormGranFormato } from "@/lib/cotizacion-form";
 import type { MaterialGFItem } from "@/lib/materiales-gf";
@@ -46,19 +46,23 @@ export function CalculadoraGranFormato({
   const esProducto = form.modo === "producto";
   const material = materiales.find((m) => m.clave === form.materialId) ?? null;
   const producto = productos.find((p) => p.clave === form.productoId) ?? null;
+  const esEtiqueta = !esProducto && material?.modoCobro === "etiqueta";
+  const rendEtq = useMemo(() => (esEtiqueta && material ? parseTablaEtq(material.tablaEtq) : []), [esEtiqueta, material]);
+  const udsEtq = rendEtq.find((e) => e.tam === form.etqTamano)?.uds ?? 0;
 
   const elegirCliente = (id: string) => {
     const c = clientes.find((x) => x.id === id);
     setForm((f) => ({ ...f, clienteId: id, cliente: id ? (c?.nombre ?? f.cliente) : f.cliente }));
   };
 
-  // Al elegir material: fija el modo por defecto y sugiere el rollo más ajustado.
+  // Al elegir material: fija el modo por defecto, sugiere el rollo o el tamaño de etiqueta.
   const elegirMaterial = (clave: string) => {
     const m = materiales.find((x) => x.clave === clave);
     setForm((f) => {
       const modo = m ? m.modoCobro : f.modoCobro;
       const rollo = m && modo === "ancho_rollo" ? sugerirRollo(m.anchos, n(f.anchoCm)) : n(f.anchoRolloCm);
-      return { ...f, materialId: clave, modoCobro: modo, anchoRolloCm: rollo || "" };
+      const tam = m && modo === "etiqueta" ? (parseTablaEtq(m.tablaEtq)[0]?.tam ?? "") : f.etqTamano;
+      return { ...f, materialId: clave, modoCobro: modo, anchoRolloCm: rollo || "", etqTamano: tam };
     });
   };
 
@@ -85,9 +89,17 @@ export function CalculadoraGranFormato({
     ...comun(), ...over,
   });
 
+  const entradaEtq = (over?: Partial<EntradaEtiquetaGF>): EntradaEtiquetaGF => ({
+    materialNombre: material?.nombre ?? "Etiqueta", tamano: form.etqTamano, cantidad: form.cantidad,
+    costoM2, montaje: material?.montaje ?? "", unidadesMontaje: udsEtq,
+    ...comun(), ...over,
+  });
+
   // Un solo motor de cálculo según el modo activo.
   const calc = (overGF?: Partial<EntradaGF>, overProd?: Partial<EntradaProductoGF>): ResultadoGF =>
-    esProducto ? calcularProductoGF(entradaProd(overProd)) : calcularGF(entrada(overGF));
+    esProducto ? calcularProductoGF(entradaProd(overProd))
+      : esEtiqueta ? calcularEtiquetaGF(entradaEtq(overGF as Partial<EntradaEtiquetaGF>))
+        : calcularGF(entrada(overGF));
 
   const r = useMemo(() => calc(), [form, costoM2, costoUnit, ojeteCosto, ojeteCm]);
   const rBase = useMemo(() => calc({ precioManual: "" }, { precioManual: "" }), [form, costoM2, costoUnit, ojeteCosto, ojeteCm]);
@@ -134,6 +146,10 @@ export function CalculadoraGranFormato({
     if (!form.cliente.trim() && !form.trabajo.trim()) { setError("Falta el cliente o el trabajo."); return; }
     if (esProducto) {
       if (!producto) { setError("Elige un producto terminado."); return; }
+    } else if (esEtiqueta) {
+      if (!material) { setError("Elige un material."); return; }
+      if (!form.etqTamano) { setError("Elige el tamaño de etiqueta."); return; }
+      if (n(form.cantidad) <= 0) { setError("Indica la cantidad de etiquetas."); return; }
     } else {
       if (!material) { setError("Elige un material."); return; }
       if (n(form.anchoCm) <= 0 || n(form.altoCm) <= 0) { setError("Indica el ancho y el alto (cm)."); return; }
@@ -177,7 +193,9 @@ export function CalculadoraGranFormato({
               <div className="hint" style={{ marginTop: 8 }}>
                 {esProducto
                   ? "Pendones, roll up, arañas y estructuras: costo fijo por unidad del catálogo."
-                  : "Banners y viniles: se cobra por área (mancha o ancho de rollo) más ojetes."}
+                  : esEtiqueta
+                    ? "Etiquetas: se imprimen en láminas de montaje; elige el tamaño y la cantidad."
+                    : "Banners y viniles: área (mancha o ancho de rollo) más ojetes. Etiquetas: elige un material de etiqueta."}
               </div>
             </div>
           </section>
@@ -247,38 +265,57 @@ export function CalculadoraGranFormato({
                 </select>
               </F>
 
-              <div className="rowg c3" style={{ marginTop: 10 }}>
-                <T l="Ancho (cm)" v={form.anchoCm} set={(v) => up("anchoCm", v)} num ph="200" />
-                <T l="Alto (cm)" v={form.altoCm} set={(v) => up("altoCm", v)} num ph="100" />
-                <T l="Cantidad" v={form.cantidad} set={(v) => up("cantidad", v)} num ph="1" />
-              </div>
-
-              <div className="rowg c2" style={{ marginTop: 10 }}>
-                <F l="Cómo se cobra">
-                  <select className="in" value={form.modoCobro} onChange={(e) => up("modoCobro", e.target.value as FormGranFormato["modoCobro"])}>
-                    <option value="mancha">Por mancha (área impresa)</option>
-                    <option value="ancho_rollo">Por ancho de rollo</option>
-                  </select>
-                </F>
-                {form.modoCobro === "ancho_rollo" ? (
-                  <F l="Ancho de rollo (cm)" hint={rolloSugerido > 0 ? `Sugerido: ${fmtNum(rolloSugerido, 0)} cm (menos desperdicio)` : undefined}>
-                    {material && material.anchos.length ? (
-                      <select className="in mono" value={form.anchoRolloCm} onChange={(e) => up("anchoRolloCm", e.target.value)}>
-                        {material.anchos.map((a) => <option key={a} value={a}>{fmtNum(a, 0)} cm</option>)}
+              {esEtiqueta ? (
+                <>
+                  <div className="rowg c2" style={{ marginTop: 10 }}>
+                    <F l="Tamaño de etiqueta (cm)">
+                      <select className="in" value={form.etqTamano} onChange={(e) => up("etqTamano", e.target.value)}>
+                        {rendEtq.map((e) => <option key={e.tam} value={e.tam}>{e.tam} cm · {e.uds} por lámina</option>)}
                       </select>
+                    </F>
+                    <T l="Cantidad de etiquetas" v={form.cantidad} set={(v) => up("cantidad", v)} num ph="1000" />
+                  </div>
+                  <div className="hint mono" style={{ marginTop: 8 }}>
+                    Lámina {material?.montaje} cm · {udsEtq} por lámina · {r.montajes} lámina{r.montajes !== 1 ? "s" : ""} · {fmtNum(r.areaFactM2, 2)} m²
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="rowg c3" style={{ marginTop: 10 }}>
+                    <T l="Ancho (cm)" v={form.anchoCm} set={(v) => up("anchoCm", v)} num ph="200" />
+                    <T l="Alto (cm)" v={form.altoCm} set={(v) => up("altoCm", v)} num ph="100" />
+                    <T l="Cantidad" v={form.cantidad} set={(v) => up("cantidad", v)} num ph="1" />
+                  </div>
+
+                  <div className="rowg c2" style={{ marginTop: 10 }}>
+                    <F l="Cómo se cobra">
+                      <select className="in" value={form.modoCobro} onChange={(e) => up("modoCobro", e.target.value as FormGranFormato["modoCobro"])}>
+                        <option value="mancha">Por mancha (área impresa)</option>
+                        <option value="ancho_rollo">Por ancho de rollo</option>
+                      </select>
+                    </F>
+                    {form.modoCobro === "ancho_rollo" ? (
+                      <F l="Ancho de rollo (cm)" hint={rolloSugerido > 0 ? `Sugerido: ${fmtNum(rolloSugerido, 0)} cm (menos desperdicio)` : undefined}>
+                        {material && material.anchos.length ? (
+                          <select className="in mono" value={form.anchoRolloCm} onChange={(e) => up("anchoRolloCm", e.target.value)}>
+                            {material.anchos.map((a) => <option key={a} value={a}>{fmtNum(a, 0)} cm</option>)}
+                          </select>
+                        ) : (
+                          <input className="in mono" type="text" inputMode="decimal" value={form.anchoRolloCm}
+                            onChange={(e) => up("anchoRolloCm", e.target.value)} placeholder="137" />
+                        )}
+                      </F>
                     ) : (
-                      <input className="in mono" type="text" inputMode="decimal" value={form.anchoRolloCm}
-                        onChange={(e) => up("anchoRolloCm", e.target.value)} placeholder="137" />
+                      <F l="Área facturable"><input className="in mono" readOnly value={`${fmtNum(r.areaFactM2, 2)} m²`}
+                        style={{ background: "#EFF2EF", color: "#767D76" }} /></F>
                     )}
-                  </F>
-                ) : (
-                  <F l="Área facturable"><input className="in mono" readOnly value={`${fmtNum(r.areaFactM2, 2)} m²`}
-                    style={{ background: "#EFF2EF", color: "#767D76" }} /></F>
-                )}
-              </div>
+                  </div>
+                </>
+              )}
             </div>
           </section>
 
+          {esEtiqueta ? null : (
           <section className="card">
             <div className="ch"><b>Ojetes</b><span className="mt">{usd(ojeteCosto, 2)} c/u · cada {ojeteCm} cm</span></div>
             <div className="cb">
@@ -300,6 +337,7 @@ export function CalculadoraGranFormato({
               </div>
             </div>
           </section>
+          )}
           </>
           )}
 

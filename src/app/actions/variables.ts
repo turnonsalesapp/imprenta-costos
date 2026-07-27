@@ -174,6 +174,8 @@ function datosMaterialGF(formData: FormData) {
     costoM2: n(formData.get("costoM2")),
     modoCobro: String(formData.get("modoCobro") ?? "mancha"),
     anchosRollo: String(formData.get("anchosRollo") ?? "").trim(),
+    montaje: String(formData.get("montaje") ?? "").trim(),
+    tablaEtq: String(formData.get("tablaEtq") ?? "").trim(),
   };
 }
 

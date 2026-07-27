@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
-  calcularGF, calcularProductoGF, ojetesPorPerimetro, type EntradaGF,
+  calcularGF, calcularProductoGF, calcularEtiquetaGF, ojetesPorPerimetro,
+  parseTablaEtq, areaMontajeM2, type EntradaGF,
 } from "./calculo-granformato";
 
 const base: Omit<EntradaGF, "anchoCm" | "altoCm" | "cantidad" | "costoM2" | "modoCobro" | "anchoRolloCm"> = {
@@ -74,6 +75,38 @@ describe("gran formato: producto terminado (costo fijo por unidad)", () => {
     });
     expect(vacio.lineas).toHaveLength(0);
     expect(vacio.costoTotal).toBe(0);
+  });
+});
+
+describe("gran formato: etiquetas por lámina de montaje", () => {
+  it("parsea la tabla y el área del montaje", () => {
+    expect(parseTablaEtq("3x3:660, 4x4:510, 5x5:310")).toEqual([
+      { tam: "3x3", uds: 660 }, { tam: "4x4", uds: 510 }, { tam: "5x5", uds: 310 },
+    ]);
+    expect(areaMontajeM2("125x70")).toBeCloseTo(0.875, 6); // 125×70 cm
+  });
+
+  const base = {
+    materialNombre: "Etiqueta Vinil Estándar", tamano: "4x4", costoM2: 12,
+    montaje: "125x70", unidadesMontaje: 510,
+    margen: 30, comision: 0, ml: 12,
+    tasaBCV: 473, binCompra: 659.71, binVenta: 658.01, difManual: false, dif: "" as const,
+  };
+
+  it("una lámina cubre hasta 510 etiquetas 4×4", () => {
+    const r = calcularEtiquetaGF({ ...base, cantidad: 510 });
+    expect(r.montajes).toBe(1);
+    expect(r.areaFactM2).toBeCloseTo(0.875, 6);
+    expect(r.costoTotal).toBeCloseTo(10.5, 6); // 0,875 m² × $12
+    expect(r.precioUnit).toBeGreaterThan(r.costoUnit);
+  });
+
+  it("1000 etiquetas necesitan 2 láminas", () => {
+    const r = calcularEtiquetaGF({ ...base, cantidad: 1000 });
+    expect(r.montajes).toBe(2);               // ceil(1000/510)
+    expect(r.areaFactM2).toBeCloseTo(1.75, 6); // 2 × 0,875
+    expect(r.costoTotal).toBeCloseTo(21, 6);   // 1,75 × $12
+    expect(r.cant).toBe(1000);
   });
 });
 

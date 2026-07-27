@@ -16,7 +16,25 @@ import {
   precioDesdeCosto, n, fmtNum, usd, type ParamsPrecio, type Precio, type LineaCosto,
 } from "./calculo";
 
-export type ModoCobroGF = "mancha" | "ancho_rollo";
+export type ModoCobroGF = "mancha" | "ancho_rollo" | "etiqueta";
+
+/** Tabla de rendimiento de etiquetas: "3x3:660,4x4:510" → [{tam,uds}]. */
+export type RendEtiqueta = { tam: string; uds: number };
+export function parseTablaEtq(s: string): RendEtiqueta[] {
+  return (s ?? "")
+    .split(/[,;]+/)
+    .map((par) => {
+      const [tam, uds] = par.split(":");
+      return { tam: (tam ?? "").trim(), uds: Math.max(0, Math.round(n(uds))) };
+    })
+    .filter((e) => e.tam && e.uds > 0);
+}
+
+/** Área de un montaje "125x70" (cm) en m². */
+export function areaMontajeM2(montaje: string): number {
+  const [w, h] = (montaje ?? "").split(/[x×]/i).map((v) => n(v));
+  return w > 0 && h > 0 ? (w * h) / 10000 : 0;
+}
 
 export interface EntradaGF extends ParamsPrecio {
   materialNombre?: string;
@@ -39,7 +57,51 @@ export interface ResultadoGF extends Precio {
   ojetesPorPieza: number;
   ojetesTotal: number;
   precioM2Venta: number; // precio de venta por m² (referencia)
+  montajes: number;      // láminas de montaje (modo etiqueta)
   lineas: LineaCosto[];
+}
+
+/**
+ * Etiquetas / stickers: se imprimen en LÁMINAS de montaje (ej. 125×70 cm) y cada
+ * lámina rinde N etiquetas según su tamaño (3×3 → 660, etc.). El costo es el área
+ * de las láminas necesarias × el costo por m². El precio se reparte entre las
+ * etiquetas pedidas.
+ */
+export interface EntradaEtiquetaGF extends ParamsPrecio {
+  materialNombre?: string;
+  tamano: string;                  // "4x4"
+  cantidad: number | string;       // etiquetas pedidas
+  costoM2: number | string;
+  montaje: string;                 // "125x70" (cm)
+  unidadesMontaje: number | string; // etiquetas por lámina, para el tamaño elegido
+}
+
+export function calcularEtiquetaGF(f: EntradaEtiquetaGF): ResultadoGF {
+  const cant = Math.max(0, Math.round(n(f.cantidad)));
+  const uds = Math.max(1, Math.round(n(f.unidadesMontaje)) || 1);
+  const costoM2 = Math.max(0, n(f.costoM2));
+  const montajeM2 = areaMontajeM2(f.montaje);
+
+  const montajes = cant > 0 ? Math.ceil(cant / uds) : 0;
+  const areaFactM2 = montajes * montajeM2;
+  const costoMaterial = areaFactM2 * costoM2;
+
+  const lineas: LineaCosto[] = [];
+  if (costoMaterial > 0) {
+    lineas.push({
+      k: "material",
+      label: f.materialNombre || "Etiqueta",
+      detalle: `${montajes} montaje${montajes !== 1 ? "s" : ""} (${uds} uds ${f.tamano}) · ${fmtNum(areaFactM2, 2)} m² x ${usd(costoM2)}`,
+      monto: costoMaterial,
+    });
+  }
+
+  const pr = precioDesdeCosto(costoMaterial, cant, f);
+  const precioM2Venta = areaFactM2 > 0 ? pr.ventaTotal / areaFactM2 : 0;
+  return {
+    areaPiezaM2: 0, areaCobroM2: 0, areaFactM2,
+    ojetesPorPieza: 0, ojetesTotal: 0, precioM2Venta, montajes, lineas, ...pr,
+  };
 }
 
 /**
@@ -71,7 +133,7 @@ export function calcularProductoGF(f: EntradaProductoGF): ResultadoGF {
   const pr = precioDesdeCosto(costoTotal, cant, f);
   return {
     areaPiezaM2: 0, areaCobroM2: 0, areaFactM2: 0,
-    ojetesPorPieza: 0, ojetesTotal: 0, precioM2Venta: 0, lineas, ...pr,
+    ojetesPorPieza: 0, ojetesTotal: 0, precioM2Venta: 0, montajes: 0, lineas, ...pr,
   };
 }
 
@@ -128,6 +190,6 @@ export function calcularGF(f: EntradaGF): ResultadoGF {
   const precioM2Venta = areaFactM2 > 0 ? pr.ventaTotal / areaFactM2 : 0;
 
   return {
-    areaPiezaM2, areaCobroM2, areaFactM2, ojetesPorPieza, ojetesTotal, precioM2Venta, lineas, ...pr,
+    areaPiezaM2, areaCobroM2, areaFactM2, ojetesPorPieza, ojetesTotal, precioM2Venta, montajes: 0, lineas, ...pr,
   };
 }

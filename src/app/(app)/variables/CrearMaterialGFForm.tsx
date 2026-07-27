@@ -30,11 +30,20 @@ export function CrearMaterialGFForm() {
         <select name="modoCobro" defaultValue="mancha" className={`mt-1 block ${inCls}`}>
           <option value="mancha">Por mancha</option>
           <option value="ancho_rollo">Ancho de rollo</option>
+          <option value="etiqueta">Etiqueta (montaje)</option>
         </select>
       </label>
       <label className="block">
         <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Anchos rollo (cm)</span>
         <input name="anchosRollo" className={`mt-1 block w-32 font-mono ${inCls}`} placeholder="105,137,152" />
+      </label>
+      <label className="block">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Montaje (cm)</span>
+        <input name="montaje" className={`mt-1 block w-24 font-mono ${inCls}`} placeholder="125x70" />
+      </label>
+      <label className="block">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Tabla etiqueta</span>
+        <input name="tablaEtq" className={`mt-1 block w-48 font-mono ${inCls}`} placeholder="3x3:660,4x4:510" />
       </label>
       <button type="submit" disabled={pend} className="rounded-sm bg-tinta px-3 py-1.5 text-sm font-bold text-hoja hover:opacity-90 disabled:opacity-50">
         Agregar material
