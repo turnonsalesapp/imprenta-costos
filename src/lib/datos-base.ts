@@ -109,25 +109,48 @@ export type MaterialGFBase = {
   costoM2: number; modo: "mancha" | "ancho_rollo"; anchos: string;
 };
 
+// Catálogo completo de Digital Print (revendedores 2025), precios a BCV por m².
+// Banners: se cobra la mancha. Viniles: se cobra el ancho del rollo.
 export const MATERIALES_GF_BASE: MaterialGFBase[] = [
-  // Banners — se cobran por la mancha de impresión.
+  // ── Banners (mancha) ──
   { clave: "gf-banner-13oz", nombre: "Banner 13 oz", categoria: "Banner", costoM2: 7, modo: "mancha", anchos: "" },
   { clave: "gf-banner-reciclaje", nombre: "Banner Reciclaje", categoria: "Banner", costoM2: 6, modo: "mancha", anchos: "" },
   { clave: "gf-banner-backlight", nombre: "Banner Backlight", categoria: "Banner", costoM2: 8, modo: "mancha", anchos: "" },
   { clave: "gf-banner-blackout", nombre: "Banner Blackout", categoria: "Banner", costoM2: 8, modo: "mancha", anchos: "" },
   { clave: "gf-banner-mesh", nombre: "Banner Mesh", categoria: "Banner", costoM2: 10, modo: "mancha", anchos: "320" },
-  // Banners impresos en UV (mayor costo).
-  { clave: "gf-banner-13oz-uv", nombre: "Banner 13 oz (UV)", categoria: "Banner UV", costoM2: 15, modo: "mancha", anchos: "" },
-  { clave: "gf-banner-blackout-uv", nombre: "Banner Blackout (UV)", categoria: "Banner UV", costoM2: 16, modo: "mancha", anchos: "" },
-  { clave: "gf-banner-backlight-uv", nombre: "Banner Backlight (UV)", categoria: "Banner UV", costoM2: 18, modo: "mancha", anchos: "90,115,140,160,180" },
-  // Viniles — se cobran por el ancho del rollo.
+  // ── Banner laminado (mancha) ──
+  { clave: "gf-banner-13oz-lam", nombre: "Banner 13 oz laminado", categoria: "Banner laminado", costoM2: 14, modo: "mancha", anchos: "137,152" },
+  { clave: "gf-banner-blackout-lam", nombre: "Banner Blackout laminado", categoria: "Banner laminado", costoM2: 15, modo: "mancha", anchos: "137,152" },
+  // ── Viniles (ancho de rollo) ──
   { clave: "gf-vinil-estandar", nombre: "Vinil Estándar 140gr", categoria: "Vinil", costoM2: 7, modo: "ancho_rollo", anchos: "105,137,152" },
-  { clave: "gf-vinil-matte", nombre: "Vinil Matte", categoria: "Vinil", costoM2: 8, modo: "ancho_rollo", anchos: "137" },
   { clave: "gf-vinil-blackout", nombre: "Vinil Blackout", categoria: "Vinil", costoM2: 8, modo: "ancho_rollo", anchos: "137" },
+  { clave: "gf-vinil-matte", nombre: "Vinil Matte", categoria: "Vinil", costoM2: 8, modo: "ancho_rollo", anchos: "137" },
   { clave: "gf-clear", nombre: "Clear Brillante", categoria: "Vinil", costoM2: 8, modo: "ancho_rollo", anchos: "137" },
   { clave: "gf-microperforado", nombre: "Vinil Microperforado", categoria: "Vinil", costoM2: 11, modo: "ancho_rollo", anchos: "137" },
   { clave: "gf-holografico", nombre: "Vinil Holográfico", categoria: "Vinil", costoM2: 13, modo: "ancho_rollo", anchos: "127" },
-  { clave: "gf-vinil-estandar-uv", nombre: "Vinil Estándar (UV)", categoria: "Vinil UV", costoM2: 18, modo: "ancho_rollo", anchos: "137,152" },
+  // ── Vinil laminado (ancho de rollo) ──
+  { clave: "gf-vinil-140-lam", nombre: "Vinil 140gr laminado", categoria: "Vinil laminado", costoM2: 14, modo: "ancho_rollo", anchos: "137,152" },
+  { clave: "gf-vinil-blackout-lam", nombre: "Vinil Blackout laminado", categoria: "Vinil laminado", costoM2: 14, modo: "ancho_rollo", anchos: "137" },
+  // ── Banners UV (mancha) — base, y Premium con/sin reserva de blanco ──
+  { clave: "gf-banner-13oz-uv", nombre: "Banner 13 oz UV", categoria: "Banner UV", costoM2: 15, modo: "mancha", anchos: "" },
+  { clave: "gf-banner-13oz-uv-sr", nombre: "Banner 13 oz UV Premium (sin reserva)", categoria: "Banner UV", costoM2: 22, modo: "mancha", anchos: "" },
+  { clave: "gf-banner-13oz-uv-cr", nombre: "Banner 13 oz UV Premium (con reserva)", categoria: "Banner UV", costoM2: 26, modo: "mancha", anchos: "" },
+  { clave: "gf-banner-blackout-uv", nombre: "Banner Blackout UV", categoria: "Banner UV", costoM2: 16, modo: "mancha", anchos: "" },
+  { clave: "gf-banner-blackout-uv-sr", nombre: "Banner Blackout UV Premium (sin reserva)", categoria: "Banner UV", costoM2: 23, modo: "mancha", anchos: "" },
+  { clave: "gf-banner-blackout-uv-cr", nombre: "Banner Blackout UV Premium (con reserva)", categoria: "Banner UV", costoM2: 30, modo: "mancha", anchos: "" },
+  { clave: "gf-banner-backlight-uv", nombre: "Banner Backlight UV", categoria: "Banner UV", costoM2: 18, modo: "mancha", anchos: "90,115,140,160,180" },
+  { clave: "gf-banner-backlight-uv-sr", nombre: "Banner Backlight UV Premium (sin reserva)", categoria: "Banner UV", costoM2: 24, modo: "mancha", anchos: "90,115,140,160,180" },
+  { clave: "gf-banner-backlight-uv-cr", nombre: "Banner Backlight UV Premium (con reserva)", categoria: "Banner UV", costoM2: 32, modo: "mancha", anchos: "90,115,140,160,180" },
+  // ── Viniles UV Premium (ancho de rollo) — con/sin reserva de blanco ──
+  { clave: "gf-vinil-estandar-uv", nombre: "Vinil Estándar UV (sin reserva)", categoria: "Vinil UV", costoM2: 18, modo: "ancho_rollo", anchos: "137,152" },
+  { clave: "gf-vinil-estandar-uv-cr", nombre: "Vinil Estándar UV (con reserva)", categoria: "Vinil UV", costoM2: 24, modo: "ancho_rollo", anchos: "137,152" },
+  { clave: "gf-vinil-matte-uv", nombre: "Vinil Matte UV (sin reserva)", categoria: "Vinil UV", costoM2: 18, modo: "ancho_rollo", anchos: "137" },
+  { clave: "gf-vinil-matte-uv-cr", nombre: "Vinil Matte UV (con reserva)", categoria: "Vinil UV", costoM2: 24, modo: "ancho_rollo", anchos: "137" },
+  { clave: "gf-clear-uv", nombre: "Clear UV (sin reserva)", categoria: "Vinil UV", costoM2: 18, modo: "ancho_rollo", anchos: "137" },
+  { clave: "gf-clear-uv-cr", nombre: "Clear UV (con reserva)", categoria: "Vinil UV", costoM2: 24, modo: "ancho_rollo", anchos: "137" },
+  { clave: "gf-microperforado-uv", nombre: "Vinil Microperforado UV (sin reserva)", categoria: "Vinil UV", costoM2: 22, modo: "ancho_rollo", anchos: "137" },
+  { clave: "gf-holografico-uv", nombre: "Vinil Holográfico UV (sin reserva)", categoria: "Vinil UV", costoM2: 22, modo: "ancho_rollo", anchos: "127" },
+  { clave: "gf-holografico-uv-cr", nombre: "Vinil Holográfico UV (con reserva)", categoria: "Vinil UV", costoM2: 30, modo: "ancho_rollo", anchos: "127" },
 ];
 
 /**
@@ -157,6 +180,15 @@ export const PRODUCTOS_GF_BASE: ProductoGFBase[] = [
   { clave: "gf-porta-arana-60x160", nombre: "Porta pendón Araña 60×160", categoria: "Estructura", medida: "60×160 cm", costoUnit: 20 },
   { clave: "gf-porta-arana-80x170", nombre: "Porta pendón Araña 80×170", categoria: "Estructura", medida: "80×170 cm", costoUnit: 24 },
   { clave: "gf-porta-doble-cara", nombre: "Porta pendón doble cara", categoria: "Estructura", medida: "hasta 180 cm", costoUnit: 25 },
+  // Stand de degustación (80×196 cm).
+  { clave: "gf-stand-degustacion", nombre: "Stand de degustación (sin rotular)", categoria: "Stand", medida: "80×196 cm", costoUnit: 100 },
+  { clave: "gf-stand-degustacion-rot", nombre: "Stand de degustación (rotulado)", categoria: "Stand", medida: "80×196 cm", costoUnit: 156 },
+  // Accesorios para banner/pendón (Digital Print, pág. 3).
+  { clave: "gf-bolsillo-peq", nombre: "Bolsillo y refilado (par, hasta 50 cm)", categoria: "Accesorio", medida: "hasta 50 cm", costoUnit: 1.5 },
+  { clave: "gf-bolsillo-med", nombre: "Bolsillo y refilado (par, hasta 1 m)", categoria: "Accesorio", medida: "hasta 1 m", costoUnit: 2.5 },
+  { clave: "gf-tubo-peq", nombre: "Tubo + cuerda + regetones (30–60 cm)", categoria: "Accesorio", medida: "30–60 cm", costoUnit: 3.5 },
+  { clave: "gf-tubo-med", nombre: "Tubo + cuerda + regetones (70–120 cm)", categoria: "Accesorio", medida: "70–120 cm", costoUnit: 5 },
+  { clave: "gf-tubo-gra", nombre: "Tubo + cuerda + regetones (121–150 cm)", categoria: "Accesorio", medida: "121–150 cm", costoUnit: 6 },
 ];
 
 /**

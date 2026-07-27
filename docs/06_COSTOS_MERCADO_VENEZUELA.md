@@ -22,7 +22,7 @@ estructura de costos conocida del sector.
 
 | Parámetro | Valor actual | Rango de mercado (VE) | Confianza | Fuente |
 |---|--:|---|:--:|---|
-| **Ojete instalado** | **$0,20** | $0,10 – 0,25 | Alta | RUPACA (caja 1.000 ≈ material $0,02–0,04) + labor |
+| **Ojete instalado** | **$0,80** | proveedor: $0,80 · en casa: $0,10–0,25 | Alta | Digital Print pág. 3 (tercerizado) |
 | Gran formato — banner/vinil m² | (catálogo) | — | Alta | Digital Print 2025 |
 | POP — chapas/llaveros/DTF | (catálogo) | — | Alta | Digital Print 2025 |
 | **Offset — plancha** | $4 | $1,5–3 poliéster · $3–6 CTP metal 1/4 | Media | globoimpresores (VE) |
@@ -33,10 +33,12 @@ estructura de costos conocida del sector.
 | **Prensa 1 color** | $3 / $8 | — | Baja | Estimado |
 
 ### Lo que quedó afinado con datos reales
-- **Ojete → $0,20.** RUPACA vende la caja de 1.000 ojetes cromados; el material
-  sale en centavos por unidad. Instalado (con máquina ojeteadora + labor) el
-  mercado venezolano ronda $0,10–0,20. El $0,50 anterior sobrecobraba.
-- **Gran formato y POP** ya venían del catálogo Digital Print 2025 → no se tocan.
+- **Ojete → $0,80.** El catálogo Digital Print (pág. 3, "Accesorios para Banner")
+  cobra la instalación del ojete a **$0,80 c/u (incluye refilado)**. Como gran
+  formato se **terceriza con Digital Print**, ese es el costo base correcto. (Si
+  el taller instalara los ojetes en casa, el material RUPACA sale en centavos y
+  podría bajarse a ~$0,10–0,20 en Variables.) Se corrigió el $0,20 previo.
+- **Gran formato y POP** vienen del catálogo Digital Print 2025 → son los reales.
 
 ### Lo que sigue como estimado (a confirmar con el taller)
 El **offset** es producción propia y **no tiene tarifario público** en Venezuela:
