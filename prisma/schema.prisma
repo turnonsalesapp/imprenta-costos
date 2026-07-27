@@ -204,7 +204,7 @@ model Config {
   /// Modelo de IA elegido para el intérprete (null = el de por defecto).
   interpretarModelo String?
   /// Gran formato: costo por ojete y separación por defecto entre ojetes (cm).
-  gfOjeteCosto  Decimal @db.Decimal(10, 4) @default(0.5)
+  gfOjeteCosto  Decimal @db.Decimal(10, 4) @default(0.2)
   gfOjeteCm     Int     @default(40)
   /// Offset (producción propia): costos base, ajustables por cotización.
   offPlancha    Decimal @db.Decimal(12, 4) @default(4)   // costo por plancha (poliéster; CTP metal ~$10)
