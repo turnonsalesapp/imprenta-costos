@@ -19,6 +19,7 @@ Sistema de Costos y Producción para imprenta (*Altoprint* — Producciones AP20
 | [04 · Manual de configuración](04_MANUAL_CONFIGURACION.md) | Variables de entorno, despliegue, migraciones y configuración funcional en detalle. |
 | [05 · Auditoría de módulos](05_AUDITORIA_MODULOS.md) | Corrida de los motores reales sobre la semilla; los 10 trabajos más comunes por línea; hallazgos de modelado A–H y sus decisiones. |
 | [06 · Costos de mercado (Venezuela)](06_COSTOS_MERCADO_VENEZUELA.md) | Investigación de parámetros base (ojetes, offset, gran formato) con fuente y confianza. |
+| [07 · Ambientes producción/desarrollo](07_AMBIENTES_PROD_DEV.md) | Separar prod y dev en Railway: copiar la base, configurar `DATABASE_URL` por ambiente y dejar ambas "en cero" con el reinicio de transacciones. |
 | [glosario](glosario.md) | Términos de dominio: un concepto, un nombre en código, BD y documentación. |
 
 > El `README.md` de la raíz es la guía de arranque rápido para desarrollo.
