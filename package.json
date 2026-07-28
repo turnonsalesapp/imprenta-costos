@@ -17,6 +17,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset-transacciones": "tsx scripts/reset-transacciones.ts",
+    "db:verificar-acabados": "tsx scripts/verificar-acabados.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {

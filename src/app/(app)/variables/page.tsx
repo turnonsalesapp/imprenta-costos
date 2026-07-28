@@ -2,6 +2,7 @@ import { requireRol } from "@/lib/auth";
 import { MEDIDAS, fmtNum, usd } from "@/lib/calculo";
 import {
   obtenerConfig, obtenerMembrete, listarPapeles, listarAcabados, historicoTasas,
+  type AcabadoFila,
 } from "@/lib/variables";
 import {
   editarPapelAction, alternarPapelAction, editarAcabadoAction, alternarAcabadoAction,
@@ -89,53 +90,37 @@ export default async function VariablesPage() {
         </div>
       </section>
 
-      {/* Acabados */}
+      {/* Acabados — agrupados en bloques por tipo de impresión (digital / offset) */}
       <section className="mt-8">
         <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
-          Acabados <span className="normal-case text-kraft">· tarifa base para 1/4 de pliego</span>
+          Acabados <span className="normal-case text-kraft">· tarifa base para 1/4 de pliego · en bloques por tipo de impresión</span>
         </h2>
         <div className="rounded-sm border border-regla bg-hoja">
-          <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
-            <span className="flex-1">Acabado</span>
-            <span className="w-20 text-right">Costo</span>
-            <span className="w-24">Módulo</span>
-            <span className="w-24">Se cobra</span>
-            <span className="w-28">Al cambiar tamaño</span>
-            <span className="w-14 text-right">Orden</span>
-            <span className="w-20">Grupo</span>
-            <span className="w-32" />
-          </div>
-          {acabados.map((a) => (
-            <form key={a.id} action={editarAcabadoAction}
-              className={`flex flex-wrap items-center gap-2 border-b border-suave px-4 py-1.5 ${a.activo ? "" : "opacity-50"}`}>
-              <input type="hidden" name="id" value={a.id} />
-              <input name="label" defaultValue={a.label} className={`min-w-[10rem] flex-1 ${inCls}`} />
-              <input name="costo" defaultValue={String(a.costo)} inputMode="decimal" className={`w-20 text-right font-mono ${inCls}`} />
-              <select name="modulo" defaultValue={a.modulo} className={`w-24 ${inCls}`}>
-                <option value="digital">Digital</option>
-                <option value="offset">Offset</option>
-              </select>
-              <select name="unidad" defaultValue={a.unidad} className={`w-24 ${inCls}`}>
-                <option value="pliego">Por corte</option>
-                <option value="elemento">Por pieza</option>
-                <option value="millar">Por millar</option>
-                <option value="trabajo">Por trabajo</option>
-              </select>
-              <select name="escala" defaultValue={a.escala} className={`w-28 ${inCls}`}>
-                <option value="area">Con el área</option>
-                <option value="min">Nunca baja</option>
-                <option value="fija">Siempre igual</option>
-              </select>
-              <input name="orden" defaultValue={String(a.orden)} inputMode="numeric" className={`w-14 text-right font-mono ${inCls}`} />
-              <input name="grupo" defaultValue={a.grupo ?? ""} placeholder="—" className={`w-20 ${inCls}`} />
-              <span className="flex w-32 justify-end gap-1.5">
-                <button type="submit" className={btnGuardar}>Guardar</button>
-                <button type="submit" formAction={alternarAcabadoAction} className={btnAlt}>
-                  {a.activo ? "Quitar" : "Activar"}
-                </button>
-              </span>
-            </form>
-          ))}
+          {(["digital", "offset"] as const).map((mod) => {
+            const grupo = acabados.filter((a) => (a.modulo === "offset" ? "offset" : "digital") === mod);
+            if (!grupo.length) return null;
+            return (
+              <div key={mod}>
+                <div className="flex items-baseline gap-2 border-b border-regla bg-tinta px-4 py-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-hoja">
+                    {mod === "digital" ? "Impresión digital" : "Impresión offset"}
+                  </span>
+                  <span className="text-[10px] text-[#9AA39C]">· {grupo.length}</span>
+                </div>
+                <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
+                  <span className="flex-1">Acabado</span>
+                  <span className="w-20 text-right">Costo</span>
+                  <span className="w-24">Módulo</span>
+                  <span className="w-24">Se cobra</span>
+                  <span className="w-28">Al cambiar tamaño</span>
+                  <span className="w-14 text-right">Orden</span>
+                  <span className="w-20">Grupo</span>
+                  <span className="w-32" />
+                </div>
+                {grupo.map((a) => <FilaAcabado key={a.id} a={a} />)}
+              </div>
+            );
+          })}
           <CrearAcabadoForm />
         </div>
       </section>
@@ -362,5 +347,40 @@ export default async function VariablesPage() {
         a lo que cotices de ahora en adelante.
       </p>
     </>
+  );
+}
+
+/** Una fila editable de acabado. Se reutiliza dentro de cada bloque por tipo. */
+function FilaAcabado({ a }: { a: AcabadoFila }) {
+  return (
+    <form action={editarAcabadoAction}
+      className={`flex flex-wrap items-center gap-2 border-b border-suave px-4 py-1.5 ${a.activo ? "" : "opacity-50"}`}>
+      <input type="hidden" name="id" value={a.id} />
+      <input name="label" defaultValue={a.label} className={`min-w-[10rem] flex-1 ${inCls}`} />
+      <input name="costo" defaultValue={String(a.costo)} inputMode="decimal" className={`w-20 text-right font-mono ${inCls}`} />
+      <select name="modulo" defaultValue={a.modulo} className={`w-24 ${inCls}`}>
+        <option value="digital">Digital</option>
+        <option value="offset">Offset</option>
+      </select>
+      <select name="unidad" defaultValue={a.unidad} className={`w-24 ${inCls}`}>
+        <option value="pliego">Por corte</option>
+        <option value="elemento">Por pieza</option>
+        <option value="millar">Por millar</option>
+        <option value="trabajo">Por trabajo</option>
+      </select>
+      <select name="escala" defaultValue={a.escala} className={`w-28 ${inCls}`}>
+        <option value="area">Con el área</option>
+        <option value="min">Nunca baja</option>
+        <option value="fija">Siempre igual</option>
+      </select>
+      <input name="orden" defaultValue={String(a.orden)} inputMode="numeric" className={`w-14 text-right font-mono ${inCls}`} />
+      <input name="grupo" defaultValue={a.grupo ?? ""} placeholder="—" className={`w-20 ${inCls}`} />
+      <span className="flex w-32 justify-end gap-1.5">
+        <button type="submit" className={btnGuardar}>Guardar</button>
+        <button type="submit" formAction={alternarAcabadoAction} className={btnAlt}>
+          {a.activo ? "Quitar" : "Activar"}
+        </button>
+      </span>
+    </form>
   );
 }
