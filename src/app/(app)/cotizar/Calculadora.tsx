@@ -44,6 +44,9 @@ export function Calculadora({
 
   const activo = Math.min(idx, items.length - 1);
   const form = items[activo];
+  // Editando una cotización guardada: el carrito de mixta no aplica; los volúmenes
+  // del comparador se agregan como ítems de ESTA cotización, no a un borrador aparte.
+  const editando = !!items[0].editarId;
 
   const setForm = (updater: FormCotizacion | ((f: FormCotizacion) => FormCotizacion)) =>
     setItems((arr) => arr.map((it, i) =>
@@ -479,19 +482,33 @@ export function Calculadora({
                         <button type="button" className="btn g sm" onClick={() => up("cantidad", p.cant)}>
                           Usar {fmtNum(p.cant, 0)}
                         </button>
-                        <button type="button" className="btn g sm" title="Agregar este volumen a la cotización"
-                          onClick={() => volumenACotizacion(p.cant, p.ventaTotal)}>＋ cotiz</button>
+                        {editando ? (
+                          <button type="button" className="btn g sm" title="Agregar este volumen como ítem de esta cotización"
+                            onClick={() => agregarVolumen(p.cant)}>＋ ítem</button>
+                        ) : (
+                          <button type="button" className="btn g sm" title="Agregar este volumen a la cotización"
+                            onClick={() => volumenACotizacion(p.cant, p.ventaTotal)}>＋ cotiz</button>
+                        )}
                       </span>
                     ))}
                   </div>
                   <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button type="button" className="btn sm" onClick={() => pts.forEach((p) => volumenACotizacion(p.cant, p.ventaTotal))}>
-                      Agregar los {pts.length} volúmenes a la cotización
-                    </button>
-                    <button type="button" className="btn g sm" title="Agregar los volúmenes como ítems de esta cotización digital"
-                      onClick={() => pts.forEach((p) => agregarVolumen(p.cant))}>
-                      … o como ítems digitales
-                    </button>
+                    {editando ? (
+                      <button type="button" className="btn sm" title="Agregar todos los volúmenes como ítems de esta cotización"
+                        onClick={() => pts.forEach((p) => agregarVolumen(p.cant))}>
+                        Agregar los {pts.length} volúmenes como ítems
+                      </button>
+                    ) : (
+                      <>
+                        <button type="button" className="btn sm" onClick={() => pts.forEach((p) => volumenACotizacion(p.cant, p.ventaTotal))}>
+                          Agregar los {pts.length} volúmenes a la cotización
+                        </button>
+                        <button type="button" className="btn g sm" title="Agregar los volúmenes como ítems de esta cotización digital"
+                          onClick={() => pts.forEach((p) => agregarVolumen(p.cant))}>
+                          … o como ítems digitales
+                        </button>
+                      </>
+                    )}
                   </div>
                 </>
               )}
