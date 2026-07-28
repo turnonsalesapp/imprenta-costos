@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Save, RotateCcw, Check } from "lucide-react";
+import Link from "next/link";
+import { Save, RotateCcw, Check, Plus } from "lucide-react";
 import { n, fmtNum, usd, type Config } from "@/lib/calculo";
 import {
   calcularGF, calcularProductoGF, calcularEtiquetaGF, ojetesPorPerimetro, parseTablaEtq,
@@ -12,6 +13,7 @@ import type { MaterialGFItem } from "@/lib/materiales-gf";
 import type { ProductoGFItem } from "@/lib/productos-gf";
 import type { ClienteSimple } from "@/lib/clientes";
 import { guardarGranFormatoAction } from "@/app/actions/cotizaciones";
+import { agregarItemDraft } from "@/lib/draft-cotizacion";
 import { F, T, PrecioManual, TarjetaTasas } from "../cotizar/campos";
 import "../cotizar/calc.css";
 
@@ -38,6 +40,7 @@ export function CalculadoraGranFormato({
   const [form, setForm] = useState<FormGranFormato>(() => formInicial);
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
   const [error, setError] = useState<string | null>(null);
+  const [enDraft, setEnDraft] = useState(0);
   const [pendiente, startTransition] = useTransition();
 
   const up = <K extends keyof FormGranFormato>(k: K, v: FormGranFormato[K]) =>
@@ -158,6 +161,30 @@ export function CalculadoraGranFormato({
       const res = await guardarGranFormatoAction(form);
       if (res?.error) setError(res.error);
     });
+  }
+
+  function validarItem(): string | null {
+    if (esProducto) { if (!producto) return "Elige un producto terminado."; }
+    else if (esEtiqueta) {
+      if (!material) return "Elige un material.";
+      if (!form.etqTamano) return "Elige el tamaño de etiqueta.";
+      if (n(form.cantidad) <= 0) return "Indica la cantidad de etiquetas.";
+    } else {
+      if (!material) return "Elige un material.";
+      if (n(form.anchoCm) <= 0 || n(form.altoCm) <= 0) return "Indica el ancho y el alto (cm).";
+    }
+    return null;
+  }
+
+  function agregarACotizacion() {
+    setError(null);
+    const err = validarItem();
+    if (err) { setError(err); return; }
+    const titulo = form.trabajo.trim() || producto?.nombre || material?.nombre || "Gran formato";
+    const nn = agregarItemDraft("GRAN_FORMATO", form, {
+      titulo, cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Gran formato",
+    }, { cliente: form.cliente, clienteId: form.clienteId });
+    setEnDraft(nn);
   }
 
   return (
@@ -429,6 +456,17 @@ export function CalculadoraGranFormato({
           <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
             <Save size={14} />{pendiente ? "Guardando…" : form.editarId ? "Guardar cambios" : "Guardar cotización"}
           </button>
+          {!form.editarId ? (
+            <button type="button" className="btn g w" onClick={agregarACotizacion}>
+              <Plus size={14} />Agregar a la cotización
+            </button>
+          ) : null}
+          {enDraft > 0 ? (
+            <div className="hint" style={{ marginTop: 8, textAlign: "center" }}>
+              Agregado · {enDraft} ítem{enDraft !== 1 ? "s" : ""} en el borrador ·{" "}
+              <Link href="/cotizacion-nueva" className="lnk">ver / guardar cotización</Link>
+            </div>
+          ) : null}
           <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormGranFormato(cfg)); setError(null); }}>
             <RotateCcw size={13} />Limpiar
           </button>

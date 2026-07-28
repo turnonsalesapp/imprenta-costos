@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Save, RotateCcw, Check } from "lucide-react";
+import Link from "next/link";
+import { Save, RotateCcw, Check, Plus } from "lucide-react";
 import {
   calcCapacidad, MEDIDAS, n, fmtNum, usd,
   type Config, type Acabado, type MedidaKey, type Montaje as MontajeInfo,
@@ -11,6 +12,7 @@ import { nuevoFormOffset, type FormOffset } from "@/lib/cotizacion-form";
 import type { ClienteSimple } from "@/lib/clientes";
 import type { EquipoItem } from "@/lib/equipos";
 import { guardarOffsetAction } from "@/app/actions/cotizaciones";
+import { agregarItemDraft } from "@/lib/draft-cotizacion";
 import { F, T, PrecioManual, TarjetaTasas } from "../cotizar/campos";
 import "../cotizar/calc.css";
 
@@ -31,6 +33,7 @@ export function CalculadoraOffset({
   const [escalas, setEscalas] = useState("1000, 2000, 5000, 10000");
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
   const [error, setError] = useState<string | null>(null);
+  const [enDraft, setEnDraft] = useState(0);
   const [pendiente, startTransition] = useTransition();
 
   const up = <K extends keyof FormOffset>(k: K, v: FormOffset[K]) => setForm((f) => ({ ...f, [k]: v }));
@@ -136,6 +139,16 @@ export function CalculadoraOffset({
       const res = await guardarOffsetAction(form);
       if (res?.error) setError(res.error);
     });
+  }
+
+  function agregarACotizacion() {
+    setError(null);
+    if (!papel) { setError("Elige el papel."); return; }
+    if (n(form.anchoPza) <= 0 || n(form.altoPza) <= 0) { setError("Indica el ancho y el alto de la pieza (mm)."); return; }
+    const nn = agregarItemDraft("OFFSET", form, {
+      titulo: form.trabajo.trim() || `Offset ${papel.nombre}`, cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Offset",
+    }, { cliente: form.cliente, clienteId: form.clienteId });
+    setEnDraft(nn);
   }
 
   const caras2 = n(form.caras) >= 2;
@@ -422,6 +435,17 @@ export function CalculadoraOffset({
           <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
             <Save size={14} />{pendiente ? "Guardando…" : form.editarId ? "Guardar cambios" : "Guardar cotización"}
           </button>
+          {!form.editarId ? (
+            <button type="button" className="btn g w" onClick={agregarACotizacion}>
+              <Plus size={14} />Agregar a la cotización
+            </button>
+          ) : null}
+          {enDraft > 0 ? (
+            <div className="hint" style={{ marginTop: 8, textAlign: "center" }}>
+              Agregado · {enDraft} ítem{enDraft !== 1 ? "s" : ""} en el borrador ·{" "}
+              <Link href="/cotizacion-nueva" className="lnk">ver / guardar cotización</Link>
+            </div>
+          ) : null}
           <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormOffset(cfg, offDefaults)); setError(null); }}>
             <RotateCcw size={13} />Limpiar
           </button>

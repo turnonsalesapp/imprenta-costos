@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Save, RotateCcw, Check } from "lucide-react";
+import Link from "next/link";
+import { Save, RotateCcw, Check, Plus } from "lucide-react";
 import {
   calcular, calcCapacidad, medidaCorte, TAMANOS, TAMANOS_DIGITAL, n, fmtNum, usd,
   type Config, type Acabado, type Montaje as MontajeInfo,
@@ -9,6 +10,7 @@ import {
 import { nuevoForm, type FormCotizacion } from "@/lib/cotizacion-form";
 import type { ClienteSimple } from "@/lib/clientes";
 import { guardarCotizacionAction } from "@/app/actions/cotizaciones";
+import { agregarItemDraft } from "@/lib/draft-cotizacion";
 import { PanelInterpretar } from "./PanelInterpretar";
 import { F, T, PrecioManual, TarjetaTasas } from "./campos";
 import "./calc.css";
@@ -38,6 +40,7 @@ export function Calculadora({
   const [escalas, setEscalas] = useState("500, 1000, 3000, 5000, 10000");
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
   const [error, setError] = useState<string | null>(null);
+  const [enDraft, setEnDraft] = useState(0);
   const [pendiente, startTransition] = useTransition();
 
   const activo = Math.min(idx, items.length - 1);
@@ -202,6 +205,17 @@ export function Calculadora({
       const res = await guardarCotizacionAction(items);
       if (res?.error) setError(res.error);
     });
+  }
+
+  // Agrega el ítem activo (digital) al borrador de cotización mixta.
+  function agregarACotizacion() {
+    setError(null);
+    if (!form.papelId) { setError("Elige el papel."); return; }
+    if (r.cant <= 0) { setError("Indica la cantidad de piezas."); return; }
+    const nn = agregarItemDraft("PROPIA", { ...form, editarId: "" }, {
+      titulo: form.trabajo.trim() || "Trabajo digital", cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Digital",
+    }, { cliente: form.cliente, clienteId: form.clienteId });
+    setEnDraft(nn);
   }
 
   return (
@@ -714,6 +728,17 @@ export function Calculadora({
               ? "Guardando…"
               : (items[0].editarId ? "Guardar cambios" : "Guardar cotización") + (items.length > 1 ? ` · ${items.length} ítems` : "")}
           </button>
+          {!items[0].editarId ? (
+            <button type="button" className="btn g w" onClick={agregarACotizacion}>
+              <Plus size={14} />Agregar a la cotización (mixta)
+            </button>
+          ) : null}
+          {enDraft > 0 ? (
+            <div className="hint" style={{ marginTop: 8, textAlign: "center" }}>
+              Agregado · {enDraft} ítem{enDraft !== 1 ? "s" : ""} en el borrador ·{" "}
+              <Link href="/cotizacion-nueva" className="lnk">ver / guardar cotización</Link>
+            </div>
+          ) : null}
           <button type="button" className="btn g w" onClick={() => { setItems([nuevoForm(cfg)]); setIdx(0); setError(null); }}>
             <RotateCcw size={13} />Limpiar y empezar otra
           </button>
