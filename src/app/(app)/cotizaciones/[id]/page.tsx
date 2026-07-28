@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRol } from "@/lib/auth";
-import { obtenerCotizacion, ESTADOS, ETIQUETA_ESTADO, esOrdenVenta } from "@/lib/cotizaciones";
+import { obtenerCotizacion, cargarMixtaEnDraft, ESTADOS, ETIQUETA_ESTADO, esOrdenVenta } from "@/lib/cotizaciones";
 import { cambiarEstadoAction, eliminarCotizacionAction } from "@/app/actions/cotizaciones";
 import { generarOrdenAction } from "@/app/actions/ordenes";
 import { esAdmin } from "@/lib/roles";
 import { BotonEliminar } from "@/app/_components/BotonEliminar";
 import { fmtNum, usd } from "@/lib/calculo";
 import { EstadoBadge } from "../EstadoBadge";
+import { EditarMixtaBtn } from "./EditarMixtaBtn";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +32,12 @@ export default async function DetalleCotizacion({
     : c.tipo === "OFFSET" ? "/cotizar-offset"
     : "/cotizar";
   const esMixta = c.tipo === "MIXTA";
-  const tercerizado = c.tipo === "PROVEEDOR" || c.tipo === "GRAN_FORMATO" || c.tipo === "PERSONALIZADO" || esMixta;
+  const tercerizado = c.tipo === "PROVEEDOR" || c.tipo === "GRAN_FORMATO" || c.tipo === "PERSONALIZADO";
   const multi = c.items.length > 1;
+  // Ítems producibles en el taller (digital/offset). Los tercerizados no van a producción.
+  const itemsProducibles = c.items.filter((it) => (it.tipo ?? c.tipo) === "PROPIA" || (it.tipo ?? c.tipo) === "OFFSET");
+  const generaOrden = !tercerizado && itemsProducibles.length > 0;
+  const cargaMixta = esMixta && c.estado === "BORRADOR" ? await cargarMixtaEnDraft(c.id) : null;
   const ov = esOrdenVenta(c.estado);
 
   return (
@@ -45,6 +50,9 @@ export default async function DetalleCotizacion({
               className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
               Editar
             </Link>
+          )}
+          {cargaMixta && cargaMixta.items.length > 0 && (
+            <EditarMixtaBtn carga={cargaMixta} />
           )}
           {!esMixta && (
             <Link href={`${rutaCotizar}?desde=${c.id}`}
@@ -260,13 +268,11 @@ export default async function DetalleCotizacion({
             <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
               Trabajo de producción
             </div>
-            {esMixta ? (
+            {!generaOrden ? (
               <p className="text-[11px] text-kraft">
-                Cotización mixta: cada ítem se produce según su tipo. Cotiza cada trabajo por separado si necesitas orden de taller.
-              </p>
-            ) : tercerizado ? (
-              <p className="text-[11px] text-kraft">
-                Trabajo tercerizado: lo produce el proveedor, no genera trabajo de taller.
+                {esMixta
+                  ? "Cotización mixta sin ítems de producción propia: no genera trabajo de taller."
+                  : "Trabajo tercerizado: lo produce el proveedor, no genera trabajo de taller."}
               </p>
             ) : c.orden ? (
               <Link
@@ -279,6 +285,7 @@ export default async function DetalleCotizacion({
               <>
                 <p className="mb-2 text-[11px] text-kraft">
                   Aprobada: es una <b>Orden de Venta</b>. Genera el trabajo de producción para el taller.
+                  {esMixta ? ` Solo los ${itemsProducibles.length} ítem(s) de producción propia van al taller.` : ""}
                 </p>
                 <form action={generarOrdenAction}>
                   <input type="hidden" name="cotizacionId" value={c.id} />

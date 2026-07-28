@@ -16,6 +16,7 @@ import {
   crearCotizacionOffset,
   actualizarCotizacionOffset,
   crearCotizacionMixta,
+  actualizarCotizacionMixta,
   cambiarEstadoCotizacion,
   eliminarCotizacion,
   ESTADOS,
@@ -94,12 +95,15 @@ export async function guardarOffsetAction(
   redirect(`/cotizaciones/${r.id}`);
 }
 
-/** Guarda una cotización MIXTA (ítems de varios tipos armados en el borrador). */
+/** Guarda una cotización MIXTA (crea, o actualiza si el borrador trae editarId). */
 export async function guardarMixtaAction(
-  borrador: { meta: { cliente?: string; clienteId?: string; trabajo?: string }; items: ItemBorrador[] },
+  borrador: { meta: { cliente?: string; clienteId?: string; trabajo?: string; editarId?: string }; items: ItemBorrador[] },
 ): Promise<EstadoGuardar> {
   const usuario = await requireRol("ADMIN", "VENDEDOR");
-  const r = await crearCotizacionMixta(borrador, usuario.id);
+  const editarId = borrador.meta.editarId?.trim();
+  const r = editarId
+    ? await actualizarCotizacionMixta(editarId, borrador)
+    : await crearCotizacionMixta(borrador, usuario.id);
   if (!r.ok) return { error: r.error };
   redirect(`/cotizaciones/${r.id}`);
 }

@@ -51,8 +51,15 @@ export function RevisarCotizacion() {
     );
   }
 
+  const editando = !!draft.meta.editarId;
+
   return (
     <div className="max-w-2xl">
+      {editando ? (
+        <div className="mb-3 rounded-sm border border-[#9AD3E0] bg-[#E6F4F8] px-3 py-2 text-sm text-[#0B5C6E]">
+          Editando una cotización guardada · al guardar se actualiza esa misma cotización.
+        </div>
+      ) : null}
       {/* Meta de la cotización */}
       <div className="rounded-sm border border-regla bg-hoja p-4">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -118,7 +125,7 @@ export function RevisarCotizacion() {
         disabled={pendiente}
         className="mt-4 flex w-full items-center justify-center gap-2 rounded-sm bg-tinta px-3 py-2.5 text-sm font-bold text-hoja hover:opacity-90 disabled:opacity-50"
       >
-        <Save size={15} /> {pendiente ? "Guardando…" : "Guardar cotización"}
+        <Save size={15} /> {pendiente ? "Guardando…" : editando ? "Guardar cambios" : "Guardar cotización"}
       </button>
     </div>
   );

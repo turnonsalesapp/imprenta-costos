@@ -1015,7 +1015,8 @@ async function construirItemMixto(d: ItemBorrador, cfg: Config): Promise<ItemMix
 type MetaMixta = { cliente?: string; clienteId?: string; trabajo?: string };
 
 /** Agrega N ítems (posiblemente de distinto tipo) en el `data` de una cotización. */
-function armarMixta(items: ItemMixto[], meta: MetaMixta) {
+function armarMixta(construidos: { item: ItemMixto; form: unknown }[], meta: MetaMixta) {
+  const items = construidos.map((c) => c.item);
   const tipos = new Set(items.map((i) => i.tipo));
   const tipo = (tipos.size === 1 ? [...tipos][0] : "MIXTA") as TipoCotizacion;
   const suma = (f: (i: ItemMixto) => number) => items.reduce((s, i) => s + f(i), 0);
@@ -1029,13 +1030,14 @@ function armarMixta(items: ItemMixto[], meta: MetaMixta) {
   const vistos = new Set<string>();
   for (const it of items) for (const l of it.lineas) if (!vistos.has(l.k)) { vistos.add(l.k); lineasUnion.push(l); }
 
-  const itemsStore = items.map((i) => ({
+  const itemsStore = construidos.map(({ item: i, form }) => ({
     tipo: i.tipo, titulo: i.titulo, descripcion: i.descripcion,
     cantidad: i.cantidad, ancho: i.ancho, alto: i.alto, tamano: i.tamano,
     papelNombre: i.papelNombre, capacidad: i.capacidad, pliegos: i.pliegos, proveedorNombre: i.proveedorNombre,
     lineas: i.lineas, costoTotal: i.costoTotal, costoUnit: i.costoUnit, diferencial: i.diferencial,
     margen: i.margen, precioUnit: i.precioUnit, ventaTotal: i.ventaTotal, precioML: i.precioML,
     precioBs: i.precioBs, tasaBCV: i.tasaBCV,
+    form, // formulario crudo para poder reeditar la cotización mixta
   }));
 
   return {
@@ -1061,28 +1063,81 @@ function armarMixta(items: ItemMixto[], meta: MetaMixta) {
   };
 }
 
+/** Recalcula todos los ítems del borrador y arma el `data` de la cotización. */
+async function construirMixta(
+  borrador: { meta: MetaMixta; items: ItemBorrador[] },
+): Promise<{ data: ReturnType<typeof armarMixta> } | { error: string }> {
+  if (!borrador.items.length) return { error: "Agrega al menos un ítem a la cotización." };
+  const cliente = (borrador.meta.cliente ?? "").trim();
+  const trabajo = (borrador.meta.trabajo ?? "").trim();
+  if (!cliente && !trabajo) return { error: "Falta el cliente o el título de la cotización." };
+
+  const cfg = await cargarConfig();
+  const construidos: { item: ItemMixto; form: unknown }[] = [];
+  for (const d of borrador.items) {
+    const it = await construirItemMixto(d, cfg);
+    if ("error" in it) return { error: it.error };
+    if (it.cantidad <= 0 || it.costoTotal <= 0) return { error: `Un ítem (${it.titulo}) no tiene cantidad o costo.` };
+    construidos.push({ item: it, form: d.form });
+  }
+  return { data: armarMixta(construidos, borrador.meta) };
+}
+
 /** Crea una cotización con varios ítems (de uno o varios tipos). */
 export async function crearCotizacionMixta(
   borrador: { meta: MetaMixta; items: ItemBorrador[] }, usuarioId: string,
 ): Promise<ResultadoGuardar> {
-  if (!borrador.items.length) return { ok: false, error: "Agrega al menos un ítem a la cotización." };
-  const cliente = (borrador.meta.cliente ?? "").trim();
-  const trabajo = (borrador.meta.trabajo ?? "").trim();
-  if (!cliente && !trabajo) return { ok: false, error: "Falta el cliente o el título de la cotización." };
-
-  const cfg = await cargarConfig();
-  const items: ItemMixto[] = [];
-  for (const d of borrador.items) {
-    const it = await construirItemMixto(d, cfg);
-    if ("error" in it) return { ok: false, error: it.error };
-    if (it.cantidad <= 0 || it.costoTotal <= 0) return { ok: false, error: `Un ítem (${it.titulo}) no tiene cantidad o costo.` };
-    items.push(it);
-  }
-
-  const data = armarMixta(items, borrador.meta);
-  const cot = await db.cotizacion.create({ data: { estado: "BORRADOR", usuarioId, ...data }, select: { id: true } });
+  const r = await construirMixta(borrador);
+  if ("error" in r) return { ok: false, error: r.error };
+  const cot = await db.cotizacion.create({ data: { estado: "BORRADOR", usuarioId, ...r.data }, select: { id: true } });
   return { ok: true, id: cot.id };
 }
+
+/** Actualiza una cotización mixta en borrador (reeditada desde el carrito). */
+export async function actualizarCotizacionMixta(
+  id: string, borrador: { meta: MetaMixta; items: ItemBorrador[] },
+): Promise<ResultadoGuardar> {
+  const ex = await db.cotizacion.findUnique({ where: { id }, select: { estado: true } });
+  if (!ex) return { ok: false, error: "La cotización no existe." };
+  if (ex.estado !== "BORRADOR") return { ok: false, error: "Solo se pueden editar cotizaciones en borrador." };
+  const r = await construirMixta(borrador);
+  if ("error" in r) return { ok: false, error: r.error };
+  await db.cotizacion.update({ where: { id }, data: r.data });
+  return { ok: true, id };
+}
+
+/** Carga los ítems (con su formulario) de una cotización mixta para reeditarla. */
+export async function cargarMixtaEnDraft(id: string): Promise<
+  { meta: { cliente: string; clienteId: string; trabajo: string; editarId: string }; items: { tipo: TipoCotizacion; form: unknown; resumen: { titulo: string; cantidad: number; ventaTotal: number; tipoLabel: string } }[] } | null
+> {
+  const c = await db.cotizacion.findUnique({
+    where: { id },
+    select: { estado: true, titulo: true, clienteNombre: true, clienteId: true, items: true },
+  });
+  if (!c || c.estado !== "BORRADOR") return null;
+  const guardados = (c.items as unknown as Array<Record<string, unknown>>) ?? [];
+  const items = guardados
+    .filter((it) => it.form)
+    .map((it) => ({
+      tipo: (it.tipo as TipoCotizacion) ?? "PROPIA",
+      form: it.form,
+      resumen: {
+        titulo: String(it.titulo ?? "Ítem"),
+        cantidad: num(it.cantidad),
+        ventaTotal: num(it.ventaTotal),
+        tipoLabel: ETIQUETA_TIPO[(it.tipo as TipoCotizacion) ?? "PROPIA"],
+      },
+    }));
+  return {
+    meta: { cliente: c.clienteNombre ?? "", clienteId: c.clienteId ?? "", trabajo: c.titulo, editarId: id },
+    items,
+  };
+}
+
+const ETIQUETA_TIPO: Record<string, string> = {
+  PROPIA: "Digital", PROVEEDOR: "Proveedor", GRAN_FORMATO: "Gran formato",
+  PERSONALIZADO: "Personalizado", OFFSET: "Offset", MIXTA: "Mixta",
+};
 
 export type FiltroLista = { q?: string; estado?: EstadoCotizacion | "" };
 

@@ -12,13 +12,13 @@ import type { TipoCotizacion } from "@prisma/client";
 export type DraftResumen = { titulo: string; cantidad: number; ventaTotal: number; tipoLabel: string };
 export type DraftItem = { id: string; tipo: TipoCotizacion; form: unknown; resumen: DraftResumen };
 export type Draft = {
-  meta: { cliente: string; clienteId: string; trabajo: string };
+  meta: { cliente: string; clienteId: string; trabajo: string; editarId: string };
   items: DraftItem[];
 };
 
 const KEY = "cotizacion-draft";
 const EVENTO = "draft-cotizacion-cambio";
-const VACIO: Draft = { meta: { cliente: "", clienteId: "", trabajo: "" }, items: [] };
+const VACIO: Draft = { meta: { cliente: "", clienteId: "", trabajo: "", editarId: "" }, items: [] };
 
 export function leerDraft(): Draft {
   if (typeof window === "undefined") return VACIO;
@@ -70,7 +70,15 @@ export function actualizarMetaDraft(meta: Partial<Draft["meta"]>) {
 }
 
 export function vaciarDraft() {
-  guardar({ ...VACIO, meta: { cliente: "", clienteId: "", trabajo: "" } });
+  guardar({ meta: { cliente: "", clienteId: "", trabajo: "", editarId: "" }, items: [] });
+}
+
+/** Reemplaza todo el borrador (para reeditar una cotización mixta guardada). */
+export function cargarDraft(
+  meta: { cliente: string; clienteId: string; trabajo: string; editarId: string },
+  items: { tipo: TipoCotizacion; form: unknown; resumen: DraftResumen }[],
+) {
+  guardar({ meta, items: items.map((i) => ({ id: idLocal(), ...i })) });
 }
 
 /** Hook reactivo: se actualiza cuando cambia el borrador (también entre pestañas). */

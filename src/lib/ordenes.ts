@@ -53,6 +53,7 @@ export type ItemProd = {
 
 /** Ítem congelado de la cotización (con dinero) del que se parte. */
 type ItemFuente = {
+  tipo?: string;
   titulo?: string;
   descripcion?: string | null;
   cantidad?: number;
@@ -64,6 +65,12 @@ type ItemFuente = {
   pliegos?: number;
   lineas?: { k: string; label: string }[];
 };
+
+/** Un ítem va al taller solo si es de producción propia (digital u offset). */
+function esProducible(tipo: string | undefined, cotTipo: string): boolean {
+  const t = tipo ?? cotTipo;
+  return t === "PROPIA" || t === "OFFSET";
+}
 
 /**
  * Proyecta los ítems de la cotización a su versión de PRODUCCIÓN: se queda solo
@@ -90,7 +97,7 @@ export function proyeccionProd(items: ItemFuente[] | null | undefined): ItemProd
 export async function generarOrden(cotizacionId: string): Promise<ResultadoOrden> {
   const cot = await db.cotizacion.findUnique({
     where: { id: cotizacionId },
-    select: { id: true, estado: true, lineas: true, items: true, orden: { select: { id: true } } },
+    select: { id: true, tipo: true, estado: true, lineas: true, items: true, orden: { select: { id: true } } },
   });
   if (!cot) return { ok: false, error: "La cotización no existe." };
   if (cot.orden) return { ok: false, error: "Esta cotización ya tiene una orden." };
@@ -98,17 +105,29 @@ export async function generarOrden(cotizacionId: string): Promise<ResultadoOrden
     return { ok: false, error: "Solo se genera orden de una cotización aprobada." };
   }
 
-  // Las etapas salen de las líneas de acabado (excluye el papel), en orden de taller.
-  const lineas = (cot.lineas as unknown as LineaCosto[]) ?? [];
-  const src = lineas
+  // Solo los ítems de producción propia (digital/offset) van al taller.
+  const todos = (cot.items as unknown as ItemFuente[] | null) ?? [];
+  const producibles = todos.length ? todos.filter((it) => esProducible(it.tipo, cot.tipo)) : todos;
+  if (todos.length && !producibles.length) {
+    return { ok: false, error: "La cotización no tiene ítems de producción propia para el taller." };
+  }
+
+  // Las etapas salen de las líneas de acabado (excluye el papel) de los ítems producibles,
+  // en orden de taller. Si no hay ítems (cotización vieja), se usan las líneas agregadas.
+  const lineasFuente: LineaCosto[] = producibles.length
+    ? (producibles.flatMap((it) => (it.lineas as LineaCosto[]) ?? []))
+    : ((cot.lineas as unknown as LineaCosto[]) ?? []);
+  const vistas = new Set<string>();
+  const src = lineasFuente
     .filter((l) => l.k !== "papel")
+    .filter((l) => (vistas.has(l.k) ? false : (vistas.add(l.k), true)))
     .map((l) => ({ clave: l.k, nombre: l.label, orden: ORDEN_ETAPAS[l.k] ?? 99 }))
     .sort((a, b) => a.orden - b.orden);
   const etapas = (src.length ? src : [{ clave: "produccion", nombre: "Producción", orden: 0 }])
     .map((e, i) => ({ clave: e.clave, nombre: e.nombre, orden: i }));
 
-  // Proyección SIN precios de los ítems, para la hoja del taller.
-  const itemsProd = proyeccionProd(cot.items as unknown as ItemFuente[] | null);
+  // Proyección SIN precios de los ítems producibles, para la hoja del taller.
+  const itemsProd = proyeccionProd(producibles);
 
   const orden = await db.orden.create({
     data: {
