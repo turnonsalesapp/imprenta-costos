@@ -218,6 +218,16 @@ export function Calculadora({
     setEnDraft(nn);
   }
 
+  // Agrega un volumen del comparador como ítem de la cotización mixta.
+  function volumenACotizacion(cant: number, ventaTotal: number) {
+    if (!form.papelId) { setError("Elige el papel."); return; }
+    const base = form.trabajo.trim() || "Trabajo digital";
+    const nn = agregarItemDraft("PROPIA", { ...form, cantidad: cant, editarId: "", trabajoId: "", guardarComoTrabajo: false }, {
+      titulo: `${base} (${fmtNum(cant, 0)} u)`, cantidad: cant, ventaTotal, tipoLabel: "Digital",
+    }, { cliente: form.cliente, clienteId: form.clienteId });
+    setEnDraft(nn);
+  }
+
   return (
     <div className="pr">
       {banner ? (
@@ -472,14 +482,18 @@ export function Calculadora({
                         <button type="button" className="btn g sm" onClick={() => up("cantidad", p.cant)}>
                           Usar {fmtNum(p.cant, 0)}
                         </button>
-                        <button type="button" className="btn g sm" title="Agregar este volumen como ítem"
-                          onClick={() => agregarVolumen(p.cant)}>＋ ítem</button>
+                        <button type="button" className="btn g sm" title="Agregar este volumen a la cotización"
+                          onClick={() => volumenACotizacion(p.cant, p.ventaTotal)}>＋ cotiz</button>
                       </span>
                     ))}
                   </div>
-                  <div style={{ marginTop: 8 }}>
-                    <button type="button" className="btn sm" onClick={() => pts.forEach((p) => agregarVolumen(p.cant))}>
-                      Agregar los {pts.length} volúmenes como ítems
+                  <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button type="button" className="btn sm" onClick={() => pts.forEach((p) => volumenACotizacion(p.cant, p.ventaTotal))}>
+                      Agregar los {pts.length} volúmenes a la cotización
+                    </button>
+                    <button type="button" className="btn g sm" title="Agregar los volúmenes como ítems de esta cotización digital"
+                      onClick={() => pts.forEach((p) => agregarVolumen(p.cant))}>
+                      … o como ítems digitales
                     </button>
                   </div>
                 </>

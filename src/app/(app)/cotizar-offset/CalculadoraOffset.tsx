@@ -161,6 +161,17 @@ export function CalculadoraOffset({
     setEnDraft(nn);
   }
 
+  // Agrega un volumen del comparador como ítem de la cotización mixta.
+  function volumenACotizacion(cant: number, ventaTotal: number) {
+    if (!papel) { setError("Elige el papel."); return; }
+    if (n(form.anchoPza) <= 0 || n(form.altoPza) <= 0) { setError("Indica el ancho y el alto de la pieza (mm)."); return; }
+    const base = form.trabajo.trim() || `Offset ${papel.nombre}`;
+    const nn = agregarItemDraft("OFFSET", { ...form, cantidad: cant, editarId: "" }, {
+      titulo: `${base} (${fmtNum(cant, 0)} u)`, cantidad: cant, ventaTotal, tipoLabel: "Offset",
+    }, { cliente: form.cliente, clienteId: form.clienteId });
+    setEnDraft(nn);
+  }
+
   const caras2 = n(form.caras) >= 2;
 
   return (
@@ -360,12 +371,22 @@ export function CalculadoraOffset({
                             <td className="ta-r mono">{usd(p.costoUnit, 4)}</td>
                             <td className="ta-r mono"><b>{usd(p.precioUnit, 4)}</b></td>
                             <td className="ta-r mono" style={{ color: "#15794F" }}>{usd(p.gananciaTotal)}</td>
-                            <td className="ta-r">{!on ? <button type="button" className="btn g sm" onClick={() => up("cantidad", p.cant)}>Usar</button> : <span style={{ fontSize: 10, color: "#767D76" }}>actual</span>}</td>
+                            <td className="ta-r">
+                              <span style={{ display: "inline-flex", gap: 4 }}>
+                                {!on ? <button type="button" className="btn g sm" onClick={() => up("cantidad", p.cant)}>Usar</button> : <span style={{ fontSize: 10, color: "#767D76" }}>actual</span>}
+                                <button type="button" className="btn g sm" title="Agregar este volumen a la cotización" onClick={() => volumenACotizacion(p.cant, p.ventaTotal)}>＋ cotiz</button>
+                              </span>
+                            </td>
                           </tr>
                         );
                       })}
                     </tbody>
                   </table>
+                  <div style={{ marginTop: 8 }}>
+                    <button type="button" className="btn sm" onClick={() => pts.forEach((p) => volumenACotizacion(p.cant, p.ventaTotal))}>
+                      Agregar los {pts.length} volúmenes a la cotización
+                    </button>
+                  </div>
                 </div>
               ) : <div className="hint" style={{ marginTop: 10 }}>Elige papel y medida para comparar.</div>}
             </div>

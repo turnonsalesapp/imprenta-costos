@@ -43,10 +43,10 @@ export default async function CotizarPage({
   }
 
   const titulos: Record<typeof modo, string> = {
-    nueva: "Nueva cotización",
+    nueva: "Cotización digital",
     recotizar: "Recotizar desde plantilla",
-    copia: "Nueva cotización (copiada)",
-    editar: "Editar borrador",
+    copia: "Cotización digital (copiada)",
+    editar: "Editar borrador digital",
   };
   const banners: Record<typeof modo, string> = {
     nueva: "",
@@ -59,7 +59,7 @@ export default async function CotizarPage({
     <>
       <header className="mb-5">
         <h1 className="text-lg font-bold tracking-tight">{titulos[modo]}</h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">Calculadora</p>
+        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">Impresión digital · producción propia</p>
       </header>
 
       <Calculadora
