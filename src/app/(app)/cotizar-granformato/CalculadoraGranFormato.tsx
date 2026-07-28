@@ -39,6 +39,7 @@ export function CalculadoraGranFormato({
 }) {
   const [form, setForm] = useState<FormGranFormato>(() => formInicial);
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
+  const [cantidades, setCantidades] = useState("1, 2, 5, 10");
   const [error, setError] = useState<string | null>(null);
   const [enDraft, setEnDraft] = useState(0);
   const [pendiente, startTransition] = useTransition();
@@ -119,6 +120,17 @@ export function CalculadoraGranFormato({
     });
   }, [margenes, form, costoM2, costoUnit, ojeteCosto, ojeteCm]);
 
+  // Comparador por cantidad: mismo trabajo, distintos tirajes (un ítem por tiraje).
+  const pts = useMemo(() => {
+    if (r.cant <= 0 || r.precioUnit <= 0) return [];
+    const qs = cantidades.split(/[,;\s]+/).map((v) => Math.round(n(v))).filter((v) => v > 0)
+      .filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).slice(0, 8);
+    return qs.map((c) => {
+      const cc = calc({ cantidad: c, precioManual: "" }, { cantidad: c, precioManual: "" });
+      return { cant: c, costoUnit: cc.costoUnit, precioUnit: cc.precioUnit, ventaTotal: cc.ventaTotal, gananciaTotal: cc.gananciaTotal };
+    });
+  }, [cantidades, form, costoM2, costoUnit, ojeteCosto, ojeteCm]);
+
   const ojetesAuto = ojetesPorPerimetro(n(form.anchoCm), n(form.altoCm), ojeteCm);
   const rolloSugerido = material ? sugerirRollo(material.anchos, n(form.anchoCm)) : 0;
 
@@ -183,6 +195,18 @@ export function CalculadoraGranFormato({
     const titulo = form.trabajo.trim() || producto?.nombre || material?.nombre || "Gran formato";
     const nn = agregarItemDraft("GRAN_FORMATO", form, {
       titulo, cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Gran formato",
+    }, { cliente: form.cliente, clienteId: form.clienteId });
+    setEnDraft(nn);
+  }
+
+  // Agrega un volumen del comparador como ítem de la cotización mixta.
+  function volumenACotizacion(cantV: number, ventaTotal: number) {
+    setError(null);
+    const err = validarItem();
+    if (err) { setError(err); return; }
+    const base = form.trabajo.trim() || producto?.nombre || material?.nombre || "Gran formato";
+    const nn = agregarItemDraft("GRAN_FORMATO", { ...form, cantidad: cantV, editarId: "" }, {
+      titulo: `${base} (${fmtNum(cantV, 0)} u)`, cantidad: cantV, ventaTotal, tipoLabel: "Gran formato",
     }, { cliente: form.cliente, clienteId: form.clienteId });
     setEnDraft(nn);
   }
@@ -376,6 +400,49 @@ export function CalculadoraGranFormato({
             set={(k, v) => setForm((f) => ({ ...f, [k]: v }))}
             toggleManual={() => setForm((f) => ({ ...f, difManual: !f.difManual, dif: f.difManual ? "" : r.difAuto.toFixed(4) }))}
           />
+
+          <section className="card">
+            <div className="ch"><b>Comparador por cantidad</b><span className="mt">un ítem por tiraje</span></div>
+            <div className="cb">
+              <F l="Cantidades a comparar" hint="Separadas por coma. Máximo 8.">
+                <input className="in mono" type="text" value={cantidades} onChange={(e) => setCantidades(e.target.value)} />
+              </F>
+              {pts.length >= 1 ? (
+                <>
+                  <div className="tw" style={{ marginTop: 12 }}>
+                    <table>
+                      <thead><tr><th className="ta-r">Cantidad</th><th className="ta-r">Costo unit.</th><th className="ta-r">Precio unit.</th><th className="ta-r">Venta total</th><th className="ta-r">Ganancia</th><th /></tr></thead>
+                      <tbody>
+                        {pts.map((p) => {
+                          const on = r.cant > 0 && p.cant === r.cant;
+                          return (
+                            <tr key={p.cant} className="rw" style={on ? { background: "#FDF0F7", boxShadow: "inset 3px 0 0 #C4177C" } : undefined}>
+                              <td className="ta-r mono"><b>{fmtNum(p.cant, 0)}</b></td>
+                              <td className="ta-r mono" style={{ color: "#767D76" }}>{usd(p.costoUnit, 4)}</td>
+                              <td className="ta-r mono"><b>{usd(p.precioUnit, 4)}</b></td>
+                              <td className="ta-r mono">{usd(p.ventaTotal)}</td>
+                              <td className="ta-r mono" style={{ color: "#15794F" }}>{usd(p.gananciaTotal)}</td>
+                              <td className="ta-r">
+                                <span style={{ display: "inline-flex", gap: 4 }}>
+                                  {!on ? <button type="button" className="btn g sm" onClick={() => up("cantidad", p.cant)}>Usar</button> : <span style={{ fontSize: 10, color: "#767D76" }}>actual</span>}
+                                  <button type="button" className="btn g sm" title="Agregar este volumen a la cotización" onClick={() => volumenACotizacion(p.cant, p.ventaTotal)}>＋ cotiz</button>
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <button type="button" className="btn sm" onClick={() => pts.forEach((p) => volumenACotizacion(p.cant, p.ventaTotal))}>
+                      Agregar los {pts.length} volúmenes a la cotización
+                    </button>
+                  </div>
+                </>
+              ) : <div className="hint" style={{ marginTop: 10 }}>{esProducto ? "Elige un producto para comparar." : "Elige material y medida para comparar."}</div>}
+            </div>
+          </section>
 
           <section className="card">
             <div className="ch"><b>Comparador por margen</b><span className="mt">mismo costo, distinta rentabilidad</span></div>

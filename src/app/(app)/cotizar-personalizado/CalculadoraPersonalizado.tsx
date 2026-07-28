@@ -25,6 +25,7 @@ export function CalculadoraPersonalizado({
 }) {
   const [form, setForm] = useState<FormPersonalizado>(() => formInicial);
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
+  const [cantidades, setCantidades] = useState("50, 100, 250, 500");
   const [error, setError] = useState<string | null>(null);
   const [enDraft, setEnDraft] = useState(0);
   const [pendiente, startTransition] = useTransition();
@@ -73,6 +74,17 @@ export function CalculadoraPersonalizado({
     });
   }, [margenes, form, producto]);
 
+  // Comparador por cantidad: mismo trabajo, distintos tirajes (un ítem por tiraje).
+  const pts = useMemo(() => {
+    if (r.cant <= 0 || r.precioUnit <= 0) return [];
+    const qs = cantidades.split(/[,;\s]+/).map((v) => Math.round(n(v))).filter((v) => v > 0)
+      .filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).slice(0, 8);
+    return qs.map((c) => {
+      const cc = calcularPop(entrada({ cantidad: c, precioManual: "" }));
+      return { cant: c, costoUnit: cc.costoUnit, precioUnit: cc.precioUnit, ventaTotal: cc.ventaTotal, gananciaTotal: cc.gananciaTotal };
+    });
+  }, [cantidades, form, producto]);
+
   // Productos agrupados por categoría.
   const grupos = useMemo(() => {
     const g: { cat: string; items: ProductoPopItem[] }[] = [];
@@ -118,6 +130,23 @@ export function CalculadoraPersonalizado({
       titulo: form.trabajo.trim() || producto.nombre, cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Personalizado",
     }, { cliente: form.cliente, clienteId: form.clienteId });
     setEnDraft(nn);
+  }
+
+  // Agrega un volumen (o tramo de escala) del comparador como ítem de la cotización mixta.
+  function volumenACotizacion(cantV: number, ventaTotal: number) {
+    setError(null);
+    if (!producto) { setError("Elige un producto."); return; }
+    const base = form.trabajo.trim() || producto.nombre;
+    const nn = agregarItemDraft("PERSONALIZADO", { ...form, cantidad: cantV, editarId: "" }, {
+      titulo: `${base} (${fmtNum(cantV, 0)} u)`, cantidad: cantV, ventaTotal, tipoLabel: "Personalizado",
+    }, { cliente: form.cliente, clienteId: form.clienteId });
+    setEnDraft(nn);
+  }
+
+  // Convierte un tramo de la tabla de escalas en un ítem con la cantidad de arranque del tramo.
+  function tramoACotizacion(desde: number) {
+    const cc = calcularPop(entrada({ cantidad: desde, precioManual: "" }));
+    volumenACotizacion(desde, cc.ventaTotal);
   }
 
   return (
@@ -192,25 +221,35 @@ export function CalculadoraPersonalizado({
               ) : null}
 
               {escalas.length ? (
-                <div className="tw" style={{ marginTop: 12 }}>
-                  <table>
-                    <thead><tr><th>Desde</th><th className="ta-r">Precio unit.</th><th /></tr></thead>
-                    <tbody>
-                      {escalas.map((e, i) => {
-                        const hasta = escalas[i + 1] ? escalas[i + 1].desde - 1 : null;
-                        const aplica = r.costoUnitBase === e.precio && cantAplica >= e.desde &&
-                          (hasta == null || cantAplica <= hasta);
-                        return (
-                          <tr key={e.desde} className="rw" style={aplica ? { background: "#E6F4F8", boxShadow: "inset 3px 0 0 #0B7A93" } : undefined}>
-                            <td className="mono">{e.desde}{hasta ? `–${hasta}` : "+"}</td>
-                            <td className="ta-r mono">{usd(e.precio)}</td>
-                            <td className="ta-r">{aplica ? <span style={{ fontSize: 10, color: "#0B7A93", fontWeight: 700 }}>aplica</span> : null}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                <>
+                  <div className="tw" style={{ marginTop: 12 }}>
+                    <table>
+                      <thead><tr><th>Desde</th><th className="ta-r">Precio unit.</th><th /><th /></tr></thead>
+                      <tbody>
+                        {escalas.map((e, i) => {
+                          const hasta = escalas[i + 1] ? escalas[i + 1].desde - 1 : null;
+                          const aplica = r.costoUnitBase === e.precio && cantAplica >= e.desde &&
+                            (hasta == null || cantAplica <= hasta);
+                          return (
+                            <tr key={e.desde} className="rw" style={aplica ? { background: "#E6F4F8", boxShadow: "inset 3px 0 0 #0B7A93" } : undefined}>
+                              <td className="mono">{e.desde}{hasta ? `–${hasta}` : "+"}</td>
+                              <td className="ta-r mono">{usd(e.precio)}</td>
+                              <td className="ta-r">{aplica ? <span style={{ fontSize: 10, color: "#0B7A93", fontWeight: 700 }}>aplica</span> : null}</td>
+                              <td className="ta-r">
+                                <button type="button" className="btn g sm" title={`Agregar un ítem de ${fmtNum(e.desde, 0)} u a la cotización`} onClick={() => tramoACotizacion(e.desde)}>＋ cotiz</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <button type="button" className="btn sm" onClick={() => escalas.forEach((e) => tramoACotizacion(e.desde))}>
+                      Agregar los {escalas.length} tramos como ítems
+                    </button>
+                  </div>
+                </>
               ) : null}
 
               {nudge ? (
@@ -231,6 +270,49 @@ export function CalculadoraPersonalizado({
             set={(k, v) => setForm((f) => ({ ...f, [k]: v }))}
             toggleManual={() => setForm((f) => ({ ...f, difManual: !f.difManual, dif: f.difManual ? "" : r.difAuto.toFixed(4) }))}
           />
+
+          <section className="card">
+            <div className="ch"><b>Comparador por cantidad</b><span className="mt">un ítem por tiraje</span></div>
+            <div className="cb">
+              <F l="Cantidades a comparar" hint="Separadas por coma. Máximo 8.">
+                <input className="in mono" type="text" value={cantidades} onChange={(e) => setCantidades(e.target.value)} />
+              </F>
+              {pts.length >= 1 ? (
+                <>
+                  <div className="tw" style={{ marginTop: 12 }}>
+                    <table>
+                      <thead><tr><th className="ta-r">Cantidad</th><th className="ta-r">Costo unit.</th><th className="ta-r">Precio unit.</th><th className="ta-r">Venta total</th><th className="ta-r">Ganancia</th><th /></tr></thead>
+                      <tbody>
+                        {pts.map((p) => {
+                          const on = r.cant > 0 && p.cant === r.cant;
+                          return (
+                            <tr key={p.cant} className="rw" style={on ? { background: "#FDF0F7", boxShadow: "inset 3px 0 0 #C4177C" } : undefined}>
+                              <td className="ta-r mono"><b>{fmtNum(p.cant, 0)}</b></td>
+                              <td className="ta-r mono" style={{ color: "#767D76" }}>{usd(p.costoUnit, 4)}</td>
+                              <td className="ta-r mono"><b>{usd(p.precioUnit, 4)}</b></td>
+                              <td className="ta-r mono">{usd(p.ventaTotal)}</td>
+                              <td className="ta-r mono" style={{ color: "#15794F" }}>{usd(p.gananciaTotal)}</td>
+                              <td className="ta-r">
+                                <span style={{ display: "inline-flex", gap: 4 }}>
+                                  {!on ? <button type="button" className="btn g sm" onClick={() => up("cantidad", p.cant)}>Usar</button> : <span style={{ fontSize: 10, color: "#767D76" }}>actual</span>}
+                                  <button type="button" className="btn g sm" title="Agregar este volumen a la cotización" onClick={() => volumenACotizacion(p.cant, p.ventaTotal)}>＋ cotiz</button>
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <button type="button" className="btn sm" onClick={() => pts.forEach((p) => volumenACotizacion(p.cant, p.ventaTotal))}>
+                      Agregar los {pts.length} volúmenes a la cotización
+                    </button>
+                  </div>
+                </>
+              ) : <div className="hint" style={{ marginTop: 10 }}>Elige un producto y la cantidad para comparar.</div>}
+            </div>
+          </section>
 
           <section className="card">
             <div className="ch"><b>Comparador por margen</b><span className="mt">mismo costo, distinta rentabilidad</span></div>
