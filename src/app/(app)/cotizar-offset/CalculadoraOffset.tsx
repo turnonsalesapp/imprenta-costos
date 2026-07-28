@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { Save, RotateCcw, Check, Plus } from "lucide-react";
 import {
   calcCapacidad, medidaCorte, TAMANOS, n, fmtNum, usd,
@@ -14,6 +13,7 @@ import type { EquipoItem } from "@/lib/equipos";
 import { guardarOffsetAction } from "@/app/actions/cotizaciones";
 import { agregarItemDraft } from "@/lib/draft-cotizacion";
 import { F, T, PrecioManual, TarjetaTasas } from "../cotizar/campos";
+import { PanelBorrador } from "../cotizar/PanelBorrador";
 import "../cotizar/calc.css";
 
 const TINTAS = ["#0B8FA8", "#C4177C", "#C79400", "#171B19", "#5B8C5A", "#8A5FBF", "#C0563B"];
@@ -33,7 +33,6 @@ export function CalculadoraOffset({
   const [escalas, setEscalas] = useState("1000, 2000, 5000, 10000");
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
   const [error, setError] = useState<string | null>(null);
-  const [enDraft, setEnDraft] = useState(0);
   const [pendiente, startTransition] = useTransition();
 
   const up = <K extends keyof FormOffset>(k: K, v: FormOffset[K]) => setForm((f) => ({ ...f, [k]: v }));
@@ -155,10 +154,9 @@ export function CalculadoraOffset({
     setError(null);
     if (!papel) { setError("Elige el papel."); return; }
     if (n(form.anchoPza) <= 0 || n(form.altoPza) <= 0) { setError("Indica el ancho y el alto de la pieza (mm)."); return; }
-    const nn = agregarItemDraft("OFFSET", form, {
+    agregarItemDraft("OFFSET", form, {
       titulo: form.trabajo.trim() || `Offset ${papel.nombre}`, cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Offset",
     }, { cliente: form.cliente, clienteId: form.clienteId });
-    setEnDraft(nn);
   }
 
   // Agrega un volumen del comparador como ítem de la cotización mixta.
@@ -166,10 +164,9 @@ export function CalculadoraOffset({
     if (!papel) { setError("Elige el papel."); return; }
     if (n(form.anchoPza) <= 0 || n(form.altoPza) <= 0) { setError("Indica el ancho y el alto de la pieza (mm)."); return; }
     const base = form.trabajo.trim() || `Offset ${papel.nombre}`;
-    const nn = agregarItemDraft("OFFSET", { ...form, cantidad: cant, editarId: "" }, {
+    agregarItemDraft("OFFSET", { ...form, cantidad: cant, editarId: "" }, {
       titulo: `${base} (${fmtNum(cant, 0)} u)`, cantidad: cant, ventaTotal, tipoLabel: "Offset",
     }, { cliente: form.cliente, clienteId: form.clienteId });
-    setEnDraft(nn);
   }
 
   const caras2 = n(form.caras) >= 2;
@@ -480,15 +477,10 @@ export function CalculadoraOffset({
               <Plus size={14} />Agregar a la cotización
             </button>
           ) : null}
-          {enDraft > 0 ? (
-            <div className="hint" style={{ marginTop: 8, textAlign: "center" }}>
-              Agregado · {enDraft} ítem{enDraft !== 1 ? "s" : ""} en el borrador ·{" "}
-              <Link href="/cotizacion-nueva" className="lnk">ver / guardar cotización</Link>
-            </div>
-          ) : null}
           <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormOffset(cfg, offDefaults)); setError(null); }}>
             <RotateCcw size={13} />Limpiar
           </button>
+          {!form.editarId ? <PanelBorrador /> : null}
         </div>
       </div>
     </div>

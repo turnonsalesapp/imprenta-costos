@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { Save, RotateCcw, Plus } from "lucide-react";
 import { precioDesdeCosto, n, fmtNum, usd } from "@/lib/calculo";
 import { nuevoFormProveedor, totalProveedor, type FormProveedor } from "@/lib/cotizacion-form";
@@ -10,6 +9,7 @@ import type { ClienteSimple } from "@/lib/clientes";
 import { guardarProveedorAction } from "@/app/actions/cotizaciones";
 import { agregarItemDraft } from "@/lib/draft-cotizacion";
 import { F, T, PrecioManual, TarjetaTasas } from "../cotizar/campos";
+import { PanelBorrador } from "../cotizar/PanelBorrador";
 import "../cotizar/calc.css";
 
 export function CalculadoraProveedor({
@@ -29,7 +29,6 @@ export function CalculadoraProveedor({
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
   const [cantidades, setCantidades] = useState("100, 250, 500, 1000");
   const [error, setError] = useState<string | null>(null);
-  const [enDraft, setEnDraft] = useState(0);
   const [pendiente, startTransition] = useTransition();
 
   const up = <K extends keyof FormProveedor>(k: K, v: FormProveedor[K]) =>
@@ -97,21 +96,19 @@ export function CalculadoraProveedor({
     setError(null);
     if (cant <= 0) { setError("Indica la cantidad."); return; }
     if (costoEfectivo <= 0) { setError("Indica el costo del proveedor."); return; }
-    const n = agregarItemDraft("PROVEEDOR", form, {
+    agregarItemDraft("PROVEEDOR", form, {
       titulo: form.trabajo.trim() || "Trabajo de proveedor",
       cantidad: cant, ventaTotal: r.ventaTotal, tipoLabel: "Proveedor",
     }, { cliente: form.cliente, clienteId: form.clienteId });
-    setEnDraft(n);
   }
 
   // Agrega un volumen del comparador como ítem de la cotización mixta.
   function volumenACotizacion(cantV: number, ventaTotal: number) {
     if (n(form.costoUnitario) <= 0) { setError("Indica el costo unitario del proveedor."); return; }
     const base = form.trabajo.trim() || "Trabajo de proveedor";
-    const nn = agregarItemDraft("PROVEEDOR", { ...form, costoModo: "unitario", cantidad: cantV, editarId: "" }, {
+    agregarItemDraft("PROVEEDOR", { ...form, costoModo: "unitario", cantidad: cantV, editarId: "" }, {
       titulo: `${base} (${fmtNum(cantV, 0)} u)`, cantidad: cantV, ventaTotal, tipoLabel: "Proveedor",
     }, { cliente: form.cliente, clienteId: form.clienteId });
-    setEnDraft(nn);
   }
 
   return (
@@ -349,15 +346,10 @@ export function CalculadoraProveedor({
               <Plus size={14} />Agregar a la cotización
             </button>
           ) : null}
-          {enDraft > 0 ? (
-            <div className="hint" style={{ marginTop: 8, textAlign: "center" }}>
-              Agregado · {enDraft} ítem{enDraft !== 1 ? "s" : ""} en el borrador ·{" "}
-              <Link href="/cotizacion-nueva" className="lnk">ver / guardar cotización</Link>
-            </div>
-          ) : null}
           <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormProveedor(cfg)); setError(null); }}>
             <RotateCcw size={13} />Limpiar
           </button>
+          {!form.editarId ? <PanelBorrador /> : null}
         </div>
       </div>
     </div>

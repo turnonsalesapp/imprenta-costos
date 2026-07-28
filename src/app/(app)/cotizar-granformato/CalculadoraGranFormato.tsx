@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { Save, RotateCcw, Check, Plus } from "lucide-react";
 import { n, fmtNum, usd, type Config } from "@/lib/calculo";
 import {
@@ -15,6 +14,7 @@ import type { ClienteSimple } from "@/lib/clientes";
 import { guardarGranFormatoAction } from "@/app/actions/cotizaciones";
 import { agregarItemDraft } from "@/lib/draft-cotizacion";
 import { F, T, PrecioManual, TarjetaTasas } from "../cotizar/campos";
+import { PanelBorrador } from "../cotizar/PanelBorrador";
 import "../cotizar/calc.css";
 
 /** Ancho de rollo más angosto que aún cubre la pieza (menos desperdicio). */
@@ -41,7 +41,6 @@ export function CalculadoraGranFormato({
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
   const [cantidades, setCantidades] = useState("1, 2, 5, 10");
   const [error, setError] = useState<string | null>(null);
-  const [enDraft, setEnDraft] = useState(0);
   const [pendiente, startTransition] = useTransition();
 
   const up = <K extends keyof FormGranFormato>(k: K, v: FormGranFormato[K]) =>
@@ -193,10 +192,9 @@ export function CalculadoraGranFormato({
     const err = validarItem();
     if (err) { setError(err); return; }
     const titulo = form.trabajo.trim() || producto?.nombre || material?.nombre || "Gran formato";
-    const nn = agregarItemDraft("GRAN_FORMATO", form, {
+    agregarItemDraft("GRAN_FORMATO", form, {
       titulo, cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Gran formato",
     }, { cliente: form.cliente, clienteId: form.clienteId });
-    setEnDraft(nn);
   }
 
   // Agrega un volumen del comparador como ítem de la cotización mixta.
@@ -205,10 +203,9 @@ export function CalculadoraGranFormato({
     const err = validarItem();
     if (err) { setError(err); return; }
     const base = form.trabajo.trim() || producto?.nombre || material?.nombre || "Gran formato";
-    const nn = agregarItemDraft("GRAN_FORMATO", { ...form, cantidad: cantV, editarId: "" }, {
+    agregarItemDraft("GRAN_FORMATO", { ...form, cantidad: cantV, editarId: "" }, {
       titulo: `${base} (${fmtNum(cantV, 0)} u)`, cantidad: cantV, ventaTotal, tipoLabel: "Gran formato",
     }, { cliente: form.cliente, clienteId: form.clienteId });
-    setEnDraft(nn);
   }
 
   return (
@@ -528,15 +525,10 @@ export function CalculadoraGranFormato({
               <Plus size={14} />Agregar a la cotización
             </button>
           ) : null}
-          {enDraft > 0 ? (
-            <div className="hint" style={{ marginTop: 8, textAlign: "center" }}>
-              Agregado · {enDraft} ítem{enDraft !== 1 ? "s" : ""} en el borrador ·{" "}
-              <Link href="/cotizacion-nueva" className="lnk">ver / guardar cotización</Link>
-            </div>
-          ) : null}
           <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormGranFormato(cfg)); setError(null); }}>
             <RotateCcw size={13} />Limpiar
           </button>
+          {!form.editarId ? <PanelBorrador /> : null}
         </div>
       </div>
     </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { Save, RotateCcw, Plus } from "lucide-react";
 import { n, fmtNum, usd, type Config } from "@/lib/calculo";
 import { calcularPop, parseEscalas, type EntradaPop } from "@/lib/calculo-personalizado";
@@ -11,6 +10,7 @@ import type { ClienteSimple } from "@/lib/clientes";
 import { guardarPersonalizadoAction } from "@/app/actions/cotizaciones";
 import { agregarItemDraft } from "@/lib/draft-cotizacion";
 import { F, T, PrecioManual, TarjetaTasas } from "../cotizar/campos";
+import { PanelBorrador } from "../cotizar/PanelBorrador";
 import "../cotizar/calc.css";
 
 export function CalculadoraPersonalizado({
@@ -27,7 +27,6 @@ export function CalculadoraPersonalizado({
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
   const [cantidades, setCantidades] = useState("50, 100, 250, 500");
   const [error, setError] = useState<string | null>(null);
-  const [enDraft, setEnDraft] = useState(0);
   const [pendiente, startTransition] = useTransition();
 
   const up = <K extends keyof FormPersonalizado>(k: K, v: FormPersonalizado[K]) =>
@@ -126,10 +125,9 @@ export function CalculadoraPersonalizado({
     if (!producto) { setError("Elige un producto."); return; }
     if (lineal && n(form.largoCm) <= 0) { setError("Indica el largo (cm)."); return; }
     if (!lineal && cantAplica <= 0) { setError("Indica la cantidad."); return; }
-    const nn = agregarItemDraft("PERSONALIZADO", form, {
+    agregarItemDraft("PERSONALIZADO", form, {
       titulo: form.trabajo.trim() || producto.nombre, cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Personalizado",
     }, { cliente: form.cliente, clienteId: form.clienteId });
-    setEnDraft(nn);
   }
 
   // Agrega un volumen (o tramo de escala) del comparador como ítem de la cotización mixta.
@@ -137,10 +135,9 @@ export function CalculadoraPersonalizado({
     setError(null);
     if (!producto) { setError("Elige un producto."); return; }
     const base = form.trabajo.trim() || producto.nombre;
-    const nn = agregarItemDraft("PERSONALIZADO", { ...form, cantidad: cantV, editarId: "" }, {
+    agregarItemDraft("PERSONALIZADO", { ...form, cantidad: cantV, editarId: "" }, {
       titulo: `${base} (${fmtNum(cantV, 0)} u)`, cantidad: cantV, ventaTotal, tipoLabel: "Personalizado",
     }, { cliente: form.cliente, clienteId: form.clienteId });
-    setEnDraft(nn);
   }
 
   // Convierte un tramo de la tabla de escalas en un ítem con la cantidad de arranque del tramo.
@@ -396,15 +393,10 @@ export function CalculadoraPersonalizado({
               <Plus size={14} />Agregar a la cotización
             </button>
           ) : null}
-          {enDraft > 0 ? (
-            <div className="hint" style={{ marginTop: 8, textAlign: "center" }}>
-              Agregado · {enDraft} ítem{enDraft !== 1 ? "s" : ""} en el borrador ·{" "}
-              <Link href="/cotizacion-nueva" className="lnk">ver / guardar cotización</Link>
-            </div>
-          ) : null}
           <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormPersonalizado(cfg)); setError(null); }}>
             <RotateCcw size={13} />Limpiar
           </button>
+          {!form.editarId ? <PanelBorrador /> : null}
         </div>
       </div>
     </div>
