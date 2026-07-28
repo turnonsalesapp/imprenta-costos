@@ -99,7 +99,10 @@ async function main() {
   }
 
   await db.$transaction(async (tx) => {
-    // Orden de borrado respetando las llaves foráneas.
+    // Orden de borrado respetando las llaves foráneas. Con una base grande el
+    // borrado puede tardar; por eso ampliamos el timeout de la transacción
+    // (por defecto Prisma la aborta a los 5 s → error P2028 "Transaction
+    // already closed").
     await tx.etapaOrden.deleteMany({});
     await tx.orden.deleteMany({});
     await tx.cotizacion.deleteMany({});
@@ -132,7 +135,7 @@ async function main() {
         data: { bcv: cfg.tasaBCV, binCompra: cfg.binCompra, binVenta: cfg.binVenta },
       });
     }
-  });
+  }, { maxWait: 15_000, timeout: 120_000 });
 
   const despues = await contar();
   console.log("✓ Listo. Datos transaccionales reiniciados.");

@@ -163,6 +163,21 @@ partiendo de cero pero con toda la configuración lista para trabajar.
 
 ---
 
+## 6b. Errores comunes al ejecutar
+
+| Error que ves | Causa | Solución |
+|---|---|---|
+| `Can't reach database server` / *timeout* al conectar | Estás usando la URL **interna** (`railway.internal`) o un puerto bloqueado por la red desde donde corres | Usa la URL **pública** (`proxy.rlwy.net`) desde tu máquina; ese host/puerto sí es alcanzable desde afuera |
+| `pg_dump: server version mismatch` / *aborting because of server version mismatch* | Tu `pg_dump` local es más viejo que el Postgres de Railway (PG 16) | Instala/usa un `pg_dump` ≥ 16, o corre el dump desde un contenedor: `docker run --rm postgres:16 pg_dump "<URL_PUBLICA>" -Fc > respaldo.dump` |
+| `P2028 Transaction ... already closed` / *transaction timed out* | La transacción tardó más que el límite en una base grande | Ya resuelto en el script (timeout de 120 s). Asegúrate de tener la última versión: `git pull` |
+| `@prisma/client did not initialize` / *Cannot find module '.prisma/client'* | Falta generar el cliente Prisma en esa máquina | `npm install` (dispara `prisma generate`) o `npx prisma generate` |
+| `password authentication failed` | Copiaste mal la URL o rotó la contraseña | Vuelve a copiar `DATABASE_PUBLIC_URL` desde Railway |
+| El script dice *Falta la confirmación* | Corriste `--ejecutar` sin la variable | Antepón `CONFIRMAR_RESET=BORRAR` al comando |
+
+Si el error no está aquí, copia las últimas líneas y el paso en que ocurrió.
+
+---
+
 ## 7. De aquí en adelante
 
 - **Desarrollo** es para probar cambios sin miedo. Puedes volver a copiar producción
