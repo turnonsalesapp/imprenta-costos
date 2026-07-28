@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Save, RotateCcw } from "lucide-react";
+import Link from "next/link";
+import { Save, RotateCcw, Plus } from "lucide-react";
 import { precioDesdeCosto, n, fmtNum, usd } from "@/lib/calculo";
 import { nuevoFormProveedor, totalProveedor, type FormProveedor } from "@/lib/cotizacion-form";
 import type { Config } from "@/lib/calculo";
 import type { ClienteSimple } from "@/lib/clientes";
 import { guardarProveedorAction } from "@/app/actions/cotizaciones";
+import { agregarItemDraft } from "@/lib/draft-cotizacion";
 import { F, T, PrecioManual, TarjetaTasas } from "../cotizar/campos";
 import "../cotizar/calc.css";
 
@@ -26,6 +28,7 @@ export function CalculadoraProveedor({
   const [form, setForm] = useState<FormProveedor>(() => formInicial);
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
   const [error, setError] = useState<string | null>(null);
+  const [enDraft, setEnDraft] = useState(0);
   const [pendiente, startTransition] = useTransition();
 
   const up = <K extends keyof FormProveedor>(k: K, v: FormProveedor[K]) =>
@@ -73,6 +76,18 @@ export function CalculadoraProveedor({
       const res = await guardarProveedorAction(form);
       if (res?.error) setError(res.error);
     });
+  }
+
+  // Agrega este trabajo como un ítem del borrador de cotización (puede mezclar tipos).
+  function agregarACotizacion() {
+    setError(null);
+    if (cant <= 0) { setError("Indica la cantidad."); return; }
+    if (costoEfectivo <= 0) { setError("Indica el costo del proveedor."); return; }
+    const n = agregarItemDraft("PROVEEDOR", form, {
+      titulo: form.trabajo.trim() || "Trabajo de proveedor",
+      cantidad: cant, ventaTotal: r.ventaTotal, tipoLabel: "Proveedor",
+    }, { cliente: form.cliente, clienteId: form.clienteId });
+    setEnDraft(n);
   }
 
   return (
@@ -256,6 +271,17 @@ export function CalculadoraProveedor({
           <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
             <Save size={14} />{pendiente ? "Guardando…" : form.editarId ? "Guardar cambios" : "Guardar cotización"}
           </button>
+          {!form.editarId ? (
+            <button type="button" className="btn g w" onClick={agregarACotizacion}>
+              <Plus size={14} />Agregar a la cotización
+            </button>
+          ) : null}
+          {enDraft > 0 ? (
+            <div className="hint" style={{ marginTop: 8, textAlign: "center" }}>
+              Agregado · {enDraft} ítem{enDraft !== 1 ? "s" : ""} en el borrador ·{" "}
+              <Link href="/cotizacion-nueva" className="lnk">ver / guardar cotización</Link>
+            </div>
+          ) : null}
           <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormProveedor(cfg)); setError(null); }}>
             <RotateCcw size={13} />Limpiar
           </button>

@@ -15,9 +15,11 @@ import {
   actualizarCotizacionPersonalizado,
   crearCotizacionOffset,
   actualizarCotizacionOffset,
+  crearCotizacionMixta,
   cambiarEstadoCotizacion,
   eliminarCotizacion,
   ESTADOS,
+  type ItemBorrador,
 } from "@/lib/cotizaciones";
 import type { FormCotizacion, FormProveedor, FormGranFormato, FormPersonalizado, FormOffset } from "@/lib/cotizacion-form";
 import { registrarAuditoria } from "@/lib/auditoria";
@@ -88,6 +90,16 @@ export async function guardarOffsetAction(
   const r = editarId
     ? await actualizarCotizacionOffset(editarId, form)
     : await crearCotizacionOffset(form, usuario.id);
+  if (!r.ok) return { error: r.error };
+  redirect(`/cotizaciones/${r.id}`);
+}
+
+/** Guarda una cotización MIXTA (ítems de varios tipos armados en el borrador). */
+export async function guardarMixtaAction(
+  borrador: { meta: { cliente?: string; clienteId?: string; trabajo?: string }; items: ItemBorrador[] },
+): Promise<EstadoGuardar> {
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
+  const r = await crearCotizacionMixta(borrador, usuario.id);
   if (!r.ok) return { error: r.error };
   redirect(`/cotizaciones/${r.id}`);
 }

@@ -106,15 +106,13 @@ export default async function ImprimirCotizacion({
                     <div className="font-medium">{it.titulo}</div>
                     {it.descripcion && <div className="text-[12px] text-kraft">{it.descripcion}</div>}
                     <div className="mt-1 text-[11px] text-kraft">
-                      {c.tipo === "PROVEEDOR"
-                        ? (c.proveedorNombre ? `Proveedor: ${c.proveedorNombre}` : "Trabajo tercerizado")
-                        : c.tipo === "GRAN_FORMATO"
-                          ? (it.ancho > 0
-                              ? `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} cm · ${it.papelNombre}`
-                              : `${it.papelNombre}${it.tamano ? ` · ${it.tamano}` : ""}`)
-                          : c.tipo === "PERSONALIZADO"
-                            ? `${it.papelNombre}${it.tamano ? ` · ${it.tamano}` : ""}`
-                            : `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} mm · ${it.papelNombre} · ${it.tamano}`}
+                      {(() => {
+                        const t = it.tipo ?? c.tipo; // el ítem manda (cotizaciones mixtas)
+                        if (t === "PROVEEDOR") return it.proveedorNombre ? `Proveedor: ${it.proveedorNombre}` : (c.proveedorNombre ? `Proveedor: ${c.proveedorNombre}` : "Trabajo tercerizado");
+                        if (t === "GRAN_FORMATO") return it.ancho > 0 ? `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} cm · ${it.papelNombre}` : `${it.papelNombre}${it.tamano ? ` · ${it.tamano}` : ""}`;
+                        if (t === "PERSONALIZADO") return `${it.papelNombre}${it.tamano ? ` · ${it.tamano}` : ""}`;
+                        return `${fmtNum(it.ancho, 0)}×${fmtNum(it.alto, 0)} mm · ${it.papelNombre}${it.tamano ? ` · ${it.tamano}` : ""}`;
+                      })()}
                     </div>
                   </td>
                   <td className="py-3 text-right font-mono">{fmtNum(it.cantidad, 0)}</td>

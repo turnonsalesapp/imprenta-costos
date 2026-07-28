@@ -30,7 +30,8 @@ export default async function DetalleCotizacion({
     : c.tipo === "PERSONALIZADO" ? "/cotizar-personalizado"
     : c.tipo === "OFFSET" ? "/cotizar-offset"
     : "/cotizar";
-  const tercerizado = c.tipo === "PROVEEDOR" || c.tipo === "GRAN_FORMATO" || c.tipo === "PERSONALIZADO";
+  const esMixta = c.tipo === "MIXTA";
+  const tercerizado = c.tipo === "PROVEEDOR" || c.tipo === "GRAN_FORMATO" || c.tipo === "PERSONALIZADO" || esMixta;
   const multi = c.items.length > 1;
   const ov = esOrdenVenta(c.estado);
 
@@ -39,16 +40,18 @@ export default async function DetalleCotizacion({
       <div className="flex items-center justify-between gap-4">
         <Link href="/cotizaciones" className="text-sm text-kraft hover:text-tinta">← Cotizaciones</Link>
         <div className="flex items-center gap-2">
-          {c.estado === "BORRADOR" && (
+          {c.estado === "BORRADOR" && !esMixta && (
             <Link href={`${rutaCotizar}?editar=${c.id}`}
               className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
               Editar
             </Link>
           )}
-          <Link href={`${rutaCotizar}?desde=${c.id}`}
-            className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
-            Usar como base
-          </Link>
+          {!esMixta && (
+            <Link href={`${rutaCotizar}?desde=${c.id}`}
+              className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
+              Usar como base
+            </Link>
+          )}
           <Link href={`/cotizaciones/${c.id}/imprimir`}
             className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
             Imprimir / PDF
@@ -257,7 +260,11 @@ export default async function DetalleCotizacion({
             <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
               Trabajo de producción
             </div>
-            {tercerizado ? (
+            {esMixta ? (
+              <p className="text-[11px] text-kraft">
+                Cotización mixta: cada ítem se produce según su tipo. Cotiza cada trabajo por separado si necesitas orden de taller.
+              </p>
+            ) : tercerizado ? (
               <p className="text-[11px] text-kraft">
                 Trabajo tercerizado: lo produce el proveedor, no genera trabajo de taller.
               </p>

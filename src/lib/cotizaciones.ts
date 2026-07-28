@@ -65,6 +65,8 @@ export type ResultadoGuardar =
 
 /** Un ítem congelado de la cotización (una cotización puede tener varios). */
 export type ItemGuardado = {
+  tipo?: TipoCotizacion;   // tipo del ítem (cotizaciones mixtas)
+  proveedorNombre?: string | null;
   titulo: string;
   descripcion: string | null;
   cantidad: number;
@@ -942,6 +944,143 @@ export async function cargarOffsetEnForm(
   };
 }
 
+/* ─────────────────────── cotizaciones MIXTAS (varios tipos) ─────────────────────── */
+
+/** Ítem congelado, normalizado, de cualquier tipo. */
+type ItemMixto = {
+  tipo: TipoCotizacion;
+  titulo: string; descripcion: string | null;
+  cantidad: number; ancho: number; alto: number; tamano: string;
+  papelNombre: string; capacidad: number; pliegos: number;
+  proveedorNombre: string | null;
+  entrada: Prisma.InputJsonValue; lineas: LineaCosto[];
+  costoTotal: number; costoUnit: number; diferencial: number; margen: number;
+  precioUnit: number; ventaTotal: number; precioML: number; tasaBCV: number; precioBs: number;
+};
+
+/** Extrae el ítem normalizado del `data` que produce cada motor. */
+function itemDeData(tipo: TipoCotizacion, d: Record<string, unknown>): ItemMixto {
+  return {
+    tipo,
+    titulo: String(d.titulo ?? "Ítem"),
+    descripcion: (d.descripcion as string | null) ?? null,
+    cantidad: num(d.cantidad), ancho: num(d.ancho), alto: num(d.alto), tamano: String(d.tamano ?? ""),
+    papelNombre: String(d.papelNombre ?? ""), capacidad: num(d.capacidad), pliegos: num(d.pliegos),
+    proveedorNombre: (d.proveedorNombre as string | null) ?? null,
+    entrada: (d.entrada ?? {}) as Prisma.InputJsonValue,
+    lineas: (d.lineas as LineaCosto[]) ?? [],
+    costoTotal: num(d.costoTotal), costoUnit: num(d.costoUnit), diferencial: num(d.diferencial), margen: num(d.margen),
+    precioUnit: num(d.precioUnit), ventaTotal: num(d.ventaTotal), precioML: num(d.precioML),
+    tasaBCV: num(d.tasaBCV), precioBs: num(d.precioBs),
+  };
+}
+
+/** Un ítem del borrador: su tipo y el formulario con que se calculó. */
+export type ItemBorrador = { tipo: TipoCotizacion; form: unknown };
+
+/** Recalcula (autoritativo) un ítem según su tipo, con el motor que corresponde. */
+async function construirItemMixto(d: ItemBorrador, cfg: Config): Promise<ItemMixto | { error: string }> {
+  switch (d.tipo) {
+    case "PROPIA": {
+      const { item } = datosItem(d.form as FormCotizacion, cfg);
+      return itemDeData("PROPIA", { ...item, tipo: "PROPIA" } as unknown as Record<string, unknown>);
+    }
+    case "PROVEEDOR": {
+      const { data } = datosProveedor(d.form as FormProveedor);
+      return itemDeData("PROVEEDOR", data as unknown as Record<string, unknown>);
+    }
+    case "GRAN_FORMATO": {
+      const armado = await armarGranFormato(d.form as FormGranFormato);
+      if ("error" in armado) return { error: armado.error };
+      return itemDeData("GRAN_FORMATO", armado.data as unknown as Record<string, unknown>);
+    }
+    case "PERSONALIZADO": {
+      const prod = await contextoPop((d.form as FormPersonalizado).productoId);
+      if (!prod) return { error: "Producto personalizado no encontrado." };
+      const { data } = datosPersonalizado(d.form as FormPersonalizado, prod);
+      return itemDeData("PERSONALIZADO", data as unknown as Record<string, unknown>);
+    }
+    case "OFFSET": {
+      const { data } = datosOffset(d.form as FormOffset, cfg);
+      return itemDeData("OFFSET", data as unknown as Record<string, unknown>);
+    }
+    default:
+      return { error: "Tipo de ítem no soportado en cotización mixta." };
+  }
+}
+
+type MetaMixta = { cliente?: string; clienteId?: string; trabajo?: string };
+
+/** Agrega N ítems (posiblemente de distinto tipo) en el `data` de una cotización. */
+function armarMixta(items: ItemMixto[], meta: MetaMixta) {
+  const tipos = new Set(items.map((i) => i.tipo));
+  const tipo = (tipos.size === 1 ? [...tipos][0] : "MIXTA") as TipoCotizacion;
+  const suma = (f: (i: ItemMixto) => number) => items.reduce((s, i) => s + f(i), 0);
+  const cantidad = suma((i) => i.cantidad);
+  const costoTotal = suma((i) => i.costoTotal);
+  const papeles = [...new Set(items.map((i) => i.papelNombre).filter(Boolean))];
+  const tamanos = [...new Set(items.map((i) => i.tamano).filter(Boolean))];
+  const primero = items[0];
+
+  const lineasUnion: LineaCosto[] = [];
+  const vistos = new Set<string>();
+  for (const it of items) for (const l of it.lineas) if (!vistos.has(l.k)) { vistos.add(l.k); lineasUnion.push(l); }
+
+  const itemsStore = items.map((i) => ({
+    tipo: i.tipo, titulo: i.titulo, descripcion: i.descripcion,
+    cantidad: i.cantidad, ancho: i.ancho, alto: i.alto, tamano: i.tamano,
+    papelNombre: i.papelNombre, capacidad: i.capacidad, pliegos: i.pliegos, proveedorNombre: i.proveedorNombre,
+    lineas: i.lineas, costoTotal: i.costoTotal, costoUnit: i.costoUnit, diferencial: i.diferencial,
+    margen: i.margen, precioUnit: i.precioUnit, ventaTotal: i.ventaTotal, precioML: i.precioML,
+    precioBs: i.precioBs, tasaBCV: i.tasaBCV,
+  }));
+
+  return {
+    tipo,
+    clienteId: meta.clienteId?.trim() || null,
+    clienteNombre: (meta.cliente ?? "").trim() || null,
+    titulo: (meta.trabajo ?? "").trim() || (items.length === 1 ? primero.titulo : `Cotización de ${items.length} ítems`),
+    descripcion: items.length === 1 ? primero.descripcion : `${items.length} ítems`,
+    cantidad,
+    ancho: primero.ancho, alto: primero.alto,
+    tamano: tamanos.length === 1 ? tamanos[0] : "Varios",
+    papelNombre: papeles.length === 1 ? papeles[0] : "Varios",
+    capacidad: primero.capacidad,
+    entrada: {} as Prisma.InputJsonValue,
+    snapshot: {} as Prisma.InputJsonValue,
+    lineas: lineasUnion as unknown as Prisma.InputJsonValue,
+    items: itemsStore as unknown as Prisma.InputJsonValue,
+    pliegos: suma((i) => i.pliegos),
+    costoTotal, costoUnit: cantidad > 0 ? costoTotal / cantidad : 0,
+    diferencial: primero.diferencial, margen: primero.margen,
+    precioUnit: primero.precioUnit, ventaTotal: suma((i) => i.ventaTotal), precioML: suma((i) => i.precioML),
+    tasaBCV: primero.tasaBCV, precioBs: suma((i) => i.precioBs),
+  };
+}
+
+/** Crea una cotización con varios ítems (de uno o varios tipos). */
+export async function crearCotizacionMixta(
+  borrador: { meta: MetaMixta; items: ItemBorrador[] }, usuarioId: string,
+): Promise<ResultadoGuardar> {
+  if (!borrador.items.length) return { ok: false, error: "Agrega al menos un ítem a la cotización." };
+  const cliente = (borrador.meta.cliente ?? "").trim();
+  const trabajo = (borrador.meta.trabajo ?? "").trim();
+  if (!cliente && !trabajo) return { ok: false, error: "Falta el cliente o el título de la cotización." };
+
+  const cfg = await cargarConfig();
+  const items: ItemMixto[] = [];
+  for (const d of borrador.items) {
+    const it = await construirItemMixto(d, cfg);
+    if ("error" in it) return { ok: false, error: it.error };
+    if (it.cantidad <= 0 || it.costoTotal <= 0) return { ok: false, error: `Un ítem (${it.titulo}) no tiene cantidad o costo.` };
+    items.push(it);
+  }
+
+  const data = armarMixta(items, borrador.meta);
+  const cot = await db.cotizacion.create({ data: { estado: "BORRADOR", usuarioId, ...data }, select: { id: true } });
+  return { ok: true, id: cot.id };
+}
+
 export type FiltroLista = { q?: string; estado?: EstadoCotizacion | "" };
 
 /** Fila del listado (Decimals ya convertidos a number). */
@@ -1028,6 +1167,7 @@ export type ItemDetalle = Omit<ItemGuardado, "entrada">;
 
 function aItemDetalle(i: ItemGuardado): ItemDetalle {
   return {
+    tipo: i.tipo, proveedorNombre: i.proveedorNombre ?? null,
     titulo: i.titulo, descripcion: i.descripcion ?? null,
     cantidad: num(i.cantidad), ancho: num(i.ancho), alto: num(i.alto), tamano: i.tamano,
     papelNombre: i.papelNombre, capacidad: num(i.capacidad), pliegos: num(i.pliegos),

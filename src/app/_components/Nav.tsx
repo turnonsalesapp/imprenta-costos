@@ -24,6 +24,7 @@ export function Nav({ usuario }: { usuario: Sesion }) {
       { href: "/cotizar-proveedor", label: "Cotizar prov." },
       { href: "/cotizar-granformato", label: "Gran formato" },
       { href: "/cotizar-personalizado", label: "Personalizados" },
+      { href: "/cotizacion-nueva", label: "Armar cotiz." },
       { href: "/cotizaciones", label: "Cotizaciones" },
       { href: "/clientes", label: "Clientes" },
     );

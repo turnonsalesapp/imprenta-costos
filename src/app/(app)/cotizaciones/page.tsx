@@ -147,6 +147,11 @@ export default async function CotizacionesPage({
                         Offset
                       </span>
                     )}
+                    {c.tipo === "MIXTA" && (
+                      <span className="ml-2 rounded-sm bg-[#EEF7EE] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#3B6B3B]">
+                        Mixta
+                      </span>
+                    )}
                     {c.nItems > 1 && (
                       <span className="ml-2 rounded-sm bg-[#E6F4F8] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cian">
                         {c.nItems} ítems

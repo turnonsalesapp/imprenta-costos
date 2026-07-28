@@ -278,6 +278,7 @@ enum TipoCotizacion {
   GRAN_FORMATO // impresión de gran formato tercerizada (costo por m² del material)
   PERSONALIZADO // material POP tercerizado: chapas, llaveros, DTF, sublimación, láser
   OFFSET       // impresión offset de producción propia (planchas + arranque + millar)
+  MIXTA        // cotización con ítems de varios tipos a la vez
 }
 
 /// Una cotización es inmutable: guarda copia de TODO lo que se usó para
