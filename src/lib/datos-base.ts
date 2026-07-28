@@ -97,10 +97,14 @@ export const ACABADOS_BASE: Acabado[] = [
   // Acabados de OFFSET (costos propios del proceso, distintos al digital).
   // Estimados PYME; ajustar en Variables con los costos reales del taller.
   { id: "off-guillotina", label: "Guillotina / refilado", costo: 8, unidad: "trabajo", escala: "fija", modulo: "offset" },
+  { id: "off-laminado", label: "Laminado", costo: 0.4, unidad: "pliego", escala: "area", modulo: "offset" },
+  { id: "off-barniz", label: "Barniz UV", costo: 0.2, unidad: "pliego", escala: "area", modulo: "offset" },
+  { id: "off-barniz-lito", label: "Barniz Litográfico", costo: 0.12, unidad: "pliego", escala: "area", modulo: "offset" },
   { id: "off-doblez", label: "Doblez / plegado", costo: 8, unidad: "millar", escala: "fija", modulo: "offset" },
   { id: "off-engrapado", label: "Engrapado (caballete)", costo: 0.05, unidad: "elemento", escala: "fija", modulo: "offset" },
   { id: "off-numerado", label: "Numeración", costo: 10, unidad: "millar", escala: "fija", modulo: "offset" },
-  { id: "off-barniz", label: "Barniz UV", costo: 0.2, unidad: "pliego", escala: "area", modulo: "offset" },
+  { id: "off-pegado-acetato", label: "Pegado de Acetato", costo: 0.05, unidad: "elemento", escala: "fija", modulo: "offset" },
+  { id: "off-pegado-caja", label: "Pegado de Caja", costo: 0.1, unidad: "elemento", escala: "fija", modulo: "offset" },
   { id: "off-encuadernado", label: "Encuadernado", costo: 20, unidad: "trabajo", escala: "fija", modulo: "offset" },
 ];
 

@@ -23,7 +23,8 @@ export type DatosConfig = {
   pinza: number; sep: number; margenMin: number; iva: number;
   interpretarIA: boolean; interpretarModelo: string;
   gfOjeteCosto: number; gfOjeteCm: number;
-  offPlancha: number; offArranque: number; offMillar: number;
+  offPlancha: number; offPlanchaMedio: number; offPlanchaPliego: number;
+  offArranque: number; offMillar: number; offTinta: number;
 };
 
 export async function obtenerConfig(): Promise<DatosConfig> {
@@ -37,8 +38,11 @@ export async function obtenerConfig(): Promise<DatosConfig> {
     interpretarModelo: c?.interpretarModelo ?? "",
     gfOjeteCosto: c ? num(c.gfOjeteCosto) : 0.8, gfOjeteCm: c?.gfOjeteCm ?? 40,
     offPlancha: c ? num(c.offPlancha) : 4,
+    offPlanchaMedio: c ? num(c.offPlanchaMedio) : 7,
+    offPlanchaPliego: c ? num(c.offPlanchaPliego) : 12,
     offArranque: c ? num(c.offArranque) : 12,
     offMillar: c ? num(c.offMillar) : 5,
+    offTinta: c ? num(c.offTinta) : 2,
   };
 }
 

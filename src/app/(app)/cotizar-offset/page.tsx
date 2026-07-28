@@ -25,7 +25,10 @@ export default async function CotizarOffsetPage({
     cargarConfig(), listarClientesSimple(), obtenerConfig(), listarEquipos(),
   ]);
   const sp = await searchParams;
-  const offDefaults = { plancha: dc.offPlancha, arranque: dc.offArranque, millar: dc.offMillar };
+  const offDefaults = {
+    plancha: dc.offPlancha, planchaMedio: dc.offPlanchaMedio, planchaPliego: dc.offPlanchaPliego,
+    arranque: dc.offArranque, millar: dc.offMillar, tinta: dc.offTinta,
+  };
 
   let cargado: Partial<FormOffset> | null = null;
   let modo: "nueva" | "copia" | "editar" = "nueva";

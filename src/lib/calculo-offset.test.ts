@@ -7,10 +7,10 @@ const tasas = {
 };
 
 const base: EntradaOffset = {
-  papelNombre: "Glasé 150g", precioPliego: 0.5, medida: "70x100",
+  papelNombre: "Glasé 150g", precioPliego: 0.5, medida: "70x100", tamano: "Pliego",
   anchoPza: 350, altoPza: 500, cantidad: 1000, merma: 3,
   pinza: 5, sep: 3, colores: 4, coloresPasada: 4, caras: 1,
-  costoPlancha: 8, costoArranque: 15, costoMillar: 6,
+  costoPlancha: 8, costoArranque: 15, costoMillar: 6, costoTinta: 0,
   acabados: {}, catalogoAcab: [], ...tasas,
 };
 
@@ -61,6 +61,23 @@ describe("offset: producción propia", () => {
     const r2 = calcularOffset({ ...base, coloresPasada: 2 });
     expect(r2.pasadas).toBe(2);
     expect(r2.lineas.find((l) => l.k === "impresion")!.monto).toBeCloseTo(12, 6);
+  });
+
+  it("cobra el consumo de tinta por color y por cara", () => {
+    const rt = calcularOffset({ ...base, costoTinta: 2 });
+    // 1 millar (515 pliegos) × $2 × 4 colores × 1 cara
+    expect(rt.lineas.find((l) => l.k === "tinta")!.monto).toBeCloseTo(8, 6);
+    const rt2 = calcularOffset({ ...base, costoTinta: 2, caras: 2 });
+    expect(rt2.lineas.find((l) => l.k === "tinta")!.monto).toBeCloseTo(16, 6); // ×2 caras
+  });
+
+  it("monta en el tamaño de corte elegido y cobra el papel por fracción", () => {
+    const rc = calcularOffset({ ...base, tamano: "1/4 Pliego", anchoPza: 100, altoPza: 150 });
+    expect(rc.frac).toBe(0.25);
+    expect(rc.cap).toBeGreaterThan(0);
+    // papel: precio del corte = pliego × 0,25
+    const papel = rc.lineas.find((l) => l.k === "papel")!;
+    expect(papel.monto).toBeCloseTo(rc.pliegos * 0.5 * 0.25, 6);
   });
 
   it("aplica acabados por pliego con el factor del pliego completo", () => {

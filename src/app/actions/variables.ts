@@ -52,7 +52,8 @@ export async function guardarConfigAction(
     interpretarIA: formData.get("interpretarIA") === "on",
     interpretarModelo: modeloValido(String(formData.get("interpretarModelo") ?? "")),
     gfOjeteCosto: f("gfOjeteCosto"), gfOjeteCm: Math.max(1, Math.round(f("gfOjeteCm")) || 40),
-    offPlancha: f("offPlancha"), offArranque: f("offArranque"), offMillar: f("offMillar"),
+    offPlancha: f("offPlancha"), offPlanchaMedio: f("offPlanchaMedio"), offPlanchaPliego: f("offPlanchaPliego"),
+    offArranque: f("offArranque"), offMillar: f("offMillar"), offTinta: f("offTinta"),
   });
   revalidatePath("/variables");
   return { error: null, ok: true };

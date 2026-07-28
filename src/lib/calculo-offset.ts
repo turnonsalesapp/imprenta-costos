@@ -8,8 +8,8 @@
  * MISMA cola de precio (`precioDesdeCosto`).
  */
 import {
-  precioDesdeCosto, calcCapacidad, n, fmtNum, usd,
-  MEDIDAS, type MedidaKey, type Unidad, type Escala, type AcabadoSel,
+  precioDesdeCosto, calcCapacidad, medidaCorte, TAMANOS, n, fmtNum, usd,
+  type Unidad, type Escala, type AcabadoSel,
   type ParamsPrecio, type Precio, type LineaCosto,
 } from "./calculo";
 
@@ -21,9 +21,10 @@ export interface EntradaOffset extends ParamsPrecio {
   papelNombre?: string;
   precioPliego: number | string;   // costo de un pliego completo
   medida: string;                  // clave de medida del pliego (66x96…)
+  tamano: string;                  // tamaño de corte que imprime la prensa (Pliego | 1/2 | 1/4)
   anchoPza: number | string;       // pieza en mm
   altoPza: number | string;
-  capacidadManual?: number | string; // override de piezas por pliego
+  capacidadManual?: number | string; // override de piezas por corte
   cantidad: number | string;
   merma: number | string;
   pinza: number | string;
@@ -31,23 +32,25 @@ export interface EntradaOffset extends ParamsPrecio {
   colores: number | string;        // colores por cara (1..4+)
   coloresPasada: number | string;  // colores que imprime la prensa por pasada
   caras: number | string;          // 1 (tiro) | 2 (tiro y retiro)
-  costoPlancha: number | string;
+  costoPlancha: number | string;   // costo de la plancha del tamaño elegido
   costoArranque: number | string;  // por cara
   costoMillar: number | string;    // por millar de pliegos, por pasada
+  costoTinta: number | string;     // por millar de pliegos, por color
   acabados: Record<string, AcabadoSel>;
   catalogoAcab: OffsetAcab[];
 }
 
 export interface ResultadoOffset extends Precio {
   cap: number; capAuto: number; cols: number; filas: number; rot: boolean;
-  corteW: number; corteH: number;
+  corteW: number; corteH: number; frac: number;
   pliegosBase: number; pliegos: number; millaresImp: number;
   colores: number; caras: number; nPlanchas: number; pasadas: number;
   lineas: LineaCosto[];
 }
 
 export function calcularOffset(f: EntradaOffset): ResultadoOffset {
-  const [W, H] = MEDIDAS[(f.medida as MedidaKey)] ?? MEDIDAS["70x100"];
+  const frac = (TAMANOS.find((t) => t.id === f.tamano) ?? TAMANOS[0]).frac; // por defecto pliego completo
+  const [W, H] = medidaCorte(f.medida, frac);
   const w = Math.max(0, n(f.anchoPza));
   const h = Math.max(0, n(f.altoPza));
   const mont = calcCapacidad(w, h, W, H, n(f.pinza), n(f.sep));
@@ -57,9 +60,9 @@ export function calcularOffset(f: EntradaOffset): ResultadoOffset {
   const cant = Math.max(0, Math.round(n(f.cantidad)));
   const merma = n(f.merma) / 100;
   const pliegosBase = cant > 0 ? Math.ceil(cant / cap) : 0;
-  const pliegos = pliegosBase > 0 ? Math.ceil(pliegosBase * (1 + merma)) : 0; // sheets enteros
+  const pliegos = pliegosBase > 0 ? Math.ceil(pliegosBase * (1 + merma)) : 0; // cortes enteros
   const millaresImp = pliegos > 0 ? Math.ceil(pliegos / 1000) : 0;
-  const millaresCortes = millaresImp; // acabados por millar: sobre los pliegos
+  const millaresCortes = millaresImp; // acabados por millar: sobre los cortes
 
   const caras = n(f.caras) >= 2 ? 2 : 1;
   const colores = Math.max(0, Math.round(n(f.colores)));
@@ -70,12 +73,14 @@ export function calcularOffset(f: EntradaOffset): ResultadoOffset {
 
   const lineas: LineaCosto[] = [];
 
+  // Papel: el corte cuesta una fracción del pliego completo.
   const precioPliego = n(f.precioPliego);
-  if (pliegos > 0 && precioPliego > 0) {
+  const precioCorte = precioPliego * frac;
+  if (pliegos > 0 && precioCorte > 0) {
     lineas.push({
       k: "papel", label: f.papelNombre || "Papel",
-      detalle: `${fmtNum(pliegos, 0)} pliegos x ${usd(precioPliego, 4)}`,
-      monto: pliegos * precioPliego,
+      detalle: `${fmtNum(pliegos, 0)} ${f.tamano} x ${usd(precioCorte, 4)}`,
+      monto: pliegos * precioCorte,
     });
   }
 
@@ -108,8 +113,19 @@ export function calcularOffset(f: EntradaOffset): ResultadoOffset {
     });
   }
 
-  // Acabados — igual que en digital, referidos al pliego completo (factor 4 = 4×1/4).
-  const factor = 4;
+  // Tinta: se consume por color, por cara y por millar de cortes impresos.
+  const cTinta = n(f.costoTinta);
+  const tinta = millaresImp * cTinta * colores * caras;
+  if (tinta > 0) {
+    lineas.push({
+      k: "tinta", label: "Tinta",
+      detalle: `${millaresImp} millar${millaresImp !== 1 ? "es" : ""} × ${colores} color${colores !== 1 ? "es" : ""} × ${caras} cara${caras !== 1 ? "s" : ""} x ${usd(cTinta, 2)}`,
+      monto: tinta,
+    });
+  }
+
+  // Acabados — como en digital: las tarifas están referidas a 1/4 de pliego.
+  const factor = frac / 0.25;
   for (const a of f.catalogoAcab) {
     const st = f.acabados?.[a.id];
     if (!st || !st.on) continue;
@@ -124,7 +140,7 @@ export function calcularOffset(f: EntradaOffset): ResultadoOffset {
       const esc = a.escala === "area" ? factor : a.escala === "min" ? Math.max(1, factor) : 1;
       unit = base * esc;
       monto = pliegos * unit * q;
-      detalle = `${fmtNum(pliegos, 0)} pliegos x ${usd(unit, 4)}${mult}`;
+      detalle = `${fmtNum(pliegos, 0)} ${f.tamano} x ${usd(unit, 4)}${mult}`;
     } else if (a.unidad === "elemento") {
       monto = cant * unit * q;
       detalle = `${fmtNum(cant, 0)} pzs x ${usd(unit, 4)}${mult}`;
@@ -143,7 +159,7 @@ export function calcularOffset(f: EntradaOffset): ResultadoOffset {
 
   return {
     cap, capAuto, cols: mont.cols, filas: mont.filas, rot: mont.rot,
-    corteW: W, corteH: H, pliegosBase, pliegos, millaresImp,
+    corteW: W, corteH: H, frac, pliegosBase, pliegos, millaresImp,
     colores, caras, nPlanchas, pasadas, lineas, ...pr,
   };
 }

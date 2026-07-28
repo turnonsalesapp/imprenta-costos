@@ -36,9 +36,12 @@ export function ConfigForm({ cfg }: { cfg: DatosConfig }) {
       </div>
       <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-kraft">Offset (producción propia)</div>
       <div className="mt-1 grid grid-cols-3 gap-3 sm:max-w-md">
-        <Campo l="Plancha ($)" name="offPlancha" v={cfg.offPlancha} />
+        <Campo l="Plancha 1/4 ($)" name="offPlancha" v={cfg.offPlancha} />
+        <Campo l="Plancha 1/2 ($)" name="offPlanchaMedio" v={cfg.offPlanchaMedio} />
+        <Campo l="Plancha pliego ($)" name="offPlanchaPliego" v={cfg.offPlanchaPliego} />
         <Campo l="Arranque/cara ($)" name="offArranque" v={cfg.offArranque} />
         <Campo l="Millar impresión ($)" name="offMillar" v={cfg.offMillar} />
+        <Campo l="Tinta/millar/color ($)" name="offTinta" v={cfg.offTinta} />
       </div>
 
       <label className="mt-4 flex items-start gap-2.5 rounded-sm border border-regla bg-suave px-3 py-2.5">

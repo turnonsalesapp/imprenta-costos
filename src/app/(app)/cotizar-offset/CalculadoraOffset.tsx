@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { Save, RotateCcw, Check, Plus } from "lucide-react";
 import {
-  calcCapacidad, MEDIDAS, n, fmtNum, usd,
-  type Config, type Acabado, type MedidaKey, type Montaje as MontajeInfo,
+  calcCapacidad, medidaCorte, TAMANOS, n, fmtNum, usd,
+  type Config, type Acabado, type Montaje as MontajeInfo,
 } from "@/lib/calculo";
 import { calcularOffset, type EntradaOffset, type OffsetAcab } from "@/lib/calculo-offset";
 import { nuevoFormOffset, type FormOffset } from "@/lib/cotizacion-form";
@@ -24,7 +24,7 @@ export function CalculadoraOffset({
   cfg: Config;
   clientes: ClienteSimple[];
   equipos: EquipoItem[];
-  offDefaults: { plancha: number; arranque: number; millar: number };
+  offDefaults: { plancha: number; planchaMedio: number; planchaPliego: number; arranque: number; millar: number; tinta: number };
   formInicial: FormOffset;
   banner?: string;
   margenMin?: number;
@@ -54,8 +54,17 @@ export function CalculadoraOffset({
   };
 
   const papel = cfg.papeles.find((p) => p.id === form.papelId) ?? null;
-  const [W, H] = MEDIDAS[(papel?.med as MedidaKey) ?? "70x100"] ?? MEDIDAS["70x100"];
+  const frac = (TAMANOS.find((t) => t.id === form.tamano) ?? TAMANOS[0]).frac;
+  const [W, H] = medidaCorte(papel?.med ?? "70x100", frac);
   const auto = calcCapacidad(n(form.anchoPza), n(form.altoPza), W, H, n(cfg.pinza), n(cfg.sep));
+
+  // Costo de plancha según el tamaño elegido.
+  const planchaPorTamano = (t: string): number => {
+    const fr = (TAMANOS.find((x) => x.id === t) ?? TAMANOS[0]).frac;
+    return fr >= 1 ? offDefaults.planchaPliego : fr >= 0.5 ? offDefaults.planchaMedio : offDefaults.plancha;
+  };
+  const elegirTamano = (t: string) =>
+    setForm((f) => ({ ...f, tamano: t, costoPlancha: planchaPorTamano(t) }));
 
   useEffect(() => {
     if (form.capAuto && auto.cap > 0 && String(auto.cap) !== String(form.capacidad)) {
@@ -73,12 +82,13 @@ export function CalculadoraOffset({
   const entrada = (over?: Partial<EntradaOffset>): EntradaOffset => ({
     papelNombre: papel?.nombre ?? "Papel",
     precioPliego: papel ? n(papel.precio) / Math.max(1, n(papel.hojas)) : 0,
-    medida: papel?.med ?? "70x100",
+    medida: papel?.med ?? "70x100", tamano: form.tamano,
     anchoPza: form.anchoPza, altoPza: form.altoPza,
     capacidadManual: form.capAuto ? "" : form.capacidad,
     cantidad: form.cantidad, merma: form.merma, pinza: cfg.pinza, sep: cfg.sep,
     colores: form.colores, coloresPasada: form.coloresPasada, caras: form.caras,
     costoPlancha: form.costoPlancha, costoArranque: form.costoArranque, costoMillar: form.costoMillar,
+    costoTinta: form.costoTinta,
     acabados: form.acabados, catalogoAcab,
     margen: form.margen, comision: form.comision, ml: form.ml,
     tasaBCV: form.tasaBCV, binCompra: form.binCompra, binVenta: form.binVenta,
@@ -183,7 +193,7 @@ export function CalculadoraOffset({
           </section>
 
           <section className="card">
-            <div className="ch"><b>Formato y material</b><span className="mt mono">pliego {W}×{H} mm</span></div>
+            <div className="ch"><b>Formato y material</b><span className="mt mono">corte {W}×{H} mm</span></div>
             <div className="cb">
               <div className="rowg c4">
                 <T l="Ancho pza (mm)" v={form.anchoPza} set={(v) => up("anchoPza", v)} num ph="216" />
@@ -198,9 +208,17 @@ export function CalculadoraOffset({
                     <option value="">— Selecciona el papel —</option>
                     {cfg.papeles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                   </select>
-                  {papel ? <div className="hint mono">{usd(precioPliego, 4)} el pliego</div> : null}
+                  {papel ? <div className="hint mono">{usd(precioPliego, 4)} el pliego · {usd(precioPliego * frac, 4)} el corte</div> : null}
                 </F>
-                <F l="Piezas por pliego">
+                <F l="Tamaño de pliego (prensa)" hint="Plancha según el tamaño">
+                  <select className="in" value={form.tamano} onChange={(e) => elegirTamano(e.target.value)}>
+                    {TAMANOS.map((t) => <option key={t.id} value={t.id}>{t.id}</option>)}
+                  </select>
+                </F>
+              </div>
+
+              <div className="rowg c2" style={{ marginTop: 10 }}>
+                <F l="Piezas por corte">
                   <input className="in mono" type="text" inputMode="decimal" value={form.capacidad}
                     disabled={form.capAuto}
                     style={form.capAuto ? { background: "#EFF2EF", color: "#767D76" } : undefined}
@@ -219,10 +237,10 @@ export function CalculadoraOffset({
               </div>
 
               <div style={{ marginTop: 12 }}>
-                <label className="fl">Montaje en el pliego</label>
+                <label className="fl">Montaje en el corte</label>
                 <Montaje W={W} H={H} w={n(form.anchoPza)} h={n(form.altoPza)} info={auto} />
                 {auto.cap === 0 && n(form.anchoPza) > 0 ? (
-                  <div className="hint">La pieza no entra en el pliego.</div>
+                  <div className="hint">La pieza no entra en el corte.</div>
                 ) : (
                   <div className="hint mono">{auto.cols}×{auto.filas}{auto.rot ? " rotado" : ""} · pinza {cfg.pinza} mm · sep {cfg.sep} mm</div>
                 )}
@@ -255,10 +273,11 @@ export function CalculadoraOffset({
                   </select>
                 </F>
               </div>
-              <div className="rowg c3" style={{ marginTop: 10 }}>
-                <T l="Plancha ($)" v={form.costoPlancha} set={(v) => up("costoPlancha", v)} num ph={String(offDefaults.plancha)} />
+              <div className="rowg c4" style={{ marginTop: 10 }}>
+                <T l={`Plancha ${form.tamano.replace(" Pliego", "").replace("Pliego", "pliego")} ($)`} v={form.costoPlancha} set={(v) => up("costoPlancha", v)} num ph={String(offDefaults.planchaPliego)} />
                 <T l="Arranque/cara ($)" v={form.costoArranque} set={(v) => up("costoArranque", v)} num ph={String(offDefaults.arranque)} />
                 <T l="Millar/pasada ($)" v={form.costoMillar} set={(v) => up("costoMillar", v)} num ph={String(offDefaults.millar)} />
+                <T l="Tinta/millar/color ($)" v={form.costoTinta} set={(v) => up("costoTinta", v)} num ph={String(offDefaults.tinta)} />
               </div>
               <div className="hint mono" style={{ marginTop: 8 }}>
                 {fmtNum(r.pliegos, 0)} pliegos · {r.millaresImp} millar{r.millaresImp !== 1 ? "es" : ""} · {r.pasadas} pasada{r.pasadas !== 1 ? "s" : ""}/cara · {caras2 ? "2 caras" : "1 cara"}

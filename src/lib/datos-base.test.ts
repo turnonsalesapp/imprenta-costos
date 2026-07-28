@@ -71,11 +71,11 @@ describe("lista de papeles precargada", () => {
 });
 
 describe("acabados precargados", () => {
-  it("trae los 13 de digital (hoja VARIABLES + troqueles) y los 6 de offset", () => {
+  it("trae los 13 de digital (hoja VARIABLES + troqueles) y los de offset", () => {
     const digital = ACABADOS_BASE.filter((a) => (a.modulo ?? "digital") === "digital");
     const offset = ACABADOS_BASE.filter((a) => a.modulo === "offset");
     expect(digital).toHaveLength(13);
-    expect(offset).toHaveLength(6);
+    expect(offset).toHaveLength(10);
     expect(offset.every((a) => a.id.startsWith("off-"))).toBe(true);
   });
 

@@ -217,9 +217,10 @@ export type FormOffset = {
   trabajo: string;
   descripcion: string;
   papelId: string;
+  tamano: string;               // tamaño de corte que imprime la prensa
   anchoPza: number | string;    // pieza en mm
   altoPza: number | string;
-  capacidad: number | string;   // piezas por pliego
+  capacidad: number | string;   // piezas por corte
   capAuto: boolean;
   cantidad: number | string;
   merma: number | string;
@@ -230,6 +231,7 @@ export type FormOffset = {
   costoPlancha: number | string;
   costoArranque: number | string;
   costoMillar: number | string;
+  costoTinta: number | string;
   acabados: Record<string, AcabadoSel>;
   margen: number | string;
   comision: number | string;
@@ -243,14 +245,18 @@ export type FormOffset = {
   editarId: string;
 };
 
-export type OffsetDefaults = { plancha: number; arranque: number; millar: number };
+export type OffsetDefaults = {
+  plancha: number; planchaMedio: number; planchaPliego: number;
+  arranque: number; millar: number; tinta: number;
+};
 
 export function nuevoFormOffset(cfg: Config, off?: OffsetDefaults): FormOffset {
   return {
     cliente: "", clienteId: "", trabajo: "", descripcion: "",
-    papelId: "", anchoPza: "", altoPza: "", capacidad: "", capAuto: true,
+    papelId: "", tamano: "Pliego", anchoPza: "", altoPza: "", capacidad: "", capAuto: true,
     cantidad: "1000", merma: cfg.merma, equipoId: "", colores: "4", coloresPasada: "4", caras: "1",
-    costoPlancha: off?.plancha ?? "", costoArranque: off?.arranque ?? "", costoMillar: off?.millar ?? "",
+    costoPlancha: off?.planchaPliego ?? "", costoArranque: off?.arranque ?? "", costoMillar: off?.millar ?? "",
+    costoTinta: off?.tinta ?? "",
     acabados: {},
     margen: cfg.margen, comision: cfg.comision, ml: cfg.ml,
     tasaBCV: cfg.tasaBCV, binCompra: cfg.binCompra, binVenta: cfg.binVenta,
