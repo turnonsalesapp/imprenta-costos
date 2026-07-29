@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRol } from "@/lib/auth";
-import { obtenerCotizacion, cargarMixtaEnDraft, ESTADOS, ETIQUETA_ESTADO, esOrdenVenta } from "@/lib/cotizaciones";
+import { obtenerCotizacion, cargarCotizacionEnDraft, ESTADOS, ETIQUETA_ESTADO, esOrdenVenta } from "@/lib/cotizaciones";
 import { cambiarEstadoAction, eliminarCotizacionAction } from "@/app/actions/cotizaciones";
 import { generarOrdenAction } from "@/app/actions/ordenes";
 import { esAdmin } from "@/lib/roles";
 import { BotonEliminar } from "@/app/_components/BotonEliminar";
 import { fmtNum, usd } from "@/lib/calculo";
 import { EstadoBadge } from "../EstadoBadge";
-import { EditarMixtaBtn } from "./EditarMixtaBtn";
+import { CargarCotizadorBtn } from "./CargarCotizadorBtn";
 
 export const dynamic = "force-dynamic";
 
@@ -25,19 +25,15 @@ export default async function DetalleCotizacion({
   if (!c) notFound();
 
   const puedeBorrar = esAdmin(usuario.rol) && c.estado === "BORRADOR" && !c.orden;
-  const rutaCotizar =
-    c.tipo === "PROVEEDOR" ? "/cotizar-proveedor"
-    : c.tipo === "GRAN_FORMATO" ? "/cotizar-granformato"
-    : c.tipo === "PERSONALIZADO" ? "/cotizar-personalizado"
-    : c.tipo === "OFFSET" ? "/cotizar-offset"
-    : "/cotizar";
   const esMixta = c.tipo === "MIXTA";
   const tercerizado = c.tipo === "PROVEEDOR" || c.tipo === "GRAN_FORMATO" || c.tipo === "PERSONALIZADO";
   const multi = c.items.length > 1;
   // Ítems producibles en el taller (digital/offset). Los tercerizados no van a producción.
   const itemsProducibles = c.items.filter((it) => (it.tipo ?? c.tipo) === "PROPIA" || (it.tipo ?? c.tipo) === "OFFSET");
   const generaOrden = !tercerizado && itemsProducibles.length > 0;
-  const cargaMixta = esMixta && c.estado === "BORRADOR" ? await cargarMixtaEnDraft(c.id) : null;
+  // Ruta B: editar y copiar cargan la cotización (de cualquier tipo) en el cotizador unificado.
+  const cargaEditar = c.estado === "BORRADOR" ? await cargarCotizacionEnDraft(c.id, "editar") : null;
+  const cargaCopia = await cargarCotizacionEnDraft(c.id, "copia");
   const ov = esOrdenVenta(c.estado);
 
   return (
@@ -45,20 +41,11 @@ export default async function DetalleCotizacion({
       <div className="flex items-center justify-between gap-4">
         <Link href="/cotizaciones" className="text-sm text-kraft hover:text-tinta">← Cotizaciones</Link>
         <div className="flex items-center gap-2">
-          {c.estado === "BORRADOR" && !esMixta && (
-            <Link href={`${rutaCotizar}?editar=${c.id}`}
-              className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
-              Editar
-            </Link>
+          {cargaEditar && cargaEditar.items.length > 0 && (
+            <CargarCotizadorBtn carga={cargaEditar} accion="editar" />
           )}
-          {cargaMixta && cargaMixta.items.length > 0 && (
-            <EditarMixtaBtn carga={cargaMixta} />
-          )}
-          {!esMixta && (
-            <Link href={`${rutaCotizar}?desde=${c.id}`}
-              className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
-              Usar como base
-            </Link>
+          {cargaCopia && cargaCopia.items.length > 0 && (
+            <CargarCotizadorBtn carga={cargaCopia} accion="copia" />
           )}
           <Link href={`/cotizaciones/${c.id}/imprimir`}
             className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">

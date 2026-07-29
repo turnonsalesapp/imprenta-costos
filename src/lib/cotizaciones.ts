@@ -1139,6 +1139,102 @@ const ETIQUETA_TIPO: Record<string, string> = {
   PERSONALIZADO: "Personalizado", OFFSET: "Offset", MIXTA: "Mixta",
 };
 
+/** Quita `editarId` de un formulario crudo (al copiar como base, no editar). */
+function formSinEditar(form: unknown): unknown {
+  if (form && typeof form === "object") return { ...(form as Record<string, unknown>), editarId: "" };
+  return form;
+}
+
+/**
+ * Carga CUALQUIER cotización (de cualquier tipo) como ítems del carrito, para
+ * editarla o copiarla en el cotizador unificado. Es la base de la "Ruta B": una
+ * cotización es siempre una lista de ítems.
+ *
+ *  - Si la cotización guardó los `form` de sus ítems (mixtas y las nuevas del
+ *    cotizador), se cargan tal cual: varios ítems, de uno o varios tipos.
+ *  - Si es una cotización vieja de un solo ítem (sin `form`), se reconstruye el
+ *    formulario por tipo con el cargador que corresponde (compatibilidad).
+ */
+export async function cargarCotizacionEnDraft(
+  id: string, modo: "editar" | "copia",
+): Promise<
+  { meta: { cliente: string; clienteId: string; trabajo: string; editarId: string };
+    items: { tipo: TipoCotizacion; form: unknown; resumen: { titulo: string; cantidad: number; ventaTotal: number; tipoLabel: string } }[] } | null
+> {
+  const c = await db.cotizacion.findUnique({
+    where: { id },
+    select: {
+      estado: true, tipo: true, titulo: true, clienteNombre: true, clienteId: true,
+      items: true, cantidad: true, ventaTotal: true,
+    },
+  });
+  if (!c) return null;
+  if (modo === "editar" && c.estado !== "BORRADOR") return null;
+
+  const editarId = modo === "editar" ? id : "";
+  const meta = {
+    cliente: c.clienteNombre ?? "",
+    clienteId: c.clienteId ?? "",
+    trabajo: modo === "copia" ? `${c.titulo} (copia)` : c.titulo,
+    editarId,
+  };
+  const label = (t: TipoCotizacion) => ETIQUETA_TIPO[t] ?? "Ítem";
+  const guardados = (c.items as unknown as Array<Record<string, unknown>>) ?? [];
+  const conForm = guardados.filter((it) => it && it.form);
+
+  // Camino nuevo: la cotización trae los formularios de sus ítems.
+  if (conForm.length) {
+    return {
+      meta,
+      items: conForm.map((it) => {
+        const tipo = (it.tipo as TipoCotizacion) ?? c.tipo;
+        return {
+          tipo,
+          form: modo === "copia" ? formSinEditar(it.form) : it.form,
+          resumen: {
+            titulo: String(it.titulo ?? "Ítem"),
+            cantidad: num(it.cantidad), ventaTotal: num(it.ventaTotal),
+            tipoLabel: label(tipo),
+          },
+        };
+      }),
+    };
+  }
+
+  // Compatibilidad: cotización vieja de un solo ítem (sin `form` guardado).
+  if (c.tipo === "PROPIA") {
+    const forms = await cargarCotizacionEnForm(id, modo);
+    if (!forms?.length) return null;
+    return {
+      meta,
+      items: forms.map((form, i) => ({
+        tipo: "PROPIA" as TipoCotizacion,
+        form,
+        resumen: {
+          titulo: String((guardados[i]?.titulo as string) ?? form.trabajo ?? "Ítem"),
+          cantidad: num(guardados[i]?.cantidad ?? form.cantidad),
+          ventaTotal: num(guardados[i]?.ventaTotal ?? (forms.length === 1 ? c.ventaTotal : 0)),
+          tipoLabel: "Digital",
+        },
+      })),
+    };
+  }
+  const form =
+    c.tipo === "PROVEEDOR" ? await cargarProveedorEnForm(id, modo)
+    : c.tipo === "GRAN_FORMATO" ? await cargarGranFormatoEnForm(id, modo)
+    : c.tipo === "PERSONALIZADO" ? await cargarPersonalizadoEnForm(id, modo)
+    : c.tipo === "OFFSET" ? await cargarOffsetEnForm(id, modo)
+    : null;
+  if (!form) return null;
+  return {
+    meta,
+    items: [{
+      tipo: c.tipo, form,
+      resumen: { titulo: c.titulo, cantidad: num(c.cantidad), ventaTotal: num(c.ventaTotal), tipoLabel: label(c.tipo) },
+    }],
+  };
+}
+
 export type FiltroLista = { q?: string; estado?: EstadoCotizacion | "" };
 
 /** Fila del listado (Decimals ya convertidos a number). */

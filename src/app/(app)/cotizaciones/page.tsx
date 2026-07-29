@@ -40,11 +40,7 @@ export default async function CotizacionesPage({
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/cotizar-proveedor"
-            className="rounded-sm border border-regla px-3 py-2 text-sm font-medium hover:border-tinta">
-            De proveedor
-          </Link>
-          <Link href="/cotizar"
+          <Link href="/cotizacion-nueva"
             className="rounded-sm bg-tinta px-3 py-2 text-sm font-bold text-hoja hover:opacity-90">
             Nueva cotización
           </Link>

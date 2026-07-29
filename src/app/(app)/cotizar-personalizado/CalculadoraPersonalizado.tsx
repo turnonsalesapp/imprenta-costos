@@ -8,13 +8,13 @@ import { nuevoFormPersonalizado, type FormPersonalizado } from "@/lib/cotizacion
 import type { ProductoPopItem } from "@/lib/productos-pop";
 import type { ClienteSimple } from "@/lib/clientes";
 import { guardarPersonalizadoAction } from "@/app/actions/cotizaciones";
-import { agregarItemDraft } from "@/lib/draft-cotizacion";
+import { agregarItemDraft, type EmbedCotizador } from "@/lib/draft-cotizacion";
 import { F, T, PrecioManual, TarjetaTasas } from "../cotizar/campos";
 import { PanelBorrador } from "../cotizar/PanelBorrador";
 import "../cotizar/calc.css";
 
 export function CalculadoraPersonalizado({
-  cfg, clientes, productos, formInicial, banner, margenMin,
+  cfg, clientes, productos, formInicial, banner, margenMin, embed,
 }: {
   cfg: Config;
   clientes: ClienteSimple[];
@@ -22,6 +22,7 @@ export function CalculadoraPersonalizado({
   formInicial: FormPersonalizado;
   banner?: string;
   margenMin?: number;
+  embed?: EmbedCotizador;
 }) {
   const [form, setForm] = useState<FormPersonalizado>(() => formInicial);
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
@@ -125,25 +126,29 @@ export function CalculadoraPersonalizado({
     if (!producto) { setError("Elige un producto."); return; }
     if (lineal && n(form.largoCm) <= 0) { setError("Indica el largo (cm)."); return; }
     if (!lineal && cantAplica <= 0) { setError("Indica la cantidad."); return; }
-    agregarItemDraft("PERSONALIZADO", form, {
-      titulo: form.trabajo.trim() || producto.nombre, cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Personalizado",
-    }, { cliente: form.cliente, clienteId: form.clienteId });
+    const resumen = { titulo: form.trabajo.trim() || producto.nombre, cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Personalizado" };
+    if (embed) { embed.onAgregar(form, resumen); return; }
+    agregarItemDraft("PERSONALIZADO", form, resumen, { cliente: form.cliente, clienteId: form.clienteId });
   }
 
-  // Agrega un volumen (o tramo de escala) del comparador como ítem de la cotización mixta.
-  function volumenACotizacion(cantV: number, ventaTotal: number) {
+  // Arma un ítem a partir de un volumen del comparador (mismo trabajo, otro tiraje).
+  function volumenItem(cantV: number, ventaTotal: number) {
+    const base = form.trabajo.trim() || producto?.nombre || "Personalizado";
+    return {
+      form: { ...form, cantidad: cantV, editarId: "" },
+      resumen: { titulo: `${base} (${fmtNum(cantV, 0)} u)`, cantidad: cantV, ventaTotal, tipoLabel: "Personalizado" },
+    };
+  }
+  // Convierte un tramo de la tabla de escalas en un ítem (cantidad de arranque del tramo).
+  function tramoItem(desde: number) {
+    const cc = calcularPop(entrada({ cantidad: desde, precioManual: "" }));
+    return volumenItem(desde, cc.ventaTotal);
+  }
+  function volumenesACotizacion(items: { form: unknown; resumen: { titulo: string; cantidad: number; ventaTotal: number; tipoLabel: string } }[]) {
     setError(null);
     if (!producto) { setError("Elige un producto."); return; }
-    const base = form.trabajo.trim() || producto.nombre;
-    agregarItemDraft("PERSONALIZADO", { ...form, cantidad: cantV, editarId: "" }, {
-      titulo: `${base} (${fmtNum(cantV, 0)} u)`, cantidad: cantV, ventaTotal, tipoLabel: "Personalizado",
-    }, { cliente: form.cliente, clienteId: form.clienteId });
-  }
-
-  // Convierte un tramo de la tabla de escalas en un ítem con la cantidad de arranque del tramo.
-  function tramoACotizacion(desde: number) {
-    const cc = calcularPop(entrada({ cantidad: desde, precioManual: "" }));
-    volumenACotizacion(desde, cc.ventaTotal);
+    if (embed) { embed.onAgregarVarios(items); return; }
+    for (const it of items) agregarItemDraft("PERSONALIZADO", it.form, it.resumen, { cliente: form.cliente, clienteId: form.clienteId });
   }
 
   return (
@@ -233,7 +238,7 @@ export function CalculadoraPersonalizado({
                               <td className="ta-r mono">{usd(e.precio)}</td>
                               <td className="ta-r">{aplica ? <span style={{ fontSize: 10, color: "#0B7A93", fontWeight: 700 }}>aplica</span> : null}</td>
                               <td className="ta-r">
-                                <button type="button" className="btn g sm" title={`Agregar un ítem de ${fmtNum(e.desde, 0)} u a la cotización`} onClick={() => tramoACotizacion(e.desde)}>＋ cotiz</button>
+                                <button type="button" className="btn g sm" title={`Agregar un ítem de ${fmtNum(e.desde, 0)} u`} onClick={() => volumenesACotizacion([tramoItem(e.desde)])}>＋ ítem</button>
                               </td>
                             </tr>
                           );
@@ -242,7 +247,7 @@ export function CalculadoraPersonalizado({
                     </table>
                   </div>
                   <div style={{ marginTop: 8 }}>
-                    <button type="button" className="btn sm" onClick={() => escalas.forEach((e) => tramoACotizacion(e.desde))}>
+                    <button type="button" className="btn sm" onClick={() => volumenesACotizacion(escalas.map((e) => tramoItem(e.desde)))}>
                       Agregar los {escalas.length} tramos como ítems
                     </button>
                   </div>
@@ -292,7 +297,7 @@ export function CalculadoraPersonalizado({
                               <td className="ta-r">
                                 <span style={{ display: "inline-flex", gap: 4 }}>
                                   {!on ? <button type="button" className="btn g sm" onClick={() => up("cantidad", p.cant)}>Usar</button> : <span style={{ fontSize: 10, color: "#767D76" }}>actual</span>}
-                                  <button type="button" className="btn g sm" title="Agregar este volumen a la cotización" onClick={() => volumenACotizacion(p.cant, p.ventaTotal)}>＋ cotiz</button>
+                                  <button type="button" className="btn g sm" title="Agregar este volumen como ítem" onClick={() => volumenesACotizacion([volumenItem(p.cant, p.ventaTotal)])}>＋ ítem</button>
                                 </span>
                               </td>
                             </tr>
@@ -302,8 +307,8 @@ export function CalculadoraPersonalizado({
                     </table>
                   </div>
                   <div style={{ marginTop: 8 }}>
-                    <button type="button" className="btn sm" onClick={() => pts.forEach((p) => volumenACotizacion(p.cant, p.ventaTotal))}>
-                      Agregar los {pts.length} volúmenes a la cotización
+                    <button type="button" className="btn sm" onClick={() => volumenesACotizacion(pts.map((p) => volumenItem(p.cant, p.ventaTotal)))}>
+                      Agregar los {pts.length} volúmenes como ítems
                     </button>
                   </div>
                 </>
@@ -385,18 +390,31 @@ export function CalculadoraPersonalizado({
           ) : null}
           {error ? <div className="warn" style={{ marginTop: 10 }}>{error}</div> : null}
 
-          <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
-            <Save size={14} />{pendiente ? "Guardando…" : form.editarId ? "Guardar cambios" : "Guardar cotización"}
-          </button>
-          {!form.editarId ? (
-            <button type="button" className="btn g w" onClick={agregarACotizacion}>
-              <Plus size={14} />Agregar a la cotización
-            </button>
-          ) : null}
-          <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormPersonalizado(cfg)); setError(null); }}>
-            <RotateCcw size={13} />Limpiar
-          </button>
-          {!form.editarId ? <PanelBorrador /> : null}
+          {embed ? (
+            <>
+              <button type="button" className="btn w" onClick={agregarACotizacion}>
+                <Plus size={14} />{embed.editando ? "Guardar ítem" : "Agregar ítem"}
+              </button>
+              <button type="button" className="btn g w" onClick={embed.onCancelar}>
+                <RotateCcw size={13} />Cancelar
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
+                <Save size={14} />{pendiente ? "Guardando…" : form.editarId ? "Guardar cambios" : "Guardar cotización"}
+              </button>
+              {!form.editarId ? (
+                <button type="button" className="btn g w" onClick={agregarACotizacion}>
+                  <Plus size={14} />Agregar a la cotización
+                </button>
+              ) : null}
+              <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormPersonalizado(cfg)); setError(null); }}>
+                <RotateCcw size={13} />Limpiar
+              </button>
+              {!form.editarId ? <PanelBorrador /> : null}
+            </>
+          )}
         </div>
       </div>
     </div>

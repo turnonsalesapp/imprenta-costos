@@ -11,7 +11,7 @@ import { nuevoFormOffset, type FormOffset } from "@/lib/cotizacion-form";
 import type { ClienteSimple } from "@/lib/clientes";
 import type { EquipoItem } from "@/lib/equipos";
 import { guardarOffsetAction } from "@/app/actions/cotizaciones";
-import { agregarItemDraft } from "@/lib/draft-cotizacion";
+import { agregarItemDraft, type EmbedCotizador } from "@/lib/draft-cotizacion";
 import { F, T, PrecioManual, TarjetaTasas } from "../cotizar/campos";
 import { PanelBorrador } from "../cotizar/PanelBorrador";
 import "../cotizar/calc.css";
@@ -19,7 +19,7 @@ import "../cotizar/calc.css";
 const TINTAS = ["#0B8FA8", "#C4177C", "#C79400", "#171B19", "#5B8C5A", "#8A5FBF", "#C0563B"];
 
 export function CalculadoraOffset({
-  cfg, clientes, equipos, offDefaults, formInicial, banner, margenMin,
+  cfg, clientes, equipos, offDefaults, formInicial, banner, margenMin, embed,
 }: {
   cfg: Config;
   clientes: ClienteSimple[];
@@ -28,6 +28,7 @@ export function CalculadoraOffset({
   formInicial: FormOffset;
   banner?: string;
   margenMin?: number;
+  embed?: EmbedCotizador;
 }) {
   const [form, setForm] = useState<FormOffset>(() => formInicial);
   const [escalas, setEscalas] = useState("1000, 2000, 5000, 10000");
@@ -154,19 +155,24 @@ export function CalculadoraOffset({
     setError(null);
     if (!papel) { setError("Elige el papel."); return; }
     if (n(form.anchoPza) <= 0 || n(form.altoPza) <= 0) { setError("Indica el ancho y el alto de la pieza (mm)."); return; }
-    agregarItemDraft("OFFSET", form, {
-      titulo: form.trabajo.trim() || `Offset ${papel.nombre}`, cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Offset",
-    }, { cliente: form.cliente, clienteId: form.clienteId });
+    const resumen = { titulo: form.trabajo.trim() || `Offset ${papel.nombre}`, cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Offset" };
+    if (embed) { embed.onAgregar(form, resumen); return; }
+    agregarItemDraft("OFFSET", form, resumen, { cliente: form.cliente, clienteId: form.clienteId });
   }
 
-  // Agrega un volumen del comparador como ítem de la cotización mixta.
-  function volumenACotizacion(cant: number, ventaTotal: number) {
+  // Arma un ítem a partir de un volumen del comparador (mismo trabajo, otro tiraje).
+  function volumenItem(cant: number, ventaTotal: number) {
+    const base = form.trabajo.trim() || `Offset ${papel?.nombre ?? ""}`;
+    return {
+      form: { ...form, cantidad: cant, editarId: "" },
+      resumen: { titulo: `${base} (${fmtNum(cant, 0)} u)`, cantidad: cant, ventaTotal, tipoLabel: "Offset" },
+    };
+  }
+  function volumenesACotizacion(items: { form: unknown; resumen: { titulo: string; cantidad: number; ventaTotal: number; tipoLabel: string } }[]) {
     if (!papel) { setError("Elige el papel."); return; }
     if (n(form.anchoPza) <= 0 || n(form.altoPza) <= 0) { setError("Indica el ancho y el alto de la pieza (mm)."); return; }
-    const base = form.trabajo.trim() || `Offset ${papel.nombre}`;
-    agregarItemDraft("OFFSET", { ...form, cantidad: cant, editarId: "" }, {
-      titulo: `${base} (${fmtNum(cant, 0)} u)`, cantidad: cant, ventaTotal, tipoLabel: "Offset",
-    }, { cliente: form.cliente, clienteId: form.clienteId });
+    if (embed) { embed.onAgregarVarios(items); return; }
+    for (const it of items) agregarItemDraft("OFFSET", it.form, it.resumen, { cliente: form.cliente, clienteId: form.clienteId });
   }
 
   const caras2 = n(form.caras) >= 2;
@@ -371,7 +377,7 @@ export function CalculadoraOffset({
                             <td className="ta-r">
                               <span style={{ display: "inline-flex", gap: 4 }}>
                                 {!on ? <button type="button" className="btn g sm" onClick={() => up("cantidad", p.cant)}>Usar</button> : <span style={{ fontSize: 10, color: "#767D76" }}>actual</span>}
-                                <button type="button" className="btn g sm" title="Agregar este volumen a la cotización" onClick={() => volumenACotizacion(p.cant, p.ventaTotal)}>＋ cotiz</button>
+                                <button type="button" className="btn g sm" title="Agregar este volumen como ítem" onClick={() => volumenesACotizacion([volumenItem(p.cant, p.ventaTotal)])}>＋ ítem</button>
                               </span>
                             </td>
                           </tr>
@@ -380,8 +386,8 @@ export function CalculadoraOffset({
                     </tbody>
                   </table>
                   <div style={{ marginTop: 8 }}>
-                    <button type="button" className="btn sm" onClick={() => pts.forEach((p) => volumenACotizacion(p.cant, p.ventaTotal))}>
-                      Agregar los {pts.length} volúmenes a la cotización
+                    <button type="button" className="btn sm" onClick={() => volumenesACotizacion(pts.map((p) => volumenItem(p.cant, p.ventaTotal)))}>
+                      Agregar los {pts.length} volúmenes como ítems
                     </button>
                   </div>
                 </div>
@@ -469,18 +475,31 @@ export function CalculadoraOffset({
           ) : null}
           {error ? <div className="warn" style={{ marginTop: 10 }}>{error}</div> : null}
 
-          <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
-            <Save size={14} />{pendiente ? "Guardando…" : form.editarId ? "Guardar cambios" : "Guardar cotización"}
-          </button>
-          {!form.editarId ? (
-            <button type="button" className="btn g w" onClick={agregarACotizacion}>
-              <Plus size={14} />Agregar a la cotización
-            </button>
-          ) : null}
-          <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormOffset(cfg, offDefaults)); setError(null); }}>
-            <RotateCcw size={13} />Limpiar
-          </button>
-          {!form.editarId ? <PanelBorrador /> : null}
+          {embed ? (
+            <>
+              <button type="button" className="btn w" onClick={agregarACotizacion}>
+                <Plus size={14} />{embed.editando ? "Guardar ítem" : "Agregar ítem"}
+              </button>
+              <button type="button" className="btn g w" onClick={embed.onCancelar}>
+                <RotateCcw size={13} />Cancelar
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
+                <Save size={14} />{pendiente ? "Guardando…" : form.editarId ? "Guardar cambios" : "Guardar cotización"}
+              </button>
+              {!form.editarId ? (
+                <button type="button" className="btn g w" onClick={agregarACotizacion}>
+                  <Plus size={14} />Agregar a la cotización
+                </button>
+              ) : null}
+              <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormOffset(cfg, offDefaults)); setError(null); }}>
+                <RotateCcw size={13} />Limpiar
+              </button>
+              {!form.editarId ? <PanelBorrador /> : null}
+            </>
+          )}
         </div>
       </div>
     </div>

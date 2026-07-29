@@ -36,7 +36,7 @@ export default async function FichaClientePage({
       <header className="mt-3 flex items-baseline justify-between gap-4">
         <h1 className="text-lg font-bold tracking-tight">{c.nombre}</h1>
         <div className="flex gap-2">
-          <Link href="/cotizar" className="rounded-sm bg-tinta px-3 py-1.5 text-sm font-bold text-hoja hover:opacity-90">
+          <Link href="/cotizacion-nueva" className="rounded-sm bg-tinta px-3 py-1.5 text-sm font-bold text-hoja hover:opacity-90">
             Cotizar
           </Link>
           <form action={alternarActivoClienteAction}>

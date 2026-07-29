@@ -7,7 +7,7 @@ import { nuevoFormProveedor, totalProveedor, type FormProveedor } from "@/lib/co
 import type { Config } from "@/lib/calculo";
 import type { ClienteSimple } from "@/lib/clientes";
 import { guardarProveedorAction } from "@/app/actions/cotizaciones";
-import { agregarItemDraft } from "@/lib/draft-cotizacion";
+import { agregarItemDraft, type EmbedCotizador } from "@/lib/draft-cotizacion";
 import { F, T, PrecioManual, TarjetaTasas } from "../cotizar/campos";
 import { PanelBorrador } from "../cotizar/PanelBorrador";
 import "../cotizar/calc.css";
@@ -18,12 +18,14 @@ export function CalculadoraProveedor({
   formInicial,
   banner,
   margenMin,
+  embed,
 }: {
   cfg: Config;
   clientes: ClienteSimple[];
   formInicial: FormProveedor;
   banner?: string;
   margenMin?: number;
+  embed?: EmbedCotizador;
 }) {
   const [form, setForm] = useState<FormProveedor>(() => formInicial);
   const [margenes, setMargenes] = useState("20, 25, 30, 35, 40");
@@ -96,19 +98,24 @@ export function CalculadoraProveedor({
     setError(null);
     if (cant <= 0) { setError("Indica la cantidad."); return; }
     if (costoEfectivo <= 0) { setError("Indica el costo del proveedor."); return; }
-    agregarItemDraft("PROVEEDOR", form, {
-      titulo: form.trabajo.trim() || "Trabajo de proveedor",
-      cantidad: cant, ventaTotal: r.ventaTotal, tipoLabel: "Proveedor",
-    }, { cliente: form.cliente, clienteId: form.clienteId });
+    const resumen = { titulo: form.trabajo.trim() || "Trabajo de proveedor", cantidad: cant, ventaTotal: r.ventaTotal, tipoLabel: "Proveedor" };
+    if (embed) { embed.onAgregar(form, resumen); return; }
+    agregarItemDraft("PROVEEDOR", form, resumen, { cliente: form.cliente, clienteId: form.clienteId });
   }
 
-  // Agrega un volumen del comparador como ítem de la cotización mixta.
-  function volumenACotizacion(cantV: number, ventaTotal: number) {
-    if (n(form.costoUnitario) <= 0) { setError("Indica el costo unitario del proveedor."); return; }
+  // Arma un ítem a partir de un volumen del comparador (mismo trabajo, otro tiraje).
+  function volumenItem(cantV: number, ventaTotal: number) {
     const base = form.trabajo.trim() || "Trabajo de proveedor";
-    agregarItemDraft("PROVEEDOR", { ...form, costoModo: "unitario", cantidad: cantV, editarId: "" }, {
-      titulo: `${base} (${fmtNum(cantV, 0)} u)`, cantidad: cantV, ventaTotal, tipoLabel: "Proveedor",
-    }, { cliente: form.cliente, clienteId: form.clienteId });
+    return {
+      form: { ...form, costoModo: "unitario" as const, cantidad: cantV, editarId: "" },
+      resumen: { titulo: `${base} (${fmtNum(cantV, 0)} u)`, cantidad: cantV, ventaTotal, tipoLabel: "Proveedor" },
+    };
+  }
+  // Agrega uno o varios volúmenes del comparador como ítems.
+  function volumenesACotizacion(items: { form: unknown; resumen: { titulo: string; cantidad: number; ventaTotal: number; tipoLabel: string } }[]) {
+    if (n(form.costoUnitario) <= 0) { setError("Indica el costo unitario del proveedor."); return; }
+    if (embed) { embed.onAgregarVarios(items); return; }
+    for (const it of items) agregarItemDraft("PROVEEDOR", it.form, it.resumen, { cliente: form.cliente, clienteId: form.clienteId });
   }
 
   return (
@@ -230,7 +237,7 @@ export function CalculadoraProveedor({
                                   <td className="ta-r">
                                     <span style={{ display: "inline-flex", gap: 4 }}>
                                       {!on ? <button type="button" className="btn g sm" onClick={() => up("cantidad", p.cant)}>Usar</button> : <span style={{ fontSize: 10, color: "#767D76" }}>actual</span>}
-                                      <button type="button" className="btn g sm" title="Agregar este volumen a la cotización" onClick={() => volumenACotizacion(p.cant, p.ventaTotal)}>＋ cotiz</button>
+                                      <button type="button" className="btn g sm" title="Agregar este volumen como ítem" onClick={() => volumenesACotizacion([volumenItem(p.cant, p.ventaTotal)])}>＋ ítem</button>
                                     </span>
                                   </td>
                                 </tr>
@@ -240,8 +247,8 @@ export function CalculadoraProveedor({
                         </table>
                       </div>
                       <div style={{ marginTop: 8 }}>
-                        <button type="button" className="btn sm" onClick={() => pts.forEach((p) => volumenACotizacion(p.cant, p.ventaTotal))}>
-                          Agregar los {pts.length} volúmenes a la cotización
+                        <button type="button" className="btn sm" onClick={() => volumenesACotizacion(pts.map((p) => volumenItem(p.cant, p.ventaTotal)))}>
+                          Agregar los {pts.length} volúmenes como ítems
                         </button>
                       </div>
                     </>
@@ -338,18 +345,31 @@ export function CalculadoraProveedor({
           ) : null}
           {error ? <div className="warn" style={{ marginTop: 10 }}>{error}</div> : null}
 
-          <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
-            <Save size={14} />{pendiente ? "Guardando…" : form.editarId ? "Guardar cambios" : "Guardar cotización"}
-          </button>
-          {!form.editarId ? (
-            <button type="button" className="btn g w" onClick={agregarACotizacion}>
-              <Plus size={14} />Agregar a la cotización
-            </button>
-          ) : null}
-          <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormProveedor(cfg)); setError(null); }}>
-            <RotateCcw size={13} />Limpiar
-          </button>
-          {!form.editarId ? <PanelBorrador /> : null}
+          {embed ? (
+            <>
+              <button type="button" className="btn w" onClick={agregarACotizacion}>
+                <Plus size={14} />{embed.editando ? "Guardar ítem" : "Agregar ítem"}
+              </button>
+              <button type="button" className="btn g w" onClick={embed.onCancelar}>
+                <RotateCcw size={13} />Cancelar
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
+                <Save size={14} />{pendiente ? "Guardando…" : form.editarId ? "Guardar cambios" : "Guardar cotización"}
+              </button>
+              {!form.editarId ? (
+                <button type="button" className="btn g w" onClick={agregarACotizacion}>
+                  <Plus size={14} />Agregar a la cotización
+                </button>
+              ) : null}
+              <button type="button" className="btn g w" onClick={() => { setForm(nuevoFormProveedor(cfg)); setError(null); }}>
+                <RotateCcw size={13} />Limpiar
+              </button>
+              {!form.editarId ? <PanelBorrador /> : null}
+            </>
+          )}
         </div>
       </div>
     </div>

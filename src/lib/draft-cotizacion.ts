@@ -63,6 +63,25 @@ export function quitarItemDraft(id: string) {
   guardar(d);
 }
 
+/** Reemplaza un ítem del borrador por su id (al editar un ítem ya agregado). */
+export function reemplazarItemDraft(id: string, form: unknown, resumen: DraftResumen) {
+  const d = leerDraft();
+  d.items = d.items.map((x) => (x.id === id ? { ...x, form, resumen } : x));
+  guardar(d);
+}
+
+/**
+ * Contrato de un editor de ítem embebido en el cotizador unificado (Ruta B).
+ * Cada calculadora, en modo embebido, en vez de guardar por su cuenta, entrega
+ * su formulario y su resumen; el cotizador decide si lo agrega o lo reemplaza.
+ */
+export type EmbedCotizador = {
+  editando: boolean; // true = editando un ítem existente ("Guardar ítem")
+  onAgregar: (form: unknown, resumen: DraftResumen) => void; // ítem principal: agrega o reemplaza
+  onAgregarVarios: (items: { form: unknown; resumen: DraftResumen }[]) => void; // volúmenes del comparador: siempre agrega
+  onCancelar: () => void;
+};
+
 export function actualizarMetaDraft(meta: Partial<Draft["meta"]>) {
   const d = leerDraft();
   d.meta = { ...d.meta, ...meta };

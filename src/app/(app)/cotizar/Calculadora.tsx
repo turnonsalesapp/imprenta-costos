@@ -9,7 +9,7 @@ import {
 import { nuevoForm, type FormCotizacion } from "@/lib/cotizacion-form";
 import type { ClienteSimple } from "@/lib/clientes";
 import { guardarCotizacionAction } from "@/app/actions/cotizaciones";
-import { agregarItemDraft } from "@/lib/draft-cotizacion";
+import { agregarItemDraft, type EmbedCotizador } from "@/lib/draft-cotizacion";
 import { PanelInterpretar } from "./PanelInterpretar";
 import { PanelBorrador } from "./PanelBorrador";
 import { F, T, PrecioManual, TarjetaTasas } from "./campos";
@@ -24,6 +24,7 @@ export function Calculadora({
   banner,
   margenMin,
   interpretarHabilitado = false,
+  embed,
 }: {
   cfg: Config;
   clientes: ClienteSimple[];
@@ -31,6 +32,7 @@ export function Calculadora({
   banner?: string;
   margenMin?: number;
   interpretarHabilitado?: boolean;
+  embed?: EmbedCotizador;
 }) {
   // Una cotización tiene uno o varios ÍTEMS. Se edita el ítem activo; los demás
   // se conservan. `setForm` opera sobre el activo, así todo el editor de abajo
@@ -209,23 +211,31 @@ export function Calculadora({
     });
   }
 
-  // Agrega el ítem activo (digital) al borrador de cotización mixta.
+  // Agrega el ítem activo (digital) al borrador de cotización mixta, o —en modo
+  // embebido— lo entrega al cotizador unificado.
   function agregarACotizacion() {
     setError(null);
     if (!form.papelId) { setError("Elige el papel."); return; }
     if (r.cant <= 0) { setError("Indica la cantidad de piezas."); return; }
-    agregarItemDraft("PROPIA", { ...form, editarId: "" }, {
-      titulo: form.trabajo.trim() || "Trabajo digital", cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Digital",
-    }, { cliente: form.cliente, clienteId: form.clienteId });
+    const resumen = { titulo: form.trabajo.trim() || "Trabajo digital", cantidad: r.cant, ventaTotal: r.ventaTotal, tipoLabel: "Digital" };
+    if (embed) { embed.onAgregar({ ...form }, resumen); return; }
+    agregarItemDraft("PROPIA", { ...form, editarId: "" }, resumen, { cliente: form.cliente, clienteId: form.clienteId });
   }
 
-  // Agrega un volumen del comparador como ítem de la cotización mixta.
+  // Arma un ítem a partir de un volumen del comparador (mismo trabajo, otro tiraje).
+  function volumenItemMixto(cant: number, ventaTotal: number) {
+    const base = form.trabajo.trim() || "Trabajo digital";
+    return {
+      form: { ...form, cantidad: cant, editarId: "", trabajoId: "", guardarComoTrabajo: false },
+      resumen: { titulo: `${base} (${fmtNum(cant, 0)} u)`, cantidad: cant, ventaTotal, tipoLabel: "Digital" },
+    };
+  }
+  // Agrega un volumen del comparador como ítem de la cotización mixta (o al cotizador).
   function volumenACotizacion(cant: number, ventaTotal: number) {
     if (!form.papelId) { setError("Elige el papel."); return; }
-    const base = form.trabajo.trim() || "Trabajo digital";
-    agregarItemDraft("PROPIA", { ...form, cantidad: cant, editarId: "", trabajoId: "", guardarComoTrabajo: false }, {
-      titulo: `${base} (${fmtNum(cant, 0)} u)`, cantidad: cant, ventaTotal, tipoLabel: "Digital",
-    }, { cliente: form.cliente, clienteId: form.clienteId });
+    const it = volumenItemMixto(cant, ventaTotal);
+    if (embed) { embed.onAgregarVarios([it]); return; }
+    agregarItemDraft("PROPIA", it.form, it.resumen, { cliente: form.cliente, clienteId: form.clienteId });
   }
 
   return (
@@ -238,23 +248,26 @@ export function Calculadora({
       <div className="grid">
         {/* ─────────────────────── columna izquierda ─────────────────────── */}
         <div>
-          {/* Pestañas de ítems: cada cotización puede tener varios. */}
-          <div className="itemtabs">
-            {items.map((it, i) => (
-              <span key={i} className={i === activo ? "itemtab on" : "itemtab"}>
-                <button type="button" className="itemtab-b" onClick={() => setIdx(i)}
-                  aria-current={i === activo ? "true" : undefined}>
-                  {it.trabajo?.trim() || `Ítem ${i + 1}`}
-                  <span className="mono" style={{ color: "#767D76", marginLeft: 6 }}>{fmtNum(n(it.cantidad), 0)}</span>
-                </button>
-                {items.length > 1 ? (
-                  <button type="button" className="x" aria-label={`Quitar ítem ${i + 1}`}
-                    onClick={() => quitarItem(i)}>×</button>
-                ) : null}
-              </span>
-            ))}
-            <button type="button" className="itemtab-add" onClick={agregarItem}>＋ Ítem</button>
-          </div>
+          {/* Pestañas de ítems: cada cotización puede tener varios. En el cotizador
+              unificado (embed) el ítem es único; la multiplicidad la maneja el carrito. */}
+          {!embed ? (
+            <div className="itemtabs">
+              {items.map((it, i) => (
+                <span key={i} className={i === activo ? "itemtab on" : "itemtab"}>
+                  <button type="button" className="itemtab-b" onClick={() => setIdx(i)}
+                    aria-current={i === activo ? "true" : undefined}>
+                    {it.trabajo?.trim() || `Ítem ${i + 1}`}
+                    <span className="mono" style={{ color: "#767D76", marginLeft: 6 }}>{fmtNum(n(it.cantidad), 0)}</span>
+                  </button>
+                  {items.length > 1 ? (
+                    <button type="button" className="x" aria-label={`Quitar ítem ${i + 1}`}
+                      onClick={() => quitarItem(i)}>×</button>
+                  ) : null}
+                </span>
+              ))}
+              <button type="button" className="itemtab-add" onClick={agregarItem}>＋ Ítem</button>
+            </div>
+          ) : null}
 
           <PanelInterpretar
             habilitado={interpretarHabilitado}
@@ -482,7 +495,10 @@ export function Calculadora({
                         <button type="button" className="btn g sm" onClick={() => up("cantidad", p.cant)}>
                           Usar {fmtNum(p.cant, 0)}
                         </button>
-                        {editando ? (
+                        {embed ? (
+                          <button type="button" className="btn g sm" title="Agregar este volumen como ítem de esta cotización"
+                            onClick={() => embed.onAgregarVarios([volumenItemMixto(p.cant, p.ventaTotal)])}>＋ ítem</button>
+                        ) : editando ? (
                           <button type="button" className="btn g sm" title="Agregar este volumen como ítem de esta cotización"
                             onClick={() => agregarVolumen(p.cant)}>＋ ítem</button>
                         ) : (
@@ -493,7 +509,12 @@ export function Calculadora({
                     ))}
                   </div>
                   <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {editando ? (
+                    {embed ? (
+                      <button type="button" className="btn sm" title="Agregar todos los volúmenes como ítems de esta cotización"
+                        onClick={() => embed.onAgregarVarios(pts.map((p) => volumenItemMixto(p.cant, p.ventaTotal)))}>
+                        Agregar los {pts.length} volúmenes como ítems
+                      </button>
+                    ) : editando ? (
                       <button type="button" className="btn sm" title="Agregar todos los volúmenes como ítems de esta cotización"
                         onClick={() => pts.forEach((p) => agregarVolumen(p.cant))}>
                         Agregar los {pts.length} volúmenes como ítems
@@ -731,7 +752,7 @@ export function Calculadora({
             </div>
           ) : null}
 
-          {items.length === 1 && !form.trabajoId ? (
+          {!embed && items.length === 1 && !form.trabajoId ? (
             <div className="hint" style={{ marginTop: 12, cursor: "pointer" }}
               onClick={() => up("guardarComoTrabajo", !form.guardarComoTrabajo)}>
               <button type="button" className={form.guardarComoTrabajo ? "chk on" : "chk"}
@@ -740,7 +761,7 @@ export function Calculadora({
               </button>
               <span>Guardar también como plantilla</span>
             </div>
-          ) : items.length === 1 && form.trabajoId ? (
+          ) : !embed && items.length === 1 && form.trabajoId ? (
             <div className="hint" style={{ marginTop: 12 }}>
               Esta cotización queda enlazada a la plantilla.
             </div>
@@ -750,21 +771,34 @@ export function Calculadora({
             <div className="warn" style={{ marginTop: 10 }}>{error}</div>
           ) : null}
 
-          <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
-            <Save size={14} />
-            {pendiente
-              ? "Guardando…"
-              : (items[0].editarId ? "Guardar cambios" : "Guardar cotización") + (items.length > 1 ? ` · ${items.length} ítems` : "")}
-          </button>
-          {!items[0].editarId ? (
-            <button type="button" className="btn g w" onClick={agregarACotizacion}>
-              <Plus size={14} />Agregar a la cotización (mixta)
-            </button>
-          ) : null}
-          <button type="button" className="btn g w" onClick={() => { setItems([nuevoForm(cfg)]); setIdx(0); setError(null); }}>
-            <RotateCcw size={13} />Limpiar y empezar otra
-          </button>
-          {!items[0].editarId ? <PanelBorrador /> : null}
+          {embed ? (
+            <>
+              <button type="button" className="btn w" onClick={agregarACotizacion}>
+                <Plus size={14} />{embed.editando ? "Guardar ítem" : "Agregar ítem"}
+              </button>
+              <button type="button" className="btn g w" onClick={embed.onCancelar}>
+                <RotateCcw size={13} />Cancelar
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className="btn w" onClick={guardar} disabled={pendiente}>
+                <Save size={14} />
+                {pendiente
+                  ? "Guardando…"
+                  : (items[0].editarId ? "Guardar cambios" : "Guardar cotización") + (items.length > 1 ? ` · ${items.length} ítems` : "")}
+              </button>
+              {!items[0].editarId ? (
+                <button type="button" className="btn g w" onClick={agregarACotizacion}>
+                  <Plus size={14} />Agregar a la cotización (mixta)
+                </button>
+              ) : null}
+              <button type="button" className="btn g w" onClick={() => { setItems([nuevoForm(cfg)]); setIdx(0); setError(null); }}>
+                <RotateCcw size={13} />Limpiar y empezar otra
+              </button>
+              {!items[0].editarId ? <PanelBorrador /> : null}
+            </>
+          )}
         </div>
       </div>
     </div>
