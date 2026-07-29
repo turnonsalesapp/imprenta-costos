@@ -7,6 +7,8 @@ import { listarMaterialesGF } from "@/lib/materiales-gf";
 import { listarProductosGF } from "@/lib/productos-gf";
 import { listarProductosPop } from "@/lib/productos-pop";
 import { interpretarActivo } from "@/lib/interpretar";
+import { cargarTrabajoEnForm } from "@/lib/trabajos";
+import { nuevoForm } from "@/lib/cotizacion-form";
 import { Cotizador } from "./Cotizador";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +19,11 @@ export const dynamic = "force-dynamic";
  * personalizado), se agrega, y se pueden mezclar tipos y cantidades. Un solo
  * guardado. Editar/copiar cualquier cotización carga sus ítems aquí.
  */
-export default async function CotizacionNuevaPage() {
+export default async function CotizacionNuevaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ trabajo?: string }>;
+}) {
   const usuario = await requireRol("ADMIN", "VENDEDOR");
   const [cfg, clientes, dc, equipos, materialesGF, productosGF, productosPop, interpretarHabilitado] = await Promise.all([
     cargarConfig(), listarClientesSimple(), obtenerConfig(), listarEquipos(),
@@ -28,6 +34,21 @@ export default async function CotizacionNuevaPage() {
     plancha: dc.offPlancha, planchaMedio: dc.offPlanchaMedio, planchaPliego: dc.offPlanchaPliego,
     arranque: dc.offArranque, millar: dc.offMillar, tinta: dc.offTinta,
   };
+
+  // Recotizar desde una plantilla (trabajo repetido): abre el editor digital
+  // ya prellenado con la receta y las tasas de hoy.
+  const sp = await searchParams;
+  let abrirInicial: Parameters<typeof Cotizador>[0]["abrirInicial"] = undefined;
+  if (sp.trabajo) {
+    const t = await cargarTrabajoEnForm(sp.trabajo);
+    if (t) {
+      abrirInicial = {
+        tipo: "PROPIA",
+        form: { ...nuevoForm(cfg), ...t },
+        meta: { cliente: t.cliente ?? "", clienteId: t.clienteId ?? "", trabajo: t.trabajo ?? "" },
+      };
+    }
+  }
 
   return (
     <>
@@ -47,6 +68,7 @@ export default async function CotizacionNuevaPage() {
         ojeteCm={dc.gfOjeteCm}
         margenMin={dc.margenMin}
         interpretarHabilitado={interpretarHabilitado}
+        abrirInicial={abrirInicial}
       />
     </>
   );

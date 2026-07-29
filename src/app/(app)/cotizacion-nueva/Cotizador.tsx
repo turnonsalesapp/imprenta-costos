@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Save, Trash2, X, Plus, Pencil } from "lucide-react";
 import type { TipoCotizacion } from "@prisma/client";
 import { fmtNum, usd, type Config } from "@/lib/calculo";
@@ -10,7 +10,7 @@ import type { MaterialGFItem } from "@/lib/materiales-gf";
 import type { ProductoGFItem } from "@/lib/productos-gf";
 import type { ProductoPopItem } from "@/lib/productos-pop";
 import {
-  useDraft, agregarItemDraft, reemplazarItemDraft, quitarItemDraft,
+  useDraft, leerDraft, agregarItemDraft, reemplazarItemDraft, quitarItemDraft,
   actualizarMetaDraft, vaciarDraft, type EmbedCotizador,
 } from "@/lib/draft-cotizacion";
 import {
@@ -38,6 +38,8 @@ export type DatosCotizador = {
   ojeteCm: number;
   margenMin?: number;
   interpretarHabilitado: boolean;
+  /** Abre un editor ya prellenado al entrar (recotizar desde plantilla). */
+  abrirInicial?: { tipo: TipoCotizacion; form: unknown; meta?: { cliente?: string; clienteId?: string; trabajo?: string } };
 };
 
 const TIPOS: { tipo: TipoCotizacion; label: string; hint: string; color: string }[] = [
@@ -50,14 +52,29 @@ const TIPOS: { tipo: TipoCotizacion; label: string; hint: string; color: string 
 const LABEL_TIPO: Record<string, string> = Object.fromEntries(TIPOS.map((t) => [t.tipo, t.label]));
 
 type Abierto =
-  | { modo: "nuevo"; tipo: TipoCotizacion }
+  | { modo: "nuevo"; tipo: TipoCotizacion; form?: unknown }
   | { modo: "editar"; tipo: TipoCotizacion; itemId: string; form: unknown };
 
 export function Cotizador(d: DatosCotizador) {
   const draft = useDraft();
-  const [abierto, setAbierto] = useState<Abierto | null>(null);
+  const [abierto, setAbierto] = useState<Abierto | null>(
+    d.abrirInicial ? { modo: "nuevo", tipo: d.abrirInicial.tipo, form: d.abrirInicial.form } : null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [pendiente, startTransition] = useTransition();
+
+  // Al entrar desde una plantilla (recotizar), sembramos cliente/título si el
+  // borrador está vacío, para que el ítem quede bajo esa cotización.
+  useEffect(() => {
+    const m = d.abrirInicial?.meta;
+    if (!m) return;
+    const actual = leerDraft();
+    if (actual.items.length === 0 && !actual.meta.editarId && !actual.meta.cliente && !actual.meta.trabajo) {
+      actualizarMetaDraft({ cliente: m.cliente ?? "", clienteId: m.clienteId ?? "", trabajo: m.trabajo ?? "" });
+    }
+    // solo al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const total = draft.items.reduce((s, i) => s + (i.resumen?.ventaTotal ?? 0), 0);
   const editando = !!draft.meta.editarId;
@@ -103,7 +120,7 @@ export function Cotizador(d: DatosCotizador) {
 
   // ─────────────────────── editor de un ítem (embebido) ───────────────────────
   if (abierto && embed) {
-    const form = abierto.modo === "editar" ? abierto.form : formNuevo(abierto.tipo);
+    const form = abierto.modo === "editar" ? abierto.form : (abierto.form ?? formNuevo(abierto.tipo));
     return (
       <div>
         <div className="mb-3 flex items-center justify-between gap-3">

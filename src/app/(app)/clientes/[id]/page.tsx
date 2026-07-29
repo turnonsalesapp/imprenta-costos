@@ -96,7 +96,7 @@ export default async function FichaClientePage({
                       {t.papelNombre ? " · " + t.papelNombre : ""}
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      <Link href={`/cotizar?trabajo=${t.id}`}
+                      <Link href={`/cotizacion-nueva?trabajo=${t.id}`}
                         className="rounded-sm bg-cian px-3 py-1.5 text-xs font-bold text-hoja hover:opacity-90">
                         Recotizar
                       </Link>

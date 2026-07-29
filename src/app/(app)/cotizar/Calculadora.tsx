@@ -280,16 +280,18 @@ export function Calculadora({
             <div className="ch"><b>Datos del trabajo</b></div>
             <div className="cb">
               <div className="rowg c2">
-                <F l="Cliente">
-                  <select className="in" value={form.clienteId} onChange={(e) => elegirCliente(e.target.value)}>
-                    <option value="">— A mano / sin registrar —</option>
-                    {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                  </select>
-                  {form.clienteId === "" ? (
-                    <input className="in" style={{ marginTop: 6 }} type="text" value={form.cliente}
-                      placeholder="Nombre del cliente" onChange={(e) => setCliente(e.target.value)} />
-                  ) : null}
-                </F>
+                {!embed && (
+                  <F l="Cliente">
+                    <select className="in" value={form.clienteId} onChange={(e) => elegirCliente(e.target.value)}>
+                      <option value="">— A mano / sin registrar —</option>
+                      {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    </select>
+                    {form.clienteId === "" ? (
+                      <input className="in" style={{ marginTop: 6 }} type="text" value={form.cliente}
+                        placeholder="Nombre del cliente" onChange={(e) => setCliente(e.target.value)} />
+                    ) : null}
+                  </F>
+                )}
                 <T l="Trabajo" v={form.trabajo} set={(v) => up("trabajo", v)} ph="Ej. Stickers motivacionales" />
               </div>
               <div style={{ marginTop: 10 }}>
