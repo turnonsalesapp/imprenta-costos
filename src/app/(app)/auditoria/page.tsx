@@ -1,5 +1,6 @@
 import { requireRol } from "@/lib/auth";
 import { listarAuditoria } from "@/lib/auditoria";
+import { PageHeader } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -17,14 +18,9 @@ export default async function AuditoriaPage() {
 
   return (
     <>
-      <header>
-        <h1 className="text-lg font-bold tracking-tight">Auditoría</h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">
-          Operaciones sensibles · solo lectura
-        </p>
-      </header>
+      <PageHeader title="Auditoría" eyebrow="Operaciones sensibles · solo lectura" />
 
-      <div className="mt-6 overflow-x-auto rounded-sm border border-regla bg-hoja">
+      <div className="mt-8 overflow-x-auto rounded-sm border border-regla bg-hoja">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-regla bg-suave text-left text-[10px] uppercase tracking-widest text-kraft">

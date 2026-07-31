@@ -5,6 +5,7 @@ import { listarClientesSimple } from "@/lib/clientes";
 import { cargarPersonalizadoEnForm } from "@/lib/cotizaciones";
 import { listarProductosPop } from "@/lib/productos-pop";
 import { nuevoFormPersonalizado, type FormPersonalizado } from "@/lib/cotizacion-form";
+import { PageHeader } from "@/app/_components/ui";
 import { CalculadoraPersonalizado } from "./CalculadoraPersonalizado";
 
 export const dynamic = "force-dynamic";
@@ -45,27 +46,27 @@ export default async function CotizarPersonalizadoPage({
 
   return (
     <>
-      <header className="mb-5">
-        <h1 className="text-lg font-bold tracking-tight">
-          {modo === "editar" ? "Editar cotización personalizada" : "Cotización de personalizados"}
-        </h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">Material POP tercerizado · chapas, llaveros, DTF, sublimación, láser</p>
-      </header>
+      <PageHeader
+        title={modo === "editar" ? "Editar cotización personalizada" : "Cotización de personalizados"}
+        eyebrow="Material POP tercerizado · chapas, llaveros, DTF, sublimación, láser"
+      />
 
-      {productos.length === 0 ? (
-        <div className="rounded-sm border border-regla bg-hoja px-4 py-8 text-center text-sm text-kraft">
-          No hay productos personalizados cargados. Un administrador los agrega en <b>Variables</b>.
-        </div>
-      ) : (
-        <CalculadoraPersonalizado
-          cfg={cfg}
-          clientes={clientes}
-          productos={productos}
-          formInicial={formInicial}
-          banner={banners[modo]}
-          margenMin={dc.margenMin}
-        />
-      )}
+      <div className="mt-8">
+        {productos.length === 0 ? (
+          <div className="rounded-sm border border-regla bg-hoja px-4 py-8 text-center text-sm text-kraft">
+            No hay productos personalizados cargados. Un administrador los agrega en <b>Variables</b>.
+          </div>
+        ) : (
+          <CalculadoraPersonalizado
+            cfg={cfg}
+            clientes={clientes}
+            productos={productos}
+            formInicial={formInicial}
+            banner={banners[modo]}
+            margenMin={dc.margenMin}
+          />
+        )}
+      </div>
     </>
   );
 }

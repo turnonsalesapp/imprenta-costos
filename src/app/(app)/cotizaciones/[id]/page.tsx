@@ -9,6 +9,7 @@ import { BotonEliminar } from "@/app/_components/BotonEliminar";
 import { fmtNum, usd } from "@/lib/calculo";
 import { EstadoBadge } from "../EstadoBadge";
 import { CargarCotizadorBtn } from "./CargarCotizadorBtn";
+import { PageHeader } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -41,54 +42,53 @@ export default async function DetalleCotizacion({
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4">
-        <Link href="/cotizaciones" className="text-sm text-kraft hover:text-tinta">← Cotizaciones</Link>
-        <div className="flex items-center gap-2">
-          {puedeCargar && cargaEditar && cargaEditar.items.length > 0 && (
-            <CargarCotizadorBtn carga={cargaEditar} accion="editar" />
-          )}
-          {puedeCargar && cargaCopia && cargaCopia.items.length > 0 && (
-            <CargarCotizadorBtn carga={cargaCopia} accion="copia" />
-          )}
-          <Link href={`/cotizaciones/${c.id}/imprimir`}
-            className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
-            Imprimir / PDF
-          </Link>
-          {puedeBorrar && (
-            <BotonEliminar
-              accion={eliminarCotizacionAction}
-              id={c.id}
-              texto="Eliminar"
-              confirmacion="¿Eliminar este borrador? No se puede deshacer."
-            />
-          )}
-          <EstadoBadge estado={c.estado} />
-        </div>
-      </div>
-
-      <header className="mt-3">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">
+      <PageHeader
+        back={{ href: "/cotizaciones", label: "Cotizaciones" }}
+        eyebrow={
+          <span className="flex items-center gap-2">
             {ov ? "Orden de Venta" : "Cotización"}
+            {ov && (
+              <span className="rounded-sm bg-[#EDF9F1] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-exito">
+                Aprobada
+              </span>
+            )}
           </span>
-          {ov && (
-            <span className="rounded-sm bg-[#EDF9F1] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-exito">
-              Aprobada
-            </span>
-          )}
-        </div>
-        <h1 className="text-lg font-bold tracking-tight">
-          {c.titulo}{" "}
-          <span className="font-mono text-sm font-normal text-kraft">N° {c.numero}</span>
-        </h1>
-        <p className="mt-0.5 text-sm text-kraft">
-          {c.clienteNombre ? c.clienteNombre + " · " : ""}
-          {c.creadaEn.toLocaleDateString("es-VE")}
-          {c.autor ? " · " + c.autor : ""}
-        </p>
-      </header>
+        }
+        title={
+          <>
+            {c.titulo}{" "}
+            <span className="font-mono text-sm font-normal text-kraft">N° {c.numero}</span>
+          </>
+        }
+      >
+        {puedeCargar && cargaEditar && cargaEditar.items.length > 0 && (
+          <CargarCotizadorBtn carga={cargaEditar} accion="editar" />
+        )}
+        {puedeCargar && cargaCopia && cargaCopia.items.length > 0 && (
+          <CargarCotizadorBtn carga={cargaCopia} accion="copia" />
+        )}
+        <Link href={`/cotizaciones/${c.id}/imprimir`}
+          className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
+          Imprimir / PDF
+        </Link>
+        {puedeBorrar && (
+          <BotonEliminar
+            accion={eliminarCotizacionAction}
+            id={c.id}
+            texto="Eliminar"
+            confirmacion="¿Eliminar este borrador? No se puede deshacer."
+          />
+        )}
+        <EstadoBadge estado={c.estado} />
+      </PageHeader>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_320px]">
+      <p className="mt-3 text-sm text-kraft">
+        {c.clienteNombre ? c.clienteNombre + " · " : ""}
+        {c.creadaEn.toLocaleDateString("es-VE")}
+        {c.autor ? " · " + c.autor : ""}
+      </p>
+
+      <div className="mt-8 grid gap-5 lg:grid-cols-[1fr_320px]">
         {/* Desglose congelado, por ítem */}
         <div className="space-y-4">
           {c.items.map((it, ii) => (

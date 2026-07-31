@@ -9,6 +9,7 @@ import { tiposQuePuedeCotizar, puedeCotizar, puedeEliminarCotizaciones } from "@
 import { EstadoBadge } from "./EstadoBadge";
 import { TipoBadges } from "./TipoBadges";
 import { AccionesFila } from "./AccionesFila";
+import { PageHeader, EmptyState } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -37,25 +38,20 @@ export default async function CotizacionesPage({
 
   return (
     <>
-      <header className="flex items-baseline justify-between gap-4">
-        <div>
-          <h1 className="text-lg font-bold tracking-tight">Cotizaciones</h1>
-          <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">
-            {filas.length} {filas.length === 1 ? "registro" : "registros"}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {puedeCotizar(usuario) && (
-            <Link href="/cotizacion-nueva"
-              className="rounded-sm bg-tinta px-3 py-2 text-sm font-bold text-hoja hover:opacity-90">
-              Nueva cotización
-            </Link>
-          )}
-        </div>
-      </header>
+      <PageHeader
+        title="Cotizaciones"
+        eyebrow={`${filas.length} ${filas.length === 1 ? "registro" : "registros"}`}
+      >
+        {puedeCotizar(usuario) && (
+          <Link href="/cotizacion-nueva"
+            className="rounded-sm bg-tinta px-3 py-2 text-sm font-bold text-hoja hover:opacity-90">
+            Nueva cotización
+          </Link>
+        )}
+      </PageHeader>
 
       {/* Buscador + filtro por estado (GET, sin JS) */}
-      <form method="get" className="mt-5 flex flex-wrap items-end gap-2">
+      <form method="get" className="mt-8 flex flex-wrap items-end gap-2">
         <label className="block">
           <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Buscar</span>
           <input
@@ -95,16 +91,11 @@ export default async function CotizacionesPage({
       </form>
 
       {filas.length === 0 ? (
-        <div className="mt-6 rounded-sm border border-regla bg-hoja px-4 py-12 text-center">
-          <b className="block text-sm">
-            {q || estado ? "Ningún resultado" : "Todavía no hay cotizaciones"}
-          </b>
-          <p className="mt-1 text-sm text-kraft">
-            {q || estado
-              ? "Prueba con otro término o quita el filtro."
-              : "Calcula un trabajo y guárdalo para empezar tu histórico."}
-          </p>
-        </div>
+        <EmptyState title={q || estado ? "Ningún resultado" : "Todavía no hay cotizaciones"}>
+          {q || estado
+            ? "Prueba con otro término o quita el filtro."
+            : "Calcula un trabajo y guárdalo para empezar tu histórico."}
+        </EmptyState>
       ) : (
         <div className="mt-4 overflow-x-auto rounded-sm border border-regla bg-hoja">
           <table className="w-full text-sm">

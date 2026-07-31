@@ -9,6 +9,7 @@ import { BotonEliminar } from "@/app/_components/BotonEliminar";
 import { fmtNum, usd } from "@/lib/calculo";
 import { EstadoBadge } from "../../cotizaciones/EstadoBadge";
 import { ClienteForm } from "../ClienteForm";
+import { PageHeader, SectionTitle, EmptyState } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -26,39 +27,32 @@ export default async function FichaClientePage({
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4">
-        <Link href="/clientes" className="text-sm text-kraft hover:text-tinta">← Clientes</Link>
+      <PageHeader title={c.nombre} back={{ href: "/clientes", label: "Clientes" }}>
         <span className={c.activo ? "text-xs font-medium text-exito" : "text-xs font-medium text-kraft"}>
           {c.activo ? "Activo" : "Inactivo"}
         </span>
-      </div>
-
-      <header className="mt-3 flex items-baseline justify-between gap-4">
-        <h1 className="text-lg font-bold tracking-tight">{c.nombre}</h1>
-        <div className="flex gap-2">
-          <Link href="/cotizacion-nueva" className="rounded-sm bg-tinta px-3 py-1.5 text-sm font-bold text-hoja hover:opacity-90">
-            Cotizar
-          </Link>
-          <form action={alternarActivoClienteAction}>
-            <input type="hidden" name="id" value={c.id} />
-            <button type="submit" className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium text-kraft hover:border-tinta hover:text-tinta">
-              {c.activo ? "Desactivar" : "Activar"}
-            </button>
-          </form>
-          {puedeBorrar && (
-            <BotonEliminar
-              accion={eliminarClienteAction}
-              id={c.id}
-              texto="Eliminar"
-              confirmacion="¿Eliminar este cliente? Solo se permite porque no tiene histórico."
-            />
-          )}
-        </div>
-      </header>
+        <Link href="/cotizacion-nueva" className="rounded-sm bg-tinta px-3 py-1.5 text-sm font-bold text-hoja hover:opacity-90">
+          Cotizar
+        </Link>
+        <form action={alternarActivoClienteAction}>
+          <input type="hidden" name="id" value={c.id} />
+          <button type="submit" className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium text-kraft hover:border-tinta hover:text-tinta">
+            {c.activo ? "Desactivar" : "Activar"}
+          </button>
+        </form>
+        {puedeBorrar && (
+          <BotonEliminar
+            accion={eliminarClienteAction}
+            id={c.id}
+            texto="Eliminar"
+            confirmacion="¿Eliminar este cliente? Solo se permite porque no tiene histórico."
+          />
+        )}
+      </PageHeader>
 
       {/* Datos editables */}
-      <section className="mt-6">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">Datos del cliente</h2>
+      <section className="mt-8">
+        <SectionTitle>Datos del cliente</SectionTitle>
         <ClienteForm
           modo="editar"
           initial={{
@@ -69,14 +63,12 @@ export default async function FichaClientePage({
       </section>
 
       {/* Plantillas (trabajos repetibles) */}
-      <section className="mt-8">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
-          Plantillas
-        </h2>
+      <section className="mt-6">
+        <SectionTitle>Plantillas</SectionTitle>
         {c.trabajos.length === 0 ? (
-          <p className="rounded-sm border border-regla bg-hoja px-4 py-6 text-center text-sm text-kraft">
-            Sin plantillas guardadas. Al cotizar, marca “guardar también como plantilla”.
-          </p>
+          <EmptyState title="Sin plantillas guardadas">
+            Al cotizar, marca “guardar también como plantilla”.
+          </EmptyState>
         ) : (
           <div className="overflow-x-auto rounded-sm border border-regla bg-hoja">
             <table className="w-full text-sm">
@@ -110,14 +102,10 @@ export default async function FichaClientePage({
       </section>
 
       {/* Histórico de cotizaciones */}
-      <section className="mt-8">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
-          Cotizaciones ({c.cotizaciones.length})
-        </h2>
+      <section className="mt-6">
+        <SectionTitle>Cotizaciones ({c.cotizaciones.length})</SectionTitle>
         {c.cotizaciones.length === 0 ? (
-          <p className="rounded-sm border border-regla bg-hoja px-4 py-6 text-center text-sm text-kraft">
-            Todavía no le has cotizado nada a este cliente.
-          </p>
+          <EmptyState title="Todavía no le has cotizado nada a este cliente" />
         ) : (
           <div className="overflow-x-auto rounded-sm border border-regla bg-hoja">
             <table className="w-full text-sm">

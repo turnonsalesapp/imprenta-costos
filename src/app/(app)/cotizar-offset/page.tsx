@@ -5,6 +5,7 @@ import { listarClientesSimple } from "@/lib/clientes";
 import { cargarOffsetEnForm } from "@/lib/cotizaciones";
 import { listarEquipos } from "@/lib/equipos";
 import { nuevoFormOffset, type FormOffset } from "@/lib/cotizacion-form";
+import { PageHeader } from "@/app/_components/ui";
 import { CalculadoraOffset } from "./CalculadoraOffset";
 
 export const dynamic = "force-dynamic";
@@ -49,28 +50,28 @@ export default async function CotizarOffsetPage({
 
   return (
     <>
-      <header className="mb-5">
-        <h1 className="text-lg font-bold tracking-tight">
-          {modo === "editar" ? "Editar cotización offset" : "Cotización de offset"}
-        </h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">Producción propia · planchas + arranque + tiraje por millar</p>
-      </header>
+      <PageHeader
+        title={modo === "editar" ? "Editar cotización offset" : "Cotización de offset"}
+        eyebrow="Producción propia · planchas + arranque + tiraje por millar"
+      />
 
-      {cfg.papeles.length === 0 ? (
-        <div className="rounded-sm border border-regla bg-hoja px-4 py-8 text-center text-sm text-kraft">
-          No hay papeles cargados. Un administrador los agrega en <b>Variables</b>.
-        </div>
-      ) : (
-        <CalculadoraOffset
-          cfg={cfg}
-          clientes={clientes}
-          equipos={equipos}
-          offDefaults={offDefaults}
-          formInicial={formInicial}
-          banner={banners[modo]}
-          margenMin={dc.margenMin}
-        />
-      )}
+      <div className="mt-8">
+        {cfg.papeles.length === 0 ? (
+          <div className="rounded-sm border border-regla bg-hoja px-4 py-8 text-center text-sm text-kraft">
+            No hay papeles cargados. Un administrador los agrega en <b>Variables</b>.
+          </div>
+        ) : (
+          <CalculadoraOffset
+            cfg={cfg}
+            clientes={clientes}
+            equipos={equipos}
+            offDefaults={offDefaults}
+            formInicial={formInicial}
+            banner={banners[modo]}
+            margenMin={dc.margenMin}
+          />
+        )}
+      </div>
     </>
   );
 }

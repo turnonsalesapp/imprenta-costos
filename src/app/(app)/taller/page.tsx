@@ -4,6 +4,7 @@ import { tablero, type OrdenProd } from "@/lib/ordenes";
 import { fmtNum } from "@/lib/calculo";
 import { EtapaToggle } from "./EtapaToggle";
 import { OrdenBadge } from "./OrdenBadge";
+import { PageHeader, EmptyState } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -22,22 +23,17 @@ export default async function TallerPage() {
 
   return (
     <>
-      <header>
-        <h1 className="text-lg font-bold tracking-tight">Taller</h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">
-          {ordenes.length} {ordenes.length === 1 ? "trabajo activo" : "trabajos activos"}
-        </p>
-      </header>
+      <PageHeader
+        title="Taller"
+        eyebrow={`${ordenes.length} ${ordenes.length === 1 ? "trabajo activo" : "trabajos activos"}`}
+      />
 
       {ordenes.length === 0 ? (
-        <div className="mt-6 rounded-sm border border-regla bg-hoja px-4 py-12 text-center">
-          <b className="block text-sm">No hay trabajos en producción</b>
-          <p className="mt-1 text-sm text-kraft">
-            Los trabajos aparecen aquí al generarse desde una Orden de Venta (cotización aprobada).
-          </p>
-        </div>
+        <EmptyState title="No hay trabajos en producción">
+          Los trabajos aparecen aquí al generarse desde una Orden de Venta (cotización aprobada).
+        </EmptyState>
       ) : (
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {ordenes.map((o) => {
             const listas = o.etapas.filter((e) => e.estado === "LISTA" || e.estado === "OMITIDA").length;
             const tarde = atrasada(o);

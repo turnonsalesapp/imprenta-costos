@@ -7,6 +7,7 @@ import { fmtNum } from "@/lib/calculo";
 import { EtapaToggle } from "../EtapaToggle";
 import { OrdenBadge } from "../OrdenBadge";
 import { BotonImprimir } from "./BotonImprimir";
+import { SectionTitle } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -157,7 +158,7 @@ export default async function OrdenPage({
         <div className="no-print mt-5 grid gap-4 sm:grid-cols-2">
           <form action={actualizarOrdenAction} className="rounded-sm border border-regla bg-hoja p-4">
             <input type="hidden" name="id" value={o.id} />
-            <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">Entrega e instrucciones</h2>
+            <SectionTitle>Entrega e instrucciones</SectionTitle>
             <label className="block">
               <span className="text-[11px] text-kraft">Fecha de entrega</span>
               <input type="date" name="fecha" defaultValue={fechaValor}
@@ -175,7 +176,7 @@ export default async function OrdenPage({
 
           <form action={cambiarEstadoOrdenAction} className="h-fit rounded-sm border border-regla bg-hoja p-4">
             <input type="hidden" name="id" value={o.id} />
-            <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">Estado de la orden</h2>
+            <SectionTitle>Estado de la orden</SectionTitle>
             <div className="flex gap-2">
               <select name="estado" defaultValue={o.estado}
                 className="flex-1 rounded-sm border border-regla bg-white px-2 py-1.5 text-sm outline-none focus:border-cian">

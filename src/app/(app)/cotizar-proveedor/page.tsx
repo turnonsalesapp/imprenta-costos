@@ -4,6 +4,7 @@ import { obtenerConfig } from "@/lib/variables";
 import { listarClientesSimple } from "@/lib/clientes";
 import { cargarProveedorEnForm } from "@/lib/cotizaciones";
 import { nuevoFormProveedor, type FormProveedor } from "@/lib/cotizacion-form";
+import { PageHeader } from "@/app/_components/ui";
 import { CalculadoraProveedor } from "./CalculadoraProveedor";
 
 export const dynamic = "force-dynamic";
@@ -43,20 +44,20 @@ export default async function CotizarProveedorPage({
 
   return (
     <>
-      <header className="mb-5">
-        <h1 className="text-lg font-bold tracking-tight">
-          {modo === "editar" ? "Editar cotización de proveedor" : "Cotización de proveedor"}
-        </h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">Trabajo tercerizado</p>
-      </header>
-
-      <CalculadoraProveedor
-        cfg={cfg}
-        clientes={clientes}
-        formInicial={formInicial}
-        banner={banners[modo]}
-        margenMin={dc.margenMin}
+      <PageHeader
+        title={modo === "editar" ? "Editar cotización de proveedor" : "Cotización de proveedor"}
+        eyebrow="Trabajo tercerizado"
       />
+
+      <div className="mt-8">
+        <CalculadoraProveedor
+          cfg={cfg}
+          clientes={clientes}
+          formInicial={formInicial}
+          banner={banners[modo]}
+          margenMin={dc.margenMin}
+        />
+      </div>
     </>
   );
 }

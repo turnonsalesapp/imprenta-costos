@@ -1,6 +1,7 @@
 import { requireRol } from "@/lib/auth";
 import { consumoPapelPorMes, type FilaConsumo } from "@/lib/consumo";
 import { fmtNum } from "@/lib/calculo";
+import { PageHeader, EmptyState } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -24,29 +25,21 @@ export default async function ConsumoPage() {
 
   return (
     <>
-      <header>
-        <h1 className="text-lg font-bold tracking-tight">Consumo de papel</h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">
-          Por mes · cotizaciones aprobadas
-        </p>
-      </header>
+      <PageHeader title="Consumo de papel" eyebrow="Por mes · cotizaciones aprobadas" />
 
       {meses.length === 0 ? (
-        <div className="mt-6 rounded-sm border border-regla bg-hoja px-4 py-12 text-center">
-          <b className="block text-sm">Todavía no hay consumo que reportar</b>
-          <p className="mt-1 text-sm text-kraft">
-            Aparece aquí cuando haya cotizaciones en estado Aprobada.
-          </p>
-        </div>
+        <EmptyState title="Todavía no hay consumo que reportar">
+          Aparece aquí cuando haya cotizaciones en estado Aprobada.
+        </EmptyState>
       ) : (
-        <div className="mt-5 space-y-6">
+        <div className="mt-8 space-y-6">
           {meses.map((g) => {
             const totalPliegos = g.filas.reduce((s, f) => s + f.pliegos, 0);
             return (
               <section key={g.mes} className="overflow-x-auto rounded-sm border border-regla bg-hoja">
                 <div className="flex items-baseline justify-between border-b border-regla bg-suave px-4 py-2">
                   <span className="text-[11px] font-bold uppercase tracking-widest">{nombreMes(g.mes)}</span>
-                  <span className="font-mono text-[12px] text-kraft">
+                  <span className="tabular font-mono text-[12px] text-kraft">
                     {fmtNum(totalPliegos, 0)} pliegos en total
                   </span>
                 </div>
@@ -62,8 +55,8 @@ export default async function ConsumoPage() {
                     {g.filas.map((f) => (
                       <tr key={f.papel} className="hover:bg-suave">
                         <td className="px-4 py-2">{f.papel}</td>
-                        <td className="px-4 py-2 text-right font-mono text-kraft">{fmtNum(f.cortes, 1)}</td>
-                        <td className="px-4 py-2 text-right font-mono font-bold">{fmtNum(f.pliegos, 0)}</td>
+                        <td className="tabular px-4 py-2 text-right font-mono text-kraft">{fmtNum(f.cortes, 1)}</td>
+                        <td className="tabular px-4 py-2 text-right font-mono font-bold">{fmtNum(f.pliegos, 0)}</td>
                       </tr>
                     ))}
                   </tbody>

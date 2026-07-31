@@ -6,6 +6,7 @@ import { cargarTrabajoEnForm } from "@/lib/trabajos";
 import { cargarCotizacionEnForm } from "@/lib/cotizaciones";
 import { interpretarActivo } from "@/lib/interpretar";
 import { nuevoForm, type FormCotizacion } from "@/lib/cotizacion-form";
+import { PageHeader } from "@/app/_components/ui";
 import { Calculadora } from "./Calculadora";
 
 export const dynamic = "force-dynamic";
@@ -57,19 +58,18 @@ export default async function CotizarPage({
 
   return (
     <>
-      <header className="mb-5">
-        <h1 className="text-lg font-bold tracking-tight">{titulos[modo]}</h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">Impresión digital · producción propia</p>
-      </header>
+      <PageHeader title={titulos[modo]} eyebrow="Impresión digital · producción propia" />
 
-      <Calculadora
-        cfg={cfg}
-        clientes={clientes}
-        itemsIniciales={itemsIniciales}
-        banner={banners[modo]}
-        margenMin={dc.margenMin}
-        interpretarHabilitado={interpretarHabilitado}
-      />
+      <div className="mt-8">
+        <Calculadora
+          cfg={cfg}
+          clientes={clientes}
+          itemsIniciales={itemsIniciales}
+          banner={banners[modo]}
+          margenMin={dc.margenMin}
+          interpretarHabilitado={interpretarHabilitado}
+        />
+      </div>
     </>
   );
 }

@@ -19,7 +19,7 @@ export default async function LoginPage() {
       <h1 className="mt-6 text-xl font-bold tracking-tight">
         Costos y precios de producción
       </h1>
-      <p className="mt-1 text-xs uppercase tracking-widest text-kraft">
+      <p className="mt-1.5 text-[10px] font-bold uppercase tracking-widest text-kraft">
         Entrar al sistema
       </p>
 

@@ -24,6 +24,7 @@ import { CrearProductoPopForm } from "./CrearProductoPopForm";
 import { CrearEquipoForm } from "./CrearEquipoForm";
 import { BotonTasas } from "./BotonTasas";
 import { MembreteForm } from "./MembreteForm";
+import { PageHeader, SectionTitle } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -41,27 +42,24 @@ export default async function VariablesPage() {
 
   return (
     <>
-      <header>
-        <h1 className="text-lg font-bold tracking-tight">Variables</h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">Del negocio · solo administración</p>
-      </header>
+      <PageHeader title="Variables" eyebrow="Del negocio · solo administración" />
 
       {/* Valores por defecto */}
-      <section className="mt-6">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">Valores por defecto</h2>
+      <section className="mt-8">
+        <SectionTitle>Valores por defecto</SectionTitle>
         <BotonTasas />
         <ConfigForm cfg={cfg} />
       </section>
 
       {/* Membrete */}
       <section className="mt-6">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">Membrete de la cotización</h2>
+        <SectionTitle>Membrete de la cotización</SectionTitle>
         <MembreteForm m={membrete} />
       </section>
 
       {/* Histórico de tasas */}
       <section className="mt-6">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">Últimas tasas registradas</h2>
+        <SectionTitle>Últimas tasas registradas</SectionTitle>
         <div className="overflow-x-auto rounded-sm border border-regla bg-hoja">
           <table className="w-full text-sm">
             <thead>
@@ -91,10 +89,10 @@ export default async function VariablesPage() {
       </section>
 
       {/* Acabados — agrupados en bloques por tipo de impresión (digital / offset) */}
-      <section className="mt-8">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+      <section className="mt-6">
+        <SectionTitle>
           Acabados <span className="normal-case text-kraft">· tarifa base para 1/4 de pliego · en bloques por tipo de impresión</span>
-        </h2>
+        </SectionTitle>
         <div className="rounded-sm border border-regla bg-hoja">
           {(["digital", "offset"] as const).map((mod) => {
             const grupo = acabados.filter((a) => (a.modulo === "offset" ? "offset" : "digital") === mod);
@@ -126,10 +124,10 @@ export default async function VariablesPage() {
       </section>
 
       {/* Papeles */}
-      <section className="mt-8">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+      <section className="mt-6">
+        <SectionTitle>
           Papeles <span className="normal-case text-kraft">· {papeles.length} referencias</span>
-        </h2>
+        </SectionTitle>
         <div className="rounded-sm border border-regla bg-hoja">
           <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
             <span className="flex-1">Referencia</span>
@@ -169,10 +167,10 @@ export default async function VariablesPage() {
       </section>
 
       {/* Materiales de gran formato */}
-      <section className="mt-8">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+      <section className="mt-6">
+        <SectionTitle>
           Gran formato <span className="normal-case text-kraft">· {materialesGF.length} materiales · costo por m²</span>
-        </h2>
+        </SectionTitle>
         <div className="rounded-sm border border-regla bg-hoja">
           <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
             <span className="flex-1">Material</span>
@@ -215,10 +213,10 @@ export default async function VariablesPage() {
       </section>
 
       {/* Productos terminados de gran formato */}
-      <section className="mt-8">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+      <section className="mt-6">
+        <SectionTitle>
           Gran formato · productos <span className="normal-case text-kraft">· {productosGF.length} productos · costo por unidad</span>
-        </h2>
+        </SectionTitle>
         <div className="rounded-sm border border-regla bg-hoja">
           <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
             <span className="flex-1">Producto</span>
@@ -255,10 +253,10 @@ export default async function VariablesPage() {
       </section>
 
       {/* Personalizados / Material POP */}
-      <section className="mt-8">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+      <section className="mt-6">
+        <SectionTitle>
           Personalizados <span className="normal-case text-kraft">· {productosPop.length} productos · Material POP (chapas, llaveros, DTF…)</span>
-        </h2>
+        </SectionTitle>
         <div className="rounded-sm border border-regla bg-hoja">
           <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
             <span className="flex-1">Producto</span>
@@ -307,10 +305,10 @@ export default async function VariablesPage() {
       </section>
 
       {/* Equipos (prensas offset) */}
-      <section className="mt-8">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+      <section className="mt-6">
+        <SectionTitle>
           Equipos <span className="normal-case text-kraft">· {equipos.length} equipos · prensas (colores por pasada)</span>
-        </h2>
+        </SectionTitle>
         <div className="rounded-sm border border-regla bg-hoja">
           <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
             <span className="flex-1">Equipo</span>

@@ -6,6 +6,7 @@ import { CrearUsuarioForm } from "./CrearUsuarioForm";
 import { SelectorRol } from "./SelectorRol";
 import { SelectorInterpretar } from "./SelectorInterpretar";
 import { PermisosCotizar } from "./PermisosCotizar";
+import { PageHeader } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -27,14 +28,9 @@ export default async function UsuariosPage() {
 
   return (
     <>
-      <header>
-        <h1 className="text-lg font-bold tracking-tight">Usuarios</h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">
-          Acceso y roles
-        </p>
-      </header>
+      <PageHeader title="Usuarios" eyebrow="Acceso y roles" />
 
-      <div className="mt-6">
+      <div className="mt-8">
         <CrearUsuarioForm />
       </div>
 

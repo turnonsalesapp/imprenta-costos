@@ -3,6 +3,7 @@ import { listarInventario, movimientosRecientes } from "@/lib/inventario";
 import { ajusteAction, stockMinAction } from "@/app/actions/inventario";
 import { fmtNum } from "@/lib/calculo";
 import { EntradaForm } from "./EntradaForm";
+import { PageHeader, SectionTitle } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -26,29 +27,24 @@ export default async function InventarioPage() {
 
   return (
     <>
-      <header>
-        <h1 className="text-lg font-bold tracking-tight">Inventario de papel</h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">
-          En pliegos completos · baja al terminar cada orden
-        </p>
-      </header>
+      <PageHeader title="Inventario de papel" eyebrow="En pliegos completos · baja al terminar cada orden" />
 
       {bajos.length > 0 && (
-        <div className="mt-4 rounded-sm border border-[#E8B4B4] bg-[#FDEDED] px-4 py-2 text-sm text-[#8A1C1C]">
+        <div className="mt-6 rounded-sm border border-[#E8B4B4] bg-[#FDEDED] px-4 py-2 text-sm text-[#8A1C1C]">
           <b>{bajos.length}</b> {bajos.length === 1 ? "papel está" : "papeles están"} bajo el mínimo:{" "}
           {bajos.map((p) => p.nombre).join(", ")}.
         </div>
       )}
 
       {/* Registrar entrada de compra */}
-      <section className="mt-5">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">Registrar entrada</h2>
+      <section className="mt-8">
+        <SectionTitle>Registrar entrada</SectionTitle>
         <EntradaForm papeles={papeles.map((p) => ({ id: p.id, nombre: p.nombre }))} />
       </section>
 
       {/* Stock por papel */}
       <section className="mt-6">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">Stock actual</h2>
+        <SectionTitle>Stock actual</SectionTitle>
         <div className="rounded-sm border border-regla bg-hoja">
           <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
             <span className="flex-1">Papel</span>
@@ -69,7 +65,7 @@ export default async function InventarioPage() {
                       {p.nombre}
                       {p.bajo && <span className="ml-2 text-[10px] font-bold uppercase text-[#C0563B]">bajo</span>}
                     </span>
-                    <span className={`w-24 text-right font-mono text-sm font-bold ${p.bajo ? "text-[#C0563B]" : ""}`}>
+                    <span className={`tabular w-24 text-right font-mono text-sm font-bold ${p.bajo ? "text-[#C0563B]" : ""}`}>
                       {fmtNum(p.stock, 0)}
                     </span>
                     <form action={stockMinAction} className="flex w-40 items-center gap-1">
@@ -92,7 +88,7 @@ export default async function InventarioPage() {
 
       {/* Movimientos recientes */}
       <section className="mt-6">
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">Movimientos recientes</h2>
+        <SectionTitle>Movimientos recientes</SectionTitle>
         <div className="overflow-x-auto rounded-sm border border-regla bg-hoja">
           <table className="w-full text-sm">
             <thead>
@@ -115,10 +111,10 @@ export default async function InventarioPage() {
                   </td>
                   <td className="px-4 py-2">{m.papel}</td>
                   <td className="px-4 py-2">{ETIQUETA_MOV[m.tipo] ?? m.tipo}</td>
-                  <td className={`px-4 py-2 text-right font-mono ${m.cantidad < 0 ? "text-[#C0563B]" : "text-exito"}`}>
+                  <td className={`tabular px-4 py-2 text-right font-mono ${m.cantidad < 0 ? "text-[#C0563B]" : "text-exito"}`}>
                     {m.cantidad > 0 ? "+" : ""}{fmtNum(m.cantidad, 0)}
                   </td>
-                  <td className="px-4 py-2 text-right font-mono">{fmtNum(m.saldo, 0)}</td>
+                  <td className="tabular px-4 py-2 text-right font-mono">{fmtNum(m.saldo, 0)}</td>
                   <td className="px-4 py-2 text-[13px] text-kraft">{m.motivo ?? "—"}</td>
                 </tr>
               ))}

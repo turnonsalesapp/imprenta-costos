@@ -10,6 +10,7 @@ import { interpretarActivo } from "@/lib/interpretar";
 import { cargarTrabajoEnForm } from "@/lib/trabajos";
 import { nuevoForm } from "@/lib/cotizacion-form";
 import { tiposQuePuedeCotizar } from "@/lib/roles";
+import { PageHeader } from "@/app/_components/ui";
 import { Cotizador } from "./Cotizador";
 
 export const dynamic = "force-dynamic";
@@ -54,25 +55,24 @@ export default async function CotizacionNuevaPage({
 
   return (
     <>
-      <header className="mb-5">
-        <h1 className="text-lg font-bold tracking-tight">Nueva cotización</h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">Un solo documento · ítems de cualquier tipo</p>
-      </header>
-      <Cotizador
-        cfg={cfg}
-        clientes={clientes}
-        equipos={equipos}
-        materialesGF={materialesGF}
-        productosGF={productosGF}
-        productosPop={productosPop}
-        offDefaults={offDefaults}
-        ojeteCosto={dc.gfOjeteCosto}
-        ojeteCm={dc.gfOjeteCm}
-        margenMin={dc.margenMin}
-        interpretarHabilitado={interpretarHabilitado}
-        tiposPermitidos={tiposPermitidos}
-        abrirInicial={abrirInicial}
-      />
+      <PageHeader title="Nueva cotización" eyebrow="Un solo documento · ítems de cualquier tipo" />
+      <div className="mt-8">
+        <Cotizador
+          cfg={cfg}
+          clientes={clientes}
+          equipos={equipos}
+          materialesGF={materialesGF}
+          productosGF={productosGF}
+          productosPop={productosPop}
+          offDefaults={offDefaults}
+          ojeteCosto={dc.gfOjeteCosto}
+          ojeteCm={dc.gfOjeteCm}
+          margenMin={dc.margenMin}
+          interpretarHabilitado={interpretarHabilitado}
+          tiposPermitidos={tiposPermitidos}
+          abrirInicial={abrirInicial}
+        />
+      </div>
     </>
   );
 }
