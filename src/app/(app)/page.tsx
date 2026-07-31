@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUsuario } from "@/lib/auth";
 import { cargarResumen } from "@/lib/resumen";
-import { ETIQUETA_ROL } from "@/lib/roles";
+import { ETIQUETA_ROL, puedeCotizar } from "@/lib/roles";
 import { fmtNum, usd } from "@/lib/calculo";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export default async function Inicio() {
 
   return (
     <>
-      <header>
+      <header className="border-b border-regla pb-5">
         <h1 className="text-lg font-bold tracking-tight">
           Hola, {usuario.nombre.split(" ")[0]}
         </h1>
@@ -29,7 +29,7 @@ export default async function Inicio() {
       {resumen.rol === "TALLER" ? (
         // ── Vista de taller: solo producción, sin un solo número de dinero ──
         <section className="mt-8">
-          <Titulo>Órdenes de producción</Titulo>
+          <Titulo acento="bg-cian">Órdenes de producción</Titulo>
           <div className="grid grid-cols-3 gap-3">
             <Tarjeta k="Pendientes" v={fmtNum(resumen.ordenes.pendientes, 0)} />
             <Tarjeta k="En proceso" v={fmtNum(resumen.ordenes.enProceso, 0)} />
@@ -37,7 +37,7 @@ export default async function Inicio() {
           </div>
           <Link
             href="/taller"
-            className="mt-4 inline-block rounded-sm bg-tinta px-4 py-2 text-sm font-bold text-hoja hover:opacity-90"
+            className="mt-5 inline-block rounded-sm bg-tinta px-4 py-2 text-sm font-bold text-hoja hover:opacity-90"
           >
             Abrir tablero del taller →
           </Link>
@@ -48,8 +48,25 @@ export default async function Inicio() {
       ) : (
         // ── Vista con precios: ADMIN y VENDEDOR ──
         <>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {puedeCotizar(usuario) && (
+              <Link
+                href="/cotizacion-nueva"
+                className="rounded-sm bg-tinta px-4 py-2 text-sm font-bold text-hoja hover:opacity-90"
+              >
+                Nueva cotización
+              </Link>
+            )}
+            <Link
+              href="/cotizaciones"
+              className="rounded-sm border border-regla px-4 py-2 text-sm font-medium text-kraft hover:border-tinta hover:text-tinta"
+            >
+              Ver cotizaciones
+            </Link>
+          </div>
+
           <section className="mt-8">
-            <Titulo>Catálogo y cotizaciones</Titulo>
+            <Titulo acento="bg-cian">Catálogo y cotizaciones</Titulo>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Tarjeta k="Papeles" v={fmtNum(resumen.papeles, 0)} />
               <Tarjeta k="Acabados" v={fmtNum(resumen.acabados, 0)} />
@@ -59,7 +76,7 @@ export default async function Inicio() {
           </section>
 
           <section className="mt-6">
-            <Titulo>Precios del día</Titulo>
+            <Titulo acento="bg-magenta">Precios del día</Titulo>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Tarjeta k="Tasa BCV" v={fmtNum(resumen.precios.tasaBCV, 2)} />
               <Tarjeta k="Margen por defecto" v={`${fmtNum(resumen.precios.margen, 0)}%`} />
@@ -72,9 +89,14 @@ export default async function Inicio() {
   );
 }
 
-function Titulo({ children }: { children: React.ReactNode }) {
+/**
+ * Rótulo de sección con marca de registro CMYK (acento pequeño, según la skill de
+ * diseño: color con cuentagotas, nunca relleno grande).
+ */
+function Titulo({ children, acento = "bg-cian" }: { children: React.ReactNode; acento?: string }) {
   return (
-    <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+    <h2 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+      <span className={`h-2 w-2 rounded-[2px] ${acento}`} />
       {children}
     </h2>
   );
@@ -82,9 +104,9 @@ function Titulo({ children }: { children: React.ReactNode }) {
 
 function Tarjeta({ k, v }: { k: string; v: string }) {
   return (
-    <div className="rounded-sm border border-regla bg-hoja px-3 py-3">
-      <div className="text-[11px] text-kraft">{k}</div>
-      <div className="tabular mt-1 font-mono text-lg font-bold">{v}</div>
+    <div className="rounded-sm border border-regla bg-hoja p-4">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">{k}</div>
+      <div className="tabular mt-1.5 font-mono text-xl font-bold">{v}</div>
     </div>
   );
 }
