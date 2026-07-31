@@ -22,6 +22,9 @@ export type Sesion = {
   email: string;
   nombre: string;
   rol: Rol;
+  puedeCotizar: boolean;
+  tiposCotizar: string[];
+  puedeEliminar: boolean;
 };
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -64,7 +67,10 @@ export async function getUsuario(): Promise<Sesion | null> {
       .catch(() => {});
   }
 
-  return { id: u.id, email: u.email, nombre: u.nombre, rol: u.rol };
+  return {
+    id: u.id, email: u.email, nombre: u.nombre, rol: u.rol,
+    puedeCotizar: u.puedeCotizar, tiposCotizar: u.tiposCotizar, puedeEliminar: u.puedeEliminar,
+  };
 }
 
 /** Igual que `getUsuario` pero redirige a /login si no hay sesión. Para páginas. */

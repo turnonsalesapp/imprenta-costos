@@ -19,11 +19,22 @@ import {
   actualizarCotizacionMixta,
   cambiarEstadoCotizacion,
   eliminarCotizacion,
+  cargarCotizacionEnDraft,
   ESTADOS,
   type ItemBorrador,
 } from "@/lib/cotizaciones";
 import type { FormCotizacion, FormProveedor, FormGranFormato, FormPersonalizado, FormOffset } from "@/lib/cotizacion-form";
+import { puedeCotizarTipo, puedeEliminarCotizaciones, ETIQUETA_TIPO_COTIZACION } from "@/lib/roles";
+import type { Sesion } from "@/lib/auth";
+import type { TipoCotizacion } from "@prisma/client";
 import { registrarAuditoria } from "@/lib/auditoria";
+
+/** Verifica que el usuario pueda cotizar un tipo; devuelve el error si no. */
+function vetoTipo(usuario: Sesion, tipo: TipoCotizacion): string | null {
+  return puedeCotizarTipo(usuario, tipo)
+    ? null
+    : `No tienes permiso para cotizar ${ETIQUETA_TIPO_COTIZACION[tipo] ?? tipo}.`;
+}
 
 export type EstadoGuardar = { error: string | null };
 
@@ -33,6 +44,8 @@ export async function guardarCotizacionAction(
 ): Promise<EstadoGuardar> {
   const usuario = await requireRol("ADMIN", "VENDEDOR");
   if (!items.length) return { error: "Agrega al menos un ítem." };
+  const veto = vetoTipo(usuario, "PROPIA");
+  if (veto) return { error: veto };
 
   const editarId = items[0].editarId?.trim();
   const r = editarId
@@ -48,6 +61,8 @@ export async function guardarProveedorAction(
   form: FormProveedor,
 ): Promise<EstadoGuardar> {
   const usuario = await requireRol("ADMIN", "VENDEDOR");
+  const veto = vetoTipo(usuario, "PROVEEDOR");
+  if (veto) return { error: veto };
   const editarId = form.editarId?.trim();
   const r = editarId
     ? await actualizarCotizacionProveedor(editarId, form)
@@ -61,6 +76,8 @@ export async function guardarGranFormatoAction(
   form: FormGranFormato,
 ): Promise<EstadoGuardar> {
   const usuario = await requireRol("ADMIN", "VENDEDOR");
+  const veto = vetoTipo(usuario, "GRAN_FORMATO");
+  if (veto) return { error: veto };
   const editarId = form.editarId?.trim();
   const r = editarId
     ? await actualizarCotizacionGranFormato(editarId, form)
@@ -74,6 +91,8 @@ export async function guardarPersonalizadoAction(
   form: FormPersonalizado,
 ): Promise<EstadoGuardar> {
   const usuario = await requireRol("ADMIN", "VENDEDOR");
+  const veto = vetoTipo(usuario, "PERSONALIZADO");
+  if (veto) return { error: veto };
   const editarId = form.editarId?.trim();
   const r = editarId
     ? await actualizarCotizacionPersonalizado(editarId, form)
@@ -87,6 +106,8 @@ export async function guardarOffsetAction(
   form: FormOffset,
 ): Promise<EstadoGuardar> {
   const usuario = await requireRol("ADMIN", "VENDEDOR");
+  const veto = vetoTipo(usuario, "OFFSET");
+  if (veto) return { error: veto };
   const editarId = form.editarId?.trim();
   const r = editarId
     ? await actualizarCotizacionOffset(editarId, form)
@@ -100,12 +121,28 @@ export async function guardarMixtaAction(
   borrador: { meta: { cliente?: string; clienteId?: string; trabajo?: string; editarId?: string }; items: ItemBorrador[] },
 ): Promise<EstadoGuardar> {
   const usuario = await requireRol("ADMIN", "VENDEDOR");
+  // Cada ítem debe ser de un tipo que el usuario tenga permitido cotizar.
+  for (const it of borrador.items) {
+    const veto = vetoTipo(usuario, it.tipo);
+    if (veto) return { error: veto };
+  }
   const editarId = borrador.meta.editarId?.trim();
   const r = editarId
     ? await actualizarCotizacionMixta(editarId, borrador)
     : await crearCotizacionMixta(borrador, usuario.id);
   if (!r.ok) return { error: r.error };
   redirect(`/cotizaciones/${r.id}`);
+}
+
+/**
+ * Carga una cotización en el cotizador unificado (para los botones "Editar" y
+ * "Usar como base" del listado). Devuelve el borrador o null.
+ */
+export async function cargarEnCotizadorAction(
+  id: string, modo: "editar" | "copia",
+) {
+  await requireRol("ADMIN", "VENDEDOR");
+  return cargarCotizacionEnDraft(id, modo);
 }
 
 /** Cambia el estado de una cotización (Borrador → Enviada → Aprobada…). */
@@ -125,9 +162,10 @@ export async function cambiarEstadoAction(formData: FormData): Promise<void> {
   revalidatePath("/cotizaciones");
 }
 
-/** Elimina una cotización (solo ADMIN, solo borrador sin orden). */
+/** Elimina una cotización (quien tenga permiso; solo borrador sin orden). */
 export async function eliminarCotizacionAction(formData: FormData): Promise<void> {
-  await requireRol("ADMIN");
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
+  if (!puedeEliminarCotizaciones(usuario)) return;
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const r = await eliminarCotizacion(id);

@@ -6,7 +6,7 @@
  * muestre o devuelva un precio, costo o margen tiene que pasar por esta función
  * en el servidor. El rol TALLER nunca la pasa.
  */
-import type { Rol } from "@prisma/client";
+import type { Rol, TipoCotizacion } from "@prisma/client";
 
 /** ADMIN y VENDEDOR ven precios; TALLER jamás. */
 export function puedeVerPrecios(rol: Rol): boolean {
@@ -35,3 +35,52 @@ export const DESCRIPCION_ROL: Record<Rol, string> = {
 };
 
 export const ROLES: Rol[] = ["ADMIN", "VENDEDOR", "TALLER"];
+
+/* ─────────────────── permisos de cotización (por usuario) ─────────────────── */
+
+/** Tipos de ítem cotizables (MIXTA es un contenedor, no un tipo que se elige). */
+export const TIPOS_COTIZACION: TipoCotizacion[] = [
+  "PROPIA", "OFFSET", "PROVEEDOR", "GRAN_FORMATO", "PERSONALIZADO",
+];
+
+export const ETIQUETA_TIPO_COTIZACION: Record<string, string> = {
+  PROPIA: "Digital", OFFSET: "Offset", PROVEEDOR: "Proveedor",
+  GRAN_FORMATO: "Gran formato", PERSONALIZADO: "Personalizado", MIXTA: "Mixta",
+};
+
+/** Lo mínimo que necesitan las funciones de permiso (subconjunto de Sesion/Usuario). */
+export type PermisosUsuario = {
+  rol: Rol;
+  puedeCotizar: boolean;
+  tiposCotizar: string[];
+  puedeEliminar: boolean;
+};
+
+/**
+ * Tipos de ítem que el usuario puede cotizar.
+ *   ADMIN  → todos siempre.
+ *   TALLER → ninguno (no ve precios).
+ *   VENDEDOR → si `puedeCotizar`; lista `tiposCotizar` (vacía = todos).
+ */
+export function tiposQuePuedeCotizar(u: PermisosUsuario): TipoCotizacion[] {
+  if (u.rol === "TALLER") return [];
+  if (u.rol === "ADMIN") return TIPOS_COTIZACION;
+  if (!u.puedeCotizar) return [];
+  return u.tiposCotizar.length
+    ? TIPOS_COTIZACION.filter((t) => u.tiposCotizar.includes(t))
+    : TIPOS_COTIZACION;
+}
+
+export function puedeCotizarTipo(u: PermisosUsuario, tipo: TipoCotizacion): boolean {
+  return tiposQuePuedeCotizar(u).includes(tipo);
+}
+
+/** ¿Puede cotizar algo (al menos un tipo)? */
+export function puedeCotizar(u: PermisosUsuario): boolean {
+  return tiposQuePuedeCotizar(u).length > 0;
+}
+
+/** ¿Puede eliminar cotizaciones? ADMIN siempre; VENDEDOR si tiene el permiso. */
+export function puedeEliminarCotizaciones(u: PermisosUsuario): boolean {
+  return u.rol === "ADMIN" || (u.rol !== "TALLER" && u.puedeEliminar);
+}

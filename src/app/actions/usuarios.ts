@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireRol } from "@/lib/auth";
-import { ROLES } from "@/lib/roles";
+import { ROLES, TIPOS_COTIZACION } from "@/lib/roles";
 import { registrarAuditoria } from "@/lib/auditoria";
 
 export type EstadoCrear = { error: string | null; ok: boolean };
@@ -83,6 +83,35 @@ export async function cambiarInterpretar(formData: FormData): Promise<void> {
     actorId: admin.id, actorNombre: admin.nombre,
     accion: "usuario.interpretarIA", entidad: id,
     detalle: `Interpretar IA → ${interpretarIA === null ? "según el sistema" : interpretarIA ? "activado" : "desactivado"}`,
+  });
+  revalidatePath("/usuarios");
+}
+
+/**
+ * Ajusta los permisos de cotización de un usuario: qué tipos puede cotizar y si
+ * puede eliminar. Si no marca ningún tipo, no puede cotizar. (El ADMIN no se
+ * toca: siempre puede todo.)
+ */
+export async function cambiarPermisos(formData: FormData): Promise<void> {
+  const admin = await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  const u = await db.usuario.findUnique({ where: { id }, select: { rol: true } });
+  if (!u || u.rol === "ADMIN") return; // ADMIN siempre puede todo; no se configura
+
+  const tipos = formData.getAll("tipos").map(String).filter((t) => TIPOS_COTIZACION.includes(t as never));
+  const puedeEliminar = formData.get("eliminar") === "on";
+  const puedeCotizar = tipos.length > 0;
+
+  await db.usuario.update({
+    where: { id },
+    data: { puedeCotizar, tiposCotizar: tipos, puedeEliminar },
+  });
+  await registrarAuditoria({
+    actorId: admin.id, actorNombre: admin.nombre,
+    accion: "usuario.permisos", entidad: id,
+    detalle: `Cotizar: ${puedeCotizar ? (tipos.join(", ") || "todos") : "ninguno"} · Eliminar: ${puedeEliminar ? "sí" : "no"}`,
   });
   revalidatePath("/usuarios");
 }

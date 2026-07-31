@@ -5,6 +5,7 @@ import { interpretarDisponible } from "@/lib/interpretar";
 import { CrearUsuarioForm } from "./CrearUsuarioForm";
 import { SelectorRol } from "./SelectorRol";
 import { SelectorInterpretar } from "./SelectorInterpretar";
+import { PermisosCotizar } from "./PermisosCotizar";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,10 @@ export default async function UsuariosPage() {
 
   const usuarios = await db.usuario.findMany({
     orderBy: [{ activo: "desc" }, { creadoEn: "asc" }],
-    select: { id: true, nombre: true, email: true, rol: true, activo: true, interpretarIA: true },
+    select: {
+      id: true, nombre: true, email: true, rol: true, activo: true, interpretarIA: true,
+      puedeCotizar: true, tiposCotizar: true, puedeEliminar: true,
+    },
   });
   const iaDisponible = interpretarDisponible();
 
@@ -41,6 +45,7 @@ export default async function UsuariosPage() {
               <th className="px-4 py-2 font-bold">Nombre</th>
               <th className="px-4 py-2 font-bold">Correo</th>
               <th className="px-4 py-2 font-bold">Rol</th>
+              <th className="px-4 py-2 font-bold">Cotizar / eliminar</th>
               {iaDisponible && <th className="px-4 py-2 font-bold">Interpretar IA</th>}
               <th className="px-4 py-2 font-bold">Estado</th>
               <th className="px-4 py-2" />
@@ -62,6 +67,15 @@ export default async function UsuariosPage() {
                   <td className="px-4 py-2.5 font-mono text-[13px] text-kraft">{u.email}</td>
                   <td className="px-4 py-2.5">
                     <SelectorRol id={u.id} rol={u.rol} disabled={esYo} />
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <PermisosCotizar
+                      id={u.id}
+                      rol={u.rol}
+                      puedeCotizar={u.puedeCotizar}
+                      tiposCotizar={u.tiposCotizar}
+                      puedeEliminar={u.puedeEliminar}
+                    />
                   </td>
                   {iaDisponible && (
                     <td className="px-4 py-2.5">

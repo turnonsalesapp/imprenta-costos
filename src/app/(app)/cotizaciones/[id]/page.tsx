@@ -4,7 +4,7 @@ import { requireRol } from "@/lib/auth";
 import { obtenerCotizacion, cargarCotizacionEnDraft, ESTADOS, ETIQUETA_ESTADO, esOrdenVenta } from "@/lib/cotizaciones";
 import { cambiarEstadoAction, eliminarCotizacionAction } from "@/app/actions/cotizaciones";
 import { generarOrdenAction } from "@/app/actions/ordenes";
-import { esAdmin } from "@/lib/roles";
+import { tiposQuePuedeCotizar, puedeEliminarCotizaciones } from "@/lib/roles";
 import { BotonEliminar } from "@/app/_components/BotonEliminar";
 import { fmtNum, usd } from "@/lib/calculo";
 import { EstadoBadge } from "../EstadoBadge";
@@ -24,7 +24,10 @@ export default async function DetalleCotizacion({
   const c = await obtenerCotizacion(id);
   if (!c) notFound();
 
-  const puedeBorrar = esAdmin(usuario.rol) && c.estado === "BORRADOR" && !c.orden;
+  const puedeBorrar = puedeEliminarCotizaciones(usuario) && c.estado === "BORRADOR" && !c.orden;
+  const permitidos = tiposQuePuedeCotizar(usuario);
+  // Puede reeditar/copiar solo si puede cotizar todos los tipos que contiene.
+  const puedeCargar = c.items.length > 0 && c.items.every((it) => permitidos.includes(it.tipo ?? c.tipo));
   const esMixta = c.tipo === "MIXTA";
   const tercerizado = c.tipo === "PROVEEDOR" || c.tipo === "GRAN_FORMATO" || c.tipo === "PERSONALIZADO";
   const multi = c.items.length > 1;
@@ -41,10 +44,10 @@ export default async function DetalleCotizacion({
       <div className="flex items-center justify-between gap-4">
         <Link href="/cotizaciones" className="text-sm text-kraft hover:text-tinta">← Cotizaciones</Link>
         <div className="flex items-center gap-2">
-          {cargaEditar && cargaEditar.items.length > 0 && (
+          {puedeCargar && cargaEditar && cargaEditar.items.length > 0 && (
             <CargarCotizadorBtn carga={cargaEditar} accion="editar" />
           )}
-          {cargaCopia && cargaCopia.items.length > 0 && (
+          {puedeCargar && cargaCopia && cargaCopia.items.length > 0 && (
             <CargarCotizadorBtn carga={cargaCopia} accion="copia" />
           )}
           <Link href={`/cotizaciones/${c.id}/imprimir`}

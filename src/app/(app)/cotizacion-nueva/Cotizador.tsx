@@ -38,6 +38,8 @@ export type DatosCotizador = {
   ojeteCm: number;
   margenMin?: number;
   interpretarHabilitado: boolean;
+  /** Tipos de ítem que este usuario puede cotizar (permisos). */
+  tiposPermitidos: TipoCotizacion[];
   /** Abre un editor ya prellenado al entrar (recotizar desde plantilla). */
   abrirInicial?: { tipo: TipoCotizacion; form: unknown; meta?: { cliente?: string; clienteId?: string; trabajo?: string } };
 };
@@ -191,7 +193,7 @@ export function Cotizador(d: DatosCotizador) {
           <Plus size={13} /> Agregar ítem — elige qué cotizar
         </div>
         <div className="flex flex-wrap gap-2">
-          {TIPOS.map((t) => (
+          {TIPOS.filter((t) => d.tiposPermitidos.includes(t.tipo)).map((t) => (
             <button key={t.tipo} type="button" title={t.hint}
               onClick={() => { setError(null); setAbierto({ modo: "nuevo", tipo: t.tipo }); }}
               className="flex items-center gap-1.5 rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
@@ -199,6 +201,9 @@ export function Cotizador(d: DatosCotizador) {
               {t.label}
             </button>
           ))}
+          {d.tiposPermitidos.length === 0 && (
+            <span className="text-sm text-kraft">No tienes permiso para cotizar ningún tipo. Pídeselo a un administrador.</span>
+          )}
         </div>
       </div>
 

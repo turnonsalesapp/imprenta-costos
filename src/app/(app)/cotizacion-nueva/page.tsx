@@ -9,6 +9,7 @@ import { listarProductosPop } from "@/lib/productos-pop";
 import { interpretarActivo } from "@/lib/interpretar";
 import { cargarTrabajoEnForm } from "@/lib/trabajos";
 import { nuevoForm } from "@/lib/cotizacion-form";
+import { tiposQuePuedeCotizar } from "@/lib/roles";
 import { Cotizador } from "./Cotizador";
 
 export const dynamic = "force-dynamic";
@@ -37,9 +38,10 @@ export default async function CotizacionNuevaPage({
 
   // Recotizar desde una plantilla (trabajo repetido): abre el editor digital
   // ya prellenado con la receta y las tasas de hoy.
+  const tiposPermitidos = tiposQuePuedeCotizar(usuario);
   const sp = await searchParams;
   let abrirInicial: Parameters<typeof Cotizador>[0]["abrirInicial"] = undefined;
-  if (sp.trabajo) {
+  if (sp.trabajo && tiposPermitidos.includes("PROPIA")) {
     const t = await cargarTrabajoEnForm(sp.trabajo);
     if (t) {
       abrirInicial = {
@@ -68,6 +70,7 @@ export default async function CotizacionNuevaPage({
         ojeteCm={dc.gfOjeteCm}
         margenMin={dc.margenMin}
         interpretarHabilitado={interpretarHabilitado}
+        tiposPermitidos={tiposPermitidos}
         abrirInicial={abrirInicial}
       />
     </>

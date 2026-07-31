@@ -31,6 +31,10 @@ model Usuario {
   /// Interpretar solicitud con IA para ESTE usuario: null = hereda del sistema,
   /// true = siempre activo, false = siempre apagado. Solo aplica a quien cotiza.
   interpretarIA Boolean?
+  /// Permisos de cotización por usuario. ADMIN siempre puede todo (ignora estos).
+  puedeCotizar  Boolean  @default(true)  // interruptor general para cotizar
+  tiposCotizar  String[] @default([])    // tipos permitidos; vacío = todos
+  puedeEliminar Boolean  @default(false) // puede eliminar cotizaciones en borrador
   creadoEn     DateTime @default(now()) @db.Timestamptz(3)
 
   cotizaciones Cotizacion[]

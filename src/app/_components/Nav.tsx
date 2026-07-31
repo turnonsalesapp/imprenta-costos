@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Sesion } from "@/lib/auth";
-import { ETIQUETA_ROL, puedeAdministrar, puedeVerPrecios } from "@/lib/roles";
+import { ETIQUETA_ROL, puedeAdministrar, puedeVerPrecios, puedeCotizar } from "@/lib/roles";
 import { logoutAction } from "@/app/actions/auth";
 import { MenuMovil, type Enlace } from "./MenuMovil";
 
@@ -18,8 +18,8 @@ export function Nav({ usuario }: { usuario: Sesion }) {
     { href: "/taller", label: "Taller" },
   ];
   if (puedeVerPrecios(usuario.rol)) {
+    if (puedeCotizar(usuario)) enlaces.push({ href: "/cotizacion-nueva", label: "Cotizar" });
     enlaces.push(
-      { href: "/cotizacion-nueva", label: "Cotizar" },
       { href: "/cotizaciones", label: "Cotizaciones" },
       { href: "/clientes", label: "Clientes" },
     );

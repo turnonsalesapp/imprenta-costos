@@ -5,8 +5,10 @@ import {
   listarCotizaciones, ESTADOS, ETIQUETA_ESTADO,
 } from "@/lib/cotizaciones";
 import { fmtNum, usd } from "@/lib/calculo";
+import { tiposQuePuedeCotizar, puedeCotizar, puedeEliminarCotizaciones } from "@/lib/roles";
 import { EstadoBadge } from "./EstadoBadge";
 import { TipoBadges } from "./TipoBadges";
+import { AccionesFila } from "./AccionesFila";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +17,9 @@ export default async function CotizacionesPage({
 }: {
   searchParams: Promise<{ q?: string; estado?: string }>;
 }) {
-  await requireRol("ADMIN", "VENDEDOR");
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
+  const permitidos = tiposQuePuedeCotizar(usuario);
+  const puedeElim = puedeEliminarCotizaciones(usuario);
 
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
@@ -41,10 +45,12 @@ export default async function CotizacionesPage({
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/cotizacion-nueva"
-            className="rounded-sm bg-tinta px-3 py-2 text-sm font-bold text-hoja hover:opacity-90">
-            Nueva cotización
-          </Link>
+          {puedeCotizar(usuario) && (
+            <Link href="/cotizacion-nueva"
+              className="rounded-sm bg-tinta px-3 py-2 text-sm font-bold text-hoja hover:opacity-90">
+              Nueva cotización
+            </Link>
+          )}
         </div>
       </header>
 
@@ -111,6 +117,7 @@ export default async function CotizacionesPage({
                 <th className="px-4 py-2 text-right font-bold">Precio unit.</th>
                 <th className="px-4 py-2 text-right font-bold">Venta total</th>
                 <th className="px-4 py-2 font-bold">Estado</th>
+                <th className="px-4 py-2 text-right font-bold">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-suave">
@@ -139,6 +146,14 @@ export default async function CotizacionesPage({
                   <td className="px-4 py-2.5 text-right font-mono font-bold">{usd(c.precioUnit, 4)}</td>
                   <td className="px-4 py-2.5 text-right font-mono">{usd(c.ventaTotal)}</td>
                   <td className="px-4 py-2.5"><EstadoBadge estado={c.estado} /></td>
+                  <td className="px-4 py-2.5">
+                    <AccionesFila
+                      id={c.id}
+                      estado={c.estado}
+                      puedeEditar={c.tipos.every((t) => permitidos.includes(t))}
+                      puedeEliminar={puedeElim && c.estado === "BORRADOR" && !c.tieneOrden}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
