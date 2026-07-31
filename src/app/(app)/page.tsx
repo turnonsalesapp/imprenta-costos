@@ -3,6 +3,7 @@ import { requireUsuario } from "@/lib/auth";
 import { cargarResumen } from "@/lib/resumen";
 import { ETIQUETA_ROL, puedeCotizar } from "@/lib/roles";
 import { fmtNum, usd } from "@/lib/calculo";
+import { PageHeader, SectionTitle, KPI } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -17,23 +18,16 @@ export default async function Inicio() {
 
   return (
     <>
-      <header className="border-b border-regla pb-5">
-        <h1 className="text-lg font-bold tracking-tight">
-          Hola, {usuario.nombre.split(" ")[0]}
-        </h1>
-        <p className="mt-0.5 text-xs uppercase tracking-widest text-kraft">
-          {ETIQUETA_ROL[usuario.rol]}
-        </p>
-      </header>
+      <PageHeader title={`Hola, ${usuario.nombre.split(" ")[0]}`} eyebrow={ETIQUETA_ROL[usuario.rol]} />
 
       {resumen.rol === "TALLER" ? (
         // ── Vista de taller: solo producción, sin un solo número de dinero ──
         <section className="mt-8">
-          <Titulo acento="bg-cian">Órdenes de producción</Titulo>
+          <SectionTitle acento="bg-cian">Órdenes de producción</SectionTitle>
           <div className="grid grid-cols-3 gap-3">
-            <Tarjeta k="Pendientes" v={fmtNum(resumen.ordenes.pendientes, 0)} />
-            <Tarjeta k="En proceso" v={fmtNum(resumen.ordenes.enProceso, 0)} />
-            <Tarjeta k="Terminadas" v={fmtNum(resumen.ordenes.terminadas, 0)} />
+            <KPI k="Pendientes" v={fmtNum(resumen.ordenes.pendientes, 0)} />
+            <KPI k="En proceso" v={fmtNum(resumen.ordenes.enProceso, 0)} />
+            <KPI k="Terminadas" v={fmtNum(resumen.ordenes.terminadas, 0)} />
           </div>
           <Link
             href="/taller"
@@ -66,47 +60,25 @@ export default async function Inicio() {
           </div>
 
           <section className="mt-8">
-            <Titulo acento="bg-cian">Catálogo y cotizaciones</Titulo>
+            <SectionTitle acento="bg-cian">Catálogo y cotizaciones</SectionTitle>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Tarjeta k="Papeles" v={fmtNum(resumen.papeles, 0)} />
-              <Tarjeta k="Acabados" v={fmtNum(resumen.acabados, 0)} />
-              <Tarjeta k="Cotizaciones" v={fmtNum(resumen.cotizaciones, 0)} />
-              <Tarjeta k="Órdenes activas" v={fmtNum(resumen.ordenes.pendientes + resumen.ordenes.enProceso, 0)} />
+              <KPI k="Papeles" v={fmtNum(resumen.papeles, 0)} />
+              <KPI k="Acabados" v={fmtNum(resumen.acabados, 0)} />
+              <KPI k="Cotizaciones" v={fmtNum(resumen.cotizaciones, 0)} />
+              <KPI k="Órdenes activas" v={fmtNum(resumen.ordenes.pendientes + resumen.ordenes.enProceso, 0)} />
             </div>
           </section>
 
           <section className="mt-6">
-            <Titulo acento="bg-magenta">Precios del día</Titulo>
+            <SectionTitle acento="bg-magenta">Precios del día</SectionTitle>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <Tarjeta k="Tasa BCV" v={fmtNum(resumen.precios.tasaBCV, 2)} />
-              <Tarjeta k="Margen por defecto" v={`${fmtNum(resumen.precios.margen, 0)}%`} />
-              <Tarjeta k="Pliego más barato" v={usd(resumen.precios.pliegoMasBarato, 4)} />
+              <KPI k="Tasa BCV" v={fmtNum(resumen.precios.tasaBCV, 2)} />
+              <KPI k="Margen por defecto" v={`${fmtNum(resumen.precios.margen, 0)}%`} />
+              <KPI k="Pliego más barato" v={usd(resumen.precios.pliegoMasBarato, 4)} />
             </div>
           </section>
         </>
       )}
     </>
-  );
-}
-
-/**
- * Rótulo de sección con marca de registro CMYK (acento pequeño, según la skill de
- * diseño: color con cuentagotas, nunca relleno grande).
- */
-function Titulo({ children, acento = "bg-cian" }: { children: React.ReactNode; acento?: string }) {
-  return (
-    <h2 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
-      <span className={`h-2 w-2 rounded-[2px] ${acento}`} />
-      {children}
-    </h2>
-  );
-}
-
-function Tarjeta({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="rounded-sm border border-regla bg-hoja p-4">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">{k}</div>
-      <div className="tabular mt-1.5 font-mono text-xl font-bold">{v}</div>
-    </div>
   );
 }
