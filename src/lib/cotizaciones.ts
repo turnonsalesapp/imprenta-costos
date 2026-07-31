@@ -1254,6 +1254,10 @@ export type CotizacionFila = {
   ventaTotal: number;
   costoTotal: number;
   nItems: number;
+  /** Tipos REALES que contiene (nunca "MIXTA"): p.ej. ["PROPIA","OFFSET"]. */
+  tipos: TipoCotizacion[];
+  /** Si tiene una orden de producción generada (para bloquear el borrado). */
+  tieneOrden: boolean;
 };
 
 export async function listarCotizaciones(f: FiltroLista): Promise<CotizacionFila[]> {
@@ -1264,18 +1268,26 @@ export async function listarCotizaciones(f: FiltroLista): Promise<CotizacionFila
       id: true, numero: true, creadaEn: true, estado: true, tipo: true, clienteNombre: true,
       titulo: true, papelNombre: true, tamano: true, cantidad: true,
       costoUnit: true, precioUnit: true, ventaTotal: true, costoTotal: true, items: true,
+      orden: { select: { id: true } },
     },
   });
 
   return filas.map((c) => {
-    const { items, ...resto } = c;
+    const { items, orden, ...resto } = c;
+    const guardados = Array.isArray(items) ? (items as Array<{ tipo?: TipoCotizacion }>) : [];
+    // Tipos reales: de los ítems (dedupe). Si no hay ítems guardados, el tipo top-level.
+    const tipos = guardados.length
+      ? [...new Set(guardados.map((i) => (i.tipo as TipoCotizacion) ?? c.tipo))]
+      : [c.tipo];
     return {
       ...resto,
       costoUnit: num(c.costoUnit),
       precioUnit: num(c.precioUnit),
       ventaTotal: num(c.ventaTotal),
       costoTotal: num(c.costoTotal),
-      nItems: Array.isArray(items) ? items.length : 1,
+      nItems: guardados.length || 1,
+      tipos,
+      tieneOrden: !!orden,
     };
   });
 }

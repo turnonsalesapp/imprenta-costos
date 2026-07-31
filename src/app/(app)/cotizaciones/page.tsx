@@ -6,6 +6,7 @@ import {
 } from "@/lib/cotizaciones";
 import { fmtNum, usd } from "@/lib/calculo";
 import { EstadoBadge } from "./EstadoBadge";
+import { TipoBadges } from "./TipoBadges";
 
 export const dynamic = "force-dynamic";
 
@@ -123,33 +124,9 @@ export default async function CotizacionesPage({
                     <Link href={`/cotizaciones/${c.id}`} className="font-medium hover:text-cian">
                       {c.titulo}
                     </Link>
-                    {c.tipo === "PROVEEDOR" && (
-                      <span className="ml-2 rounded-sm bg-[#EDE6F7] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#5B3E8F]">
-                        Proveedor
-                      </span>
-                    )}
-                    {c.tipo === "GRAN_FORMATO" && (
-                      <span className="ml-2 rounded-sm bg-[#FDECED] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#B23A48]">
-                        Gran formato
-                      </span>
-                    )}
-                    {c.tipo === "PERSONALIZADO" && (
-                      <span className="ml-2 rounded-sm bg-[#FFF4E0] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#9A6A00]">
-                        Personalizado
-                      </span>
-                    )}
-                    {c.tipo === "OFFSET" && (
-                      <span className="ml-2 rounded-sm bg-[#E9F0FF] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#2C4A8A]">
-                        Offset
-                      </span>
-                    )}
-                    {c.tipo === "MIXTA" && (
-                      <span className="ml-2 rounded-sm bg-[#EEF7EE] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#3B6B3B]">
-                        Mixta
-                      </span>
-                    )}
+                    <TipoBadges tipos={c.tipos} />
                     {c.nItems > 1 && (
-                      <span className="ml-2 rounded-sm bg-[#E6F4F8] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cian">
+                      <span className="ml-1.5 rounded-sm bg-suave px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-kraft">
                         {c.nItems} ítems
                       </span>
                     )}
