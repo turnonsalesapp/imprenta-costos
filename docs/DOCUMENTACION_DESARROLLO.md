@@ -311,7 +311,7 @@ Railway. Todas las `DateTime` con `@db.Timestamptz(3)`; dinero en `Decimal`.
 
 | Modelo | Puntos clave |
 |---|---|
-| **Usuario** | `email @unique`, `passwordHash`, `rol @default(VENDEDOR)`, `activo`, `interpretarIA Boolean?` (null = hereda), relaciones a cotizaciones/ordenes/sesiones |
+| **Usuario** | `email @unique`, `passwordHash`, `rol @default(VENDEDOR)`, `activo`, `interpretarIA Boolean?` (null = hereda), **permisos de cotización**: `puedeCotizar @default(true)`, `tiposCotizar String[] @default([])` (vacío = todos), `puedeEliminar @default(false)`; relaciones a cotizaciones/ordenes/sesiones |
 | **Sesion** | `token @unique`, `expiraEn`, `usuario` (onDelete Cascade); permite revocación |
 | **Cliente** | nombre/rif/contacto/telefono/email/direccion/notas, `activo` |
 | **Papel** | `clave @unique` (la usa el motor), `hojas Int`, `precio Decimal(12,4)`, `medida`, `categoria`, `activo`, `stock`/`stockMin Decimal(14,2)` |
@@ -420,9 +420,16 @@ formulario y su traducción a `Entrada` del motor:
 - `guardarCotizacionAction(items)` (digital, array), `guardarProveedorAction`,
   `guardarGranFormatoAction`, `guardarPersonalizadoAction`, `guardarOffsetAction`,
   `guardarMixtaAction(borrador)`.
+- **Permisos por tipo (servidor):** cada `guardar*Action` veta con
+  `puedeCotizarTipo(usuario, tipo)` antes de escribir; la mixta valida **cada** ítem
+  del borrador. El error se devuelve como `{error}` (no basta con esconder botones).
+- `cargarEnCotizadorAction(id, modo)` — envuelve `cargarCotizacionEnDraft` para los
+  botones **Editar / Usar como base** del listado (client → server action → carga el
+  borrador en el cotizador unificado).
 - `cambiarEstadoAction` — valida contra `ESTADOS`, cambia estado, escribe auditoría
   (`"cotizacion.estado"`), revalida.
-- `eliminarCotizacionAction` — **solo ADMIN**; borrado inteligente.
+- `eliminarCotizacionAction` — `requireRol("ADMIN","VENDEDOR")` + guard
+  `puedeEliminarCotizaciones(usuario)`; borrado inteligente.
 - `generarOrdenAction` (`src/app/actions/ordenes.ts`) → `generarOrden` → redirige a
   `/taller/{ordenId}`.
 
@@ -480,13 +487,22 @@ descuenta su papel = `pliegos × frac(tamano)`.
   `sid`, y devuelve null si no existe, venció (borra la fila) o el usuario está
   inactivo. **Sesión deslizante:** extiende `expiraEn` con la actividad.
 - `requireUsuario()` (redirige a `/login`), `requireRol(...)` (redirige a `/` si el
-  rol no aplica).
+  rol no aplica). La `Sesion` incluye los permisos de cotización (`puedeCotizar`,
+  `tiposCotizar`, `puedeEliminar`), leídos **frescos de la BD en cada request**, de
+  modo que un cambio de permiso surte efecto sin re-login (igual que activar/rol).
 - `iniciarSesion` compara bcrypt contra un **señuelo válido** (cost 12) cuando el
   usuario no existe, para no filtrar por tiempo qué correos existen; error genérico
   idéntico en todos los casos.
 
 **Autorización** (`src/lib/roles.ts`, módulo puro): `puedeVerPrecios(rol) = rol !==
 "TALLER"`, `puedeAdministrar(rol) = rol === "ADMIN"`.
+
+**Permisos de cotización por usuario** (`src/lib/roles.ts`): `tiposQuePuedeCotizar(u)`
+(ADMIN → todos; TALLER → ninguno; VENDEDOR → `tiposCotizar`, vacío = todos, salvo que
+`puedeCotizar` sea false), y encima `puedeCotizarTipo`, `puedeCotizar` y
+`puedeEliminarCotizaciones(u)` (ADMIN siempre; VENDEDOR según `puedeEliminar`). Se
+aplican en el servidor (actions) y en la UI (cotizador, listado, detalle, nav). El
+ADMIN los edita en **Usuarios** vía `cambiarPermisos` (auditoría `"usuario.permisos"`).
 
 **Invariante TALLER-sin-precios** (estructural, no cosmético) — vive en
 `src/lib/ordenes.ts` (**no hay `seguridad.ts`**, solo `seguridad.test.ts`):

@@ -62,8 +62,8 @@ la protección real está en el servidor (no depende de esconder botones).
 
 | Rol | Para qué | Qué ve / puede |
 |---|---|---|
-| **Administrador (ADMIN)** | dueño / gerencia | **Todo:** cotiza, ve precios y márgenes, edita variables, papeles, acabados, catálogos, inventario, usuarios y auditoría |
-| **Vendedor (VENDEDOR)** | cotizar y vender | Cotiza y **ve precios**; **no** edita las variables ni los catálogos del negocio |
+| **Administrador (ADMIN)** | dueño / gerencia | **Todo:** cotiza todos los tipos, ve precios y márgenes, edita variables, papeles, acabados, catálogos, inventario, usuarios y auditoría; siempre puede **eliminar** |
+| **Vendedor (VENDEDOR)** | cotizar y vender | Cotiza y **ve precios**; **no** edita las variables ni los catálogos del negocio. **Qué tipos puede cotizar y si puede eliminar lo define el ADMIN por usuario** (ver §20) |
 | **Taller (TALLER)** | producción | **Solo** las órdenes de producción. **Nunca** ve un precio, costo o margen |
 
 > **Regla de oro del sistema:** el rol TALLER **jamás** recibe dinero. No es que se
@@ -72,7 +72,16 @@ la protección real está en el servidor (no depende de esconder botones).
 > verificado por pruebas automáticas.
 
 Solo el ADMIN puede: editar Variables, papeles, acabados, catálogos (gran formato,
-POP, equipos), crear/editar usuarios, ver Auditoría, y **eliminar** cotizaciones.
+POP, equipos), crear/editar usuarios y ver Auditoría.
+
+**Permisos de cotización (por usuario).** El ADMIN puede afinar, para cada
+vendedor, **qué tipos de trabajo puede cotizar** (Digital, Offset, Proveedor, Gran
+formato, Personalizados) y **si puede eliminar** cotizaciones. Por defecto un
+vendedor nuevo puede cotizar **todos los tipos** y **no** puede eliminar. El ADMIN
+siempre puede todo (estos ajustes no le aplican) y el TALLER no cotiza. La
+protección es real en el servidor: aunque alguien fuerce la interfaz, guardar un
+tipo no permitido o eliminar sin permiso es rechazado. Los cambios de permiso
+surten efecto de inmediato, sin volver a iniciar sesión.
 
 ---
 
@@ -349,22 +358,31 @@ Si el administrador activó la función, arriba de la calculadora Digital aparec
 Menú **Cotizaciones**: listado con búsqueda (por título, cliente, descripción o
 papel) y filtro por estado.
 
+- **Tipos a la vista:** cada fila muestra una etiqueta por **cada tipo de trabajo
+  que contiene** (Digital, Offset, Proveedor, Gran formato, Personalizado). Una
+  cotización con varios tipos muestra varias etiquetas.
 - **Estados:** Borrador → Enviada → Aprobada / Rechazada / Vencida. El estado se
   cambia desde el detalle.
 - **Orden de Venta:** cuando una cotización pasa a **Aprobada**, el mismo documento
   se presenta como **Orden de Venta** (mismo número, mismo registro).
-- **Editar:** solo en **Borrador**. Al guardar se actualiza esa misma cotización.
-- **Usar como base (duplicar):** desde el detalle, crea una **nueva** cotización con
-  la misma estructura (útil para variantes). Existe por tipo y para las mixtas.
-- **Imprimir / PDF:** el detalle tiene versión imprimible con el **membrete** de la
-  empresa; usa *Imprimir* del navegador → Guardar como PDF. Cada ítem aparece con su
-  descripción y total; el cliente ve el **Total** con IVA.
+- **Acciones por fila:** a la derecha de cada cotización, sin abrir el detalle:
+  **Editar** (solo borradores), **Usar como base**, **Imprimir/PDF** y **Eliminar**.
+  Cada acción aparece solo si tu rol y permisos la permiten.
+- **Editar:** solo en **Borrador**. Abre la cotización en el cotizador; al guardar se
+  actualiza esa misma cotización. (Se ofrece únicamente si puedes cotizar todos los
+  tipos que contiene.)
+- **Usar como base (duplicar):** crea una **nueva** cotización con la misma
+  estructura (útil para variantes), desde el listado o desde el detalle. Funciona con
+  cualquier tipo y con las mixtas.
+- **Imprimir / PDF:** versión imprimible con el **membrete** de la empresa; usa
+  *Imprimir* del navegador → Guardar como PDF. Cada ítem aparece con su descripción y
+  total; el cliente ve el **Total** con IVA.
 - **Exportar CSV:** desde el listado; abre en Excel en español (separador `;`, BOM
   UTF-8, respeta acentos). Incluye costos, margen, ML, tasa BCV y precio en Bs (solo
   para roles que ven precios).
-- **Eliminar (solo ADMIN):** "borrado inteligente" — solo se borra de verdad un
-  Borrador sin orden; lo que tiene historia se marca **Rechazada**, y no se puede
-  borrar si ya generó una orden.
+- **Eliminar (ADMIN, o quien tenga el permiso):** "borrado inteligente" — solo se
+  borra de verdad un Borrador sin orden; lo que tiene historia se marca **Rechazada**,
+  y no se puede borrar si ya generó una orden.
 
 > Una cotización guardada es **inmutable**: aunque mañana suba el papel, sigue
 > mostrando lo que se le prometió al cliente. Solo el Borrador se modifica.
@@ -492,6 +510,12 @@ Menú **Usuarios** (solo ADMIN):
 - **Crear usuario:** nombre, correo, clave (mín. 6), rol.
 - **Rol:** ADMIN / VENDEDOR / TALLER (no puedes quitarte a ti mismo el rol de
   admin).
+- **Cotizar / eliminar (por usuario):** para cada vendedor, casillas por tipo de
+  trabajo (Digital, Offset, Proveedor, Gran formato, Personalizado) y una casilla
+  **Eliminar**. Marca los tipos que puede cotizar; si **no marcas ninguno**, ese
+  vendedor no puede cotizar. Un vendedor nuevo empieza con **todos** los tipos y
+  **sin** eliminar. El ADMIN muestra "Todo · puede eliminar" (no se configura) y el
+  TALLER "No cotiza". Cada cambio queda en Auditoría y surte efecto de inmediato.
 - **Activar / Desactivar:** al desactivar, se cierran sus sesiones al instante.
 - **Interpretar IA (por usuario):** *Según el sistema* (sigue el interruptor
   general), *Activado* o *Desactivado*. Solo aparece si hay clave de API.
