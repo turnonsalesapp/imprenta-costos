@@ -14,7 +14,7 @@ export function MenuMovil({ enlaces }: { enlaces: Enlace[] }) {
   const [abierto, setAbierto] = useState(false);
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       <button
         type="button"
         aria-label={abierto ? "Cerrar menú" : "Abrir menú"}

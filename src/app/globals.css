@@ -13,6 +13,11 @@ body {
 /* Números alineados en columna, como en una hoja de cálculo. */
 .tabular { font-variant-numeric: tabular-nums; }
 
+/* Oculta la barra de scroll donde el desborde se resuelve deslizando (la barra
+   de navegación cuando hay muchos enlaces), sin recortar el contenido. */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 /* Impresión: se oculta todo lo marcado no-print (nav, botones) y se limpia el fondo. */
 @media print {
   .no-print { display: none !important; }

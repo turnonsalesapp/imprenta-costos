@@ -175,14 +175,14 @@ export function Cotizador(d: DatosCotizador) {
             <input value={draft.meta.cliente}
               onChange={(e) => actualizarMetaDraft({ cliente: e.target.value, clienteId: "" })}
               placeholder="Nombre del cliente"
-              className="mt-1 block w-full rounded-sm border border-regla bg-white px-2 py-1.5 text-sm outline-none focus:border-cian" />
+              className="mt-1 block w-full rounded-sm border border-regla bg-white px-2 py-1.5 text-base outline-none focus:border-cian sm:text-sm" />
           </label>
           <label className="block">
             <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Título de la cotización</span>
             <input value={draft.meta.trabajo}
               onChange={(e) => actualizarMetaDraft({ trabajo: e.target.value })}
               placeholder="Ej. Paquete de campaña"
-              className="mt-1 block w-full rounded-sm border border-regla bg-white px-2 py-1.5 text-sm outline-none focus:border-cian" />
+              className="mt-1 block w-full rounded-sm border border-regla bg-white px-2 py-1.5 text-base outline-none focus:border-cian sm:text-sm" />
           </label>
         </div>
       </div>
