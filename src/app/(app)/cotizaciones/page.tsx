@@ -123,6 +123,7 @@ export default async function CotizacionesPage({
             filasIniciales={filas.map((c) => ({
               id: c.id, numero: c.numero, titulo: c.titulo,
               clienteNombre: c.clienteNombre, estado: c.estado, ventaTotal: c.ventaTotal,
+              tipos: c.tipos,
             }))}
           />
         )

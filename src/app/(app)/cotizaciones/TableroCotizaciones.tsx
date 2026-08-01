@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import type { EstadoCotizacion } from "@prisma/client";
+import type { EstadoCotizacion, TipoCotizacion } from "@prisma/client";
 import { usd } from "@/lib/calculo";
 import { moverEstadoAction } from "@/app/actions/cotizaciones";
+import { TipoBadges } from "./TipoBadges";
 
 /**
  * Tablero Kanban de cotizaciones. Cada columna es un estado; se cambia el estado
@@ -20,16 +21,19 @@ export type FilaTablero = {
   clienteNombre: string | null;
   estado: EstadoCotizacion;
   ventaTotal: number;
+  tipos: TipoCotizacion[];
 };
 
+// Cada columna hereda el color del badge de su estado (mismo lenguaje visual que
+// EstadoBadge), tintando solo la cabecera; el cuerpo queda neutro.
 const COLUMNAS: {
-  label: string; estado: EstadoCotizacion; incluye: EstadoCotizacion[]; acento: string;
+  label: string; estado: EstadoCotizacion; incluye: EstadoCotizacion[]; head: string;
 }[] = [
-  { label: "Borrador", estado: "BORRADOR", incluye: ["BORRADOR"], acento: "bg-kraft" },
-  { label: "Pendiente de aprobación", estado: "PENDIENTE", incluye: ["PENDIENTE"], acento: "bg-[#5B3E8F]" },
-  { label: "Enviada al cliente", estado: "ENVIADA", incluye: ["ENVIADA"], acento: "bg-cian" },
-  { label: "Ganadas", estado: "APROBADA", incluye: ["APROBADA"], acento: "bg-exito" },
-  { label: "Perdidas", estado: "RECHAZADA", incluye: ["RECHAZADA", "VENCIDA"], acento: "bg-[#B23A48]" },
+  { label: "Borrador", estado: "BORRADOR", incluye: ["BORRADOR"], head: "bg-suave text-kraft" },
+  { label: "Pendiente de aprobación", estado: "PENDIENTE", incluye: ["PENDIENTE"], head: "bg-[#F1ECF8] text-[#5B3E8F]" },
+  { label: "Enviada al cliente", estado: "ENVIADA", incluye: ["ENVIADA"], head: "bg-[#E6F4F8] text-cian" },
+  { label: "Ganadas", estado: "APROBADA", incluye: ["APROBADA"], head: "bg-[#EDF9F1] text-exito" },
+  { label: "Perdidas", estado: "RECHAZADA", incluye: ["RECHAZADA", "VENCIDA"], head: "bg-[#FDECED] text-[#8A1C1C]" },
 ];
 
 // Opciones del selector de cada tarjeta (todas las metas posibles).
@@ -84,15 +88,14 @@ export function TableroCotizaciones({ filasIniciales }: { filasIniciales: FilaTa
                 if (arrastrando) mover(arrastrando, col.estado);
                 setArrastrando(null);
               }}
-              className={`flex min-w-[180px] flex-1 flex-col rounded-sm border bg-suave ${activa ? "border-cian ring-1 ring-cian" : "border-regla"}`}
+              className={`flex min-w-[188px] flex-1 flex-col overflow-hidden rounded-sm border bg-suave/60 ${activa ? "border-cian ring-1 ring-cian" : "border-regla"}`}
             >
-              <div className="flex items-center gap-2 border-b border-regla px-3 py-2">
-                <span className={`h-2 w-2 rounded-[2px] ${col.acento}`} />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">{col.label}</span>
-                <span className="ml-auto font-mono text-[11px] text-kraft">{cards.length}</span>
+              <div className={`flex items-center gap-2 px-3 py-2 ${col.head}`}>
+                <span className="text-[10px] font-bold uppercase tracking-widest">{col.label}</span>
+                <span className="ml-auto font-mono text-[11px] opacity-70">{cards.length}</span>
               </div>
 
-              <div className="flex min-h-[64px] flex-1 flex-col gap-2 p-2">
+              <div className="flex min-h-[56px] flex-1 flex-col gap-2 p-2">
                 {cards.map((c) => (
                   <article
                     key={c.id}
@@ -101,7 +104,12 @@ export function TableroCotizaciones({ filasIniciales }: { filasIniciales: FilaTa
                     onDragEnd={() => { setArrastrando(null); setSobre(null); }}
                     className={`cursor-grab rounded-sm border border-regla bg-hoja p-2.5 active:cursor-grabbing ${arrastrando === c.id ? "opacity-50" : ""}`}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    {c.tipos.length > 0 && (
+                      <div className="-ml-1.5 flex flex-wrap items-center gap-y-1">
+                        <TipoBadges tipos={c.tipos} />
+                      </div>
+                    )}
+                    <div className="mt-1 flex items-start justify-between gap-2">
                       <Link href={`/cotizaciones/${c.id}`} className="text-sm font-medium leading-snug hover:text-cian">
                         {c.titulo}
                       </Link>
@@ -110,13 +118,17 @@ export function TableroCotizaciones({ filasIniciales }: { filasIniciales: FilaTa
                     {c.clienteNombre && (
                       <div className="mt-0.5 truncate text-[11px] text-kraft">{c.clienteNombre}</div>
                     )}
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <span className="font-mono text-sm font-bold">{usd(c.ventaTotal)}</span>
+
+                    <div className="mt-2 border-t border-suave pt-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Total</span>
+                        <span className="font-mono text-sm font-bold">{usd(c.ventaTotal)}</span>
+                      </div>
                       <select
                         value={c.estado}
                         onChange={(e) => mover(c.id, e.target.value as EstadoCotizacion)}
                         aria-label="Cambiar estado"
-                        className="max-w-[9rem] rounded-sm border border-regla bg-white px-1 py-0.5 text-[11px] text-kraft outline-none focus:border-cian"
+                        className="mt-1.5 w-full rounded-sm border border-regla bg-hoja px-1.5 py-1 text-[11px] text-kraft outline-none focus:border-cian"
                       >
                         {OPCIONES.map((o) => (
                           <option key={o.estado} value={o.estado}>{o.label}</option>
