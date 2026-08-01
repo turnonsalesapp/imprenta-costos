@@ -83,6 +83,14 @@ Patrón de listado (`src/app/(app)/cotizaciones/page.tsx`, `usuarios/page.tsx`):
 Reglas: encabezado en `bg-suave` con eyebrow; filas separadas por `divide-suave`;
 números `text-right font-mono`; envoltura `overflow-x-auto` para móvil.
 
+**Tablas anchas (muchas columnas) → tarjetas en móvil.** El scroll horizontal en el
+teléfono es incómodo. Para una tabla que no entra por debajo de ~900px, ofrece dos
+vistas: una lista de tarjetas apiladas (`<ul className="space-y-3 min-[900px]:hidden">`,
+cada registro con su título + badge de estado arriba, metadatos en `text-[11px]
+text-kraft`, y las cifras en una grilla `grid-cols-3` con rótulo + valor mono) y la
+tabla solo a partir de donde entra completa (`hidden overflow-x-auto min-[900px]:block`).
+Así todo se ve por línea, sin scroll. Ejemplo real: `cotizaciones/page.tsx`.
+
 ## Badge de estado
 
 `src/app/(app)/cotizaciones/EstadoBadge.tsx` — fondo suave + texto del mismo tono.

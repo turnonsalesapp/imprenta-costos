@@ -97,59 +97,119 @@ export default async function CotizacionesPage({
             : "Calcula un trabajo y guárdalo para empezar tu histórico."}
         </EmptyState>
       ) : (
-        <div className="mt-4 overflow-x-auto rounded-sm border border-regla bg-hoja">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-regla bg-suave text-left text-[10px] uppercase tracking-widest text-kraft">
-                <th className="px-4 py-2 font-bold">N°</th>
-                <th className="px-4 py-2 font-bold">Fecha</th>
-                <th className="px-4 py-2 font-bold">Cliente / Trabajo</th>
-                <th className="px-4 py-2 text-right font-bold">Cant.</th>
-                <th className="px-4 py-2 text-right font-bold">Precio unit.</th>
-                <th className="px-4 py-2 text-right font-bold">Venta total</th>
-                <th className="px-4 py-2 font-bold">Estado</th>
-                <th className="px-4 py-2 text-right font-bold">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-suave">
-              {filas.map((c) => (
-                <tr key={c.id} className="hover:bg-suave">
-                  <td className="px-4 py-2.5 font-mono text-kraft">{c.numero}</td>
-                  <td className="whitespace-nowrap px-4 py-2.5 font-mono text-[13px] text-kraft">
-                    {c.creadaEn.toLocaleDateString("es-VE")}
-                  </td>
-                  <td className="px-4 py-2.5">
+        <>
+          {/* Móvil: cada cotización es una tarjeta con sus datos apilados, así se
+              ve todo por línea sin scroll horizontal (la tabla no es cómoda en el
+              teléfono). La tabla aparece a partir de 900px, donde entra completa. */}
+          <ul className="mt-4 space-y-3 min-[900px]:hidden">
+            {filas.map((c) => (
+              <li key={c.id} className="rounded-sm border border-regla bg-hoja p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
                     <Link href={`/cotizaciones/${c.id}`} className="font-medium hover:text-cian">
                       {c.titulo}
                     </Link>
-                    <TipoBadges tipos={c.tipos} />
-                    {c.nItems > 1 && (
-                      <span className="ml-1.5 rounded-sm bg-suave px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-kraft">
-                        {c.nItems} ítems
-                      </span>
-                    )}
-                    <div className="text-[11px] text-kraft">
-                      {c.clienteNombre ? c.clienteNombre + " · " : ""}
-                      {c.tipo === "PROPIA" || c.tipo === "OFFSET" ? `${c.papelNombre} · ${c.tamano}` : c.papelNombre}
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      <TipoBadges tipos={c.tipos} />
+                      {c.nItems > 1 && (
+                        <span className="rounded-sm bg-suave px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-kraft">
+                          {c.nItems} ítems
+                        </span>
+                      )}
                     </div>
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-mono">{fmtNum(c.cantidad, 0)}</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-bold">{usd(c.precioUnit, 4)}</td>
-                  <td className="px-4 py-2.5 text-right font-mono">{usd(c.ventaTotal)}</td>
-                  <td className="px-4 py-2.5"><EstadoBadge estado={c.estado} /></td>
-                  <td className="px-4 py-2.5">
-                    <AccionesFila
-                      id={c.id}
-                      estado={c.estado}
-                      puedeEditar={c.tipos.every((t) => permitidos.includes(t))}
-                      puedeEliminar={puedeElim && c.estado === "BORRADOR" && !c.tieneOrden}
-                    />
-                  </td>
+                  </div>
+                  <EstadoBadge estado={c.estado} />
+                </div>
+
+                <div className="mt-2 text-[11px] leading-relaxed text-kraft">
+                  <span className="font-mono">N° {c.numero}</span> · {c.creadaEn.toLocaleDateString("es-VE")}
+                  {c.clienteNombre ? " · " + c.clienteNombre : ""}
+                  <br />
+                  {c.tipo === "PROPIA" || c.tipo === "OFFSET" ? `${c.papelNombre} · ${c.tamano}` : c.papelNombre}
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-2 border-t border-suave pt-3">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">Cant.</div>
+                    <div className="mt-0.5 font-mono text-sm">{fmtNum(c.cantidad, 0)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">Precio u.</div>
+                    <div className="mt-0.5 font-mono text-sm font-bold">{usd(c.precioUnit, 4)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">Total</div>
+                    <div className="mt-0.5 font-mono text-sm">{usd(c.ventaTotal)}</div>
+                  </div>
+                </div>
+
+                <div className="mt-2 flex justify-end border-t border-suave pt-2">
+                  <AccionesFila
+                    id={c.id}
+                    estado={c.estado}
+                    puedeEditar={c.tipos.every((t) => permitidos.includes(t))}
+                    puedeEliminar={puedeElim && c.estado === "BORRADOR" && !c.tieneOrden}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {/* Escritorio (≥900px): tabla completa, ya sin scroll horizontal. */}
+          <div className="mt-4 hidden overflow-x-auto rounded-sm border border-regla bg-hoja min-[900px]:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-regla bg-suave text-left text-[10px] uppercase tracking-widest text-kraft">
+                  <th className="px-4 py-2 font-bold">N°</th>
+                  <th className="px-4 py-2 font-bold">Fecha</th>
+                  <th className="px-4 py-2 font-bold">Cliente / Trabajo</th>
+                  <th className="px-4 py-2 text-right font-bold">Cant.</th>
+                  <th className="px-4 py-2 text-right font-bold">Precio unit.</th>
+                  <th className="px-4 py-2 text-right font-bold">Venta total</th>
+                  <th className="px-4 py-2 font-bold">Estado</th>
+                  <th className="px-4 py-2 text-right font-bold">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-suave">
+                {filas.map((c) => (
+                  <tr key={c.id} className="hover:bg-suave">
+                    <td className="px-4 py-2.5 font-mono text-kraft">{c.numero}</td>
+                    <td className="whitespace-nowrap px-4 py-2.5 font-mono text-[13px] text-kraft">
+                      {c.creadaEn.toLocaleDateString("es-VE")}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <Link href={`/cotizaciones/${c.id}`} className="font-medium hover:text-cian">
+                        {c.titulo}
+                      </Link>
+                      <TipoBadges tipos={c.tipos} />
+                      {c.nItems > 1 && (
+                        <span className="ml-1.5 rounded-sm bg-suave px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-kraft">
+                          {c.nItems} ítems
+                        </span>
+                      )}
+                      <div className="text-[11px] text-kraft">
+                        {c.clienteNombre ? c.clienteNombre + " · " : ""}
+                        {c.tipo === "PROPIA" || c.tipo === "OFFSET" ? `${c.papelNombre} · ${c.tamano}` : c.papelNombre}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono">{fmtNum(c.cantidad, 0)}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold">{usd(c.precioUnit, 4)}</td>
+                    <td className="px-4 py-2.5 text-right font-mono">{usd(c.ventaTotal)}</td>
+                    <td className="px-4 py-2.5"><EstadoBadge estado={c.estado} /></td>
+                    <td className="px-4 py-2.5">
+                      <AccionesFila
+                        id={c.id}
+                        estado={c.estado}
+                        puedeEditar={c.tipos.every((t) => permitidos.includes(t))}
+                        puedeEliminar={puedeElim && c.estado === "BORRADOR" && !c.tieneOrden}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </>
   );
