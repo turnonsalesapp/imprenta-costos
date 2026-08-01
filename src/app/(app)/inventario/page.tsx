@@ -45,8 +45,56 @@ export default async function InventarioPage() {
       {/* Stock por papel */}
       <section className="mt-6">
         <SectionTitle>Stock actual</SectionTitle>
-        <div className="rounded-sm border border-regla bg-hoja">
-          <div className="hidden gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft sm:flex">
+
+        {/* Móvil (<md): cada papel es una tarjeta con su stock y sus controles
+            apilados, agrupados por categoría; así se ve todo por línea sin scroll. */}
+        <div className="space-y-4 md:hidden">
+          {categorias.map((cat) => (
+            <div key={cat.nombre}>
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+                {cat.nombre}
+              </div>
+              <ul className="space-y-3">
+                {cat.filas.map((p) => (
+                  <li key={p.id}
+                    className={`rounded-sm border border-regla p-4 ${p.bajo ? "bg-[#FDEDED]" : "bg-hoja"}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="min-w-0 text-sm font-medium">
+                        {p.nombre}
+                        {p.bajo && <span className="ml-2 text-[10px] font-bold uppercase text-[#C0563B]">bajo</span>}
+                      </span>
+                      <span className={`tabular shrink-0 font-mono text-sm font-bold ${p.bajo ? "text-[#C0563B]" : ""}`}>
+                        {fmtNum(p.stock, 0)}
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-3 border-t border-suave pt-3">
+                      <form action={stockMinAction} className="flex items-end gap-2">
+                        <input type="hidden" name="papelId" value={p.id} />
+                        <label className="block">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Mínimo (aviso)</span>
+                          <input name="stockMin" defaultValue={fmtNum(p.stockMin, 0)} inputMode="decimal" className={`mt-1 block ${inCls}`} />
+                        </label>
+                        <button type="submit" className={btn}>Guardar</button>
+                      </form>
+                      <form action={ajusteAction} className="flex items-end gap-2">
+                        <input type="hidden" name="papelId" value={p.id} />
+                        <label className="block">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Ajustar a</span>
+                          <input name="stock" placeholder="conteo" inputMode="decimal" className={`mt-1 block ${inCls}`} />
+                        </label>
+                        <button type="submit" className={btn}>Ajustar</button>
+                      </form>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Escritorio (≥md): tabla ancha completa con controles en línea. */}
+        <div className="hidden rounded-sm border border-regla bg-hoja md:block">
+          <div className="flex gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
             <span className="flex-1">Papel</span>
             <span className="w-24 text-right">Stock</span>
             <span className="w-40">Mínimo (aviso)</span>
@@ -89,7 +137,45 @@ export default async function InventarioPage() {
       {/* Movimientos recientes */}
       <section className="mt-6">
         <SectionTitle>Movimientos recientes</SectionTitle>
-        <div className="overflow-x-auto rounded-sm border border-regla bg-hoja">
+
+        {/* Móvil (<md): cada movimiento es una tarjeta con sus datos por línea. */}
+        <ul className="space-y-3 md:hidden">
+          {movs.length === 0 ? (
+            <li className="rounded-sm border border-regla bg-hoja px-4 py-8 text-center text-sm text-kraft">
+              Sin movimientos todavía.
+            </li>
+          ) : movs.map((m) => (
+            <li key={m.id} className="rounded-sm border border-regla bg-hoja p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm">{m.papel}</div>
+                  <div className="mt-0.5 font-mono text-[11px] text-kraft">
+                    {m.fecha.toLocaleDateString("es-VE")}
+                  </div>
+                </div>
+                <span className="shrink-0 rounded-sm bg-suave px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-kraft">
+                  {ETIQUETA_MOV[m.tipo] ?? m.tipo}
+                </span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-suave pt-3">
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">Cantidad</div>
+                  <div className={`tabular mt-0.5 font-mono text-sm ${m.cantidad < 0 ? "text-[#C0563B]" : "text-exito"}`}>
+                    {m.cantidad > 0 ? "+" : ""}{fmtNum(m.cantidad, 0)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">Saldo</div>
+                  <div className="tabular mt-0.5 font-mono text-sm">{fmtNum(m.saldo, 0)}</div>
+                </div>
+              </div>
+              {m.motivo && <div className="mt-2 text-[13px] text-kraft">{m.motivo}</div>}
+            </li>
+          ))}
+        </ul>
+
+        {/* Escritorio (≥md): tabla ancha completa. */}
+        <div className="hidden overflow-x-auto rounded-sm border border-regla bg-hoja md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-regla bg-suave text-left text-[10px] uppercase tracking-widest text-kraft">

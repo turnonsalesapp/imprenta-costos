@@ -3,6 +3,7 @@ import { ETIQUETA_ESTADO } from "@/lib/cotizaciones";
 
 const CLASES: Record<EstadoCotizacion, string> = {
   BORRADOR: "bg-suave text-kraft",
+  PENDIENTE: "bg-[#F1ECF8] text-[#5B3E8F]",
   ENVIADA: "bg-[#E6F4F8] text-cian",
   APROBADA: "bg-[#EDF9F1] text-exito",
   RECHAZADA: "bg-[#FDEDED] text-[#8A1C1C]",

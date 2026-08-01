@@ -162,6 +162,25 @@ export async function cambiarEstadoAction(formData: FormData): Promise<void> {
   revalidatePath("/cotizaciones");
 }
 
+/**
+ * Cambia el estado desde el tablero Kanban (arrastrar o el selector de la
+ * tarjeta). Igual que `cambiarEstadoAction` pero con argumentos tipados para
+ * llamarla desde el cliente, y devuelve `{error}` en vez de redirigir.
+ */
+export async function moverEstadoAction(
+  id: string, estado: EstadoCotizacion,
+): Promise<{ error: string | null }> {
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
+  if (!id || !ESTADOS.includes(estado)) return { error: "Estado inválido." };
+  await cambiarEstadoCotizacion(id, estado);
+  await registrarAuditoria({
+    actorId: usuario.id, actorNombre: usuario.nombre,
+    accion: "cotizacion.estado", entidad: id, detalle: `Estado → ${estado}`,
+  });
+  revalidatePath("/cotizaciones");
+  return { error: null };
+}
+
 /** Elimina una cotización (quien tenga permiso; solo borrador sin orden). */
 export async function eliminarCotizacionAction(formData: FormData): Promise<void> {
   const usuario = await requireRol("ADMIN", "VENDEDOR");

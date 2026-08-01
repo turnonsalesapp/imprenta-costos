@@ -36,31 +36,55 @@ export default async function ConsumoPage() {
           {meses.map((g) => {
             const totalPliegos = g.filas.reduce((s, f) => s + f.pliegos, 0);
             return (
-              <section key={g.mes} className="overflow-x-auto rounded-sm border border-regla bg-hoja">
+              <section key={g.mes} className="rounded-sm border border-regla bg-hoja">
                 <div className="flex items-baseline justify-between border-b border-regla bg-suave px-4 py-2">
                   <span className="text-[11px] font-bold uppercase tracking-widest">{nombreMes(g.mes)}</span>
                   <span className="tabular font-mono text-[12px] text-kraft">
                     {fmtNum(totalPliegos, 0)} pliegos en total
                   </span>
                 </div>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-widest text-kraft">
-                      <th className="px-4 py-2 font-bold">Papel</th>
-                      <th className="px-4 py-2 text-right font-bold">Cortes</th>
-                      <th className="px-4 py-2 text-right font-bold">Pliegos completos</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-suave">
-                    {g.filas.map((f) => (
-                      <tr key={f.papel} className="hover:bg-suave">
-                        <td className="px-4 py-2">{f.papel}</td>
-                        <td className="tabular px-4 py-2 text-right font-mono text-kraft">{fmtNum(f.cortes, 1)}</td>
-                        <td className="tabular px-4 py-2 text-right font-mono font-bold">{fmtNum(f.pliegos, 0)}</td>
+
+                {/* Móvil (<768px): cada fila del mes es una tarjeta, así se ve
+                    todo por línea sin scroll horizontal. La tabla aparece desde md. */}
+                <div className="space-y-3 p-3 md:hidden">
+                  {g.filas.map((f) => (
+                    <div key={f.papel} className="rounded-sm border border-regla bg-hoja p-4">
+                      <div className="font-medium">{f.papel}</div>
+                      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-suave pt-3">
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">Cortes</div>
+                          <div className="tabular mt-0.5 font-mono text-sm text-kraft">{fmtNum(f.cortes, 1)}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-kraft">Pliegos completos</div>
+                          <div className="tabular mt-0.5 font-mono text-sm font-bold">{fmtNum(f.pliegos, 0)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Escritorio (≥768px): tabla completa. */}
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-[10px] uppercase tracking-widest text-kraft">
+                        <th className="px-4 py-2 font-bold">Papel</th>
+                        <th className="px-4 py-2 text-right font-bold">Cortes</th>
+                        <th className="px-4 py-2 text-right font-bold">Pliegos completos</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-suave">
+                      {g.filas.map((f) => (
+                        <tr key={f.papel} className="hover:bg-suave">
+                          <td className="px-4 py-2">{f.papel}</td>
+                          <td className="tabular px-4 py-2 text-right font-mono text-kraft">{fmtNum(f.cortes, 1)}</td>
+                          <td className="tabular px-4 py-2 text-right font-mono font-bold">{fmtNum(f.pliegos, 0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </section>
             );
           })}

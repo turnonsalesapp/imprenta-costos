@@ -34,7 +34,83 @@ export default async function UsuariosPage() {
         <CrearUsuarioForm />
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-sm border border-regla bg-hoja">
+      {/* Móvil (< lg): cada usuario es una tarjeta con sus datos y controles
+          apilados, así se ve todo por línea sin scroll horizontal (la tabla es
+          demasiado ancha en el teléfono). La tabla aparece a partir de 1024px. */}
+      <ul className="mt-6 space-y-3 lg:hidden">
+        {usuarios.map((u) => {
+          const esYo = u.id === admin.id;
+          return (
+            <li
+              key={u.id}
+              className={`rounded-sm border border-regla bg-hoja p-4 ${u.activo ? "" : "opacity-50"}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-medium">
+                    {u.nombre}
+                    {esYo && (
+                      <span className="ml-1.5 text-[10px] uppercase tracking-widest text-kraft">
+                        (tú)
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-0.5 break-all font-mono text-[13px] text-kraft">{u.email}</div>
+                </div>
+                <span
+                  className={
+                    u.activo
+                      ? "shrink-0 text-xs font-medium text-exito"
+                      : "shrink-0 text-xs font-medium text-kraft"
+                  }
+                >
+                  {u.activo ? "Activo" : "Inactivo"}
+                </span>
+              </div>
+
+              <div className="mt-3 space-y-3 border-t border-suave pt-3">
+                <div>
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-kraft">Rol</div>
+                  <SelectorRol id={u.id} rol={u.rol} disabled={esYo} />
+                </div>
+                <div>
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-kraft">Cotizar / eliminar</div>
+                  <PermisosCotizar
+                    id={u.id}
+                    rol={u.rol}
+                    puedeCotizar={u.puedeCotizar}
+                    tiposCotizar={u.tiposCotizar}
+                    puedeEliminar={u.puedeEliminar}
+                  />
+                </div>
+                {iaDisponible && (
+                  <div>
+                    <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-kraft">Interpretar IA</div>
+                    <SelectorInterpretar id={u.id} valor={u.interpretarIA} disabled={u.rol === "TALLER"} />
+                  </div>
+                )}
+              </div>
+
+              {!esYo && (
+                <div className="mt-3 flex justify-end border-t border-suave pt-3">
+                  <form action={alternarActivo}>
+                    <input type="hidden" name="id" value={u.id} />
+                    <button
+                      type="submit"
+                      className="rounded-sm border border-regla px-2.5 py-1 text-xs font-medium text-kraft hover:border-tinta hover:text-tinta"
+                    >
+                      {u.activo ? "Desactivar" : "Activar"}
+                    </button>
+                  </form>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Escritorio (≥ lg): tabla completa (overflow-x-auto como red de seguridad). */}
+      <div className="mt-6 hidden overflow-x-auto rounded-sm border border-regla bg-hoja lg:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-regla bg-suave text-left text-[10px] uppercase tracking-widest text-kraft">

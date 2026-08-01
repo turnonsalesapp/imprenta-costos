@@ -30,6 +30,7 @@ const num = (v: unknown): number => (v == null ? 0 : Number(v));
 
 export const ESTADOS: EstadoCotizacion[] = [
   "BORRADOR",
+  "PENDIENTE",
   "ENVIADA",
   "APROBADA",
   "RECHAZADA",
@@ -38,6 +39,7 @@ export const ESTADOS: EstadoCotizacion[] = [
 
 export const ETIQUETA_ESTADO: Record<EstadoCotizacion, string> = {
   BORRADOR: "Borrador",
+  PENDIENTE: "Pendiente de aprobación",
   ENVIADA: "Enviada",
   APROBADA: "Aprobada",
   RECHAZADA: "Rechazada",

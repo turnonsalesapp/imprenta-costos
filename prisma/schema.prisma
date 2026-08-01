@@ -273,6 +273,7 @@ model Trabajo {
 
 enum EstadoCotizacion {
   BORRADOR
+  PENDIENTE   // pendiente de aprobación interna, antes de enviarla al cliente
   ENVIADA
   APROBADA
   RECHAZADA
