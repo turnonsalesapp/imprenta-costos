@@ -30,7 +30,7 @@ export default async function ClientesPage({
         <label className="block">
           <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Buscar</span>
           <input name="q" defaultValue={q} placeholder="Nombre, RIF o contacto"
-            className="mt-1 block w-64 rounded-sm border border-regla bg-hoja px-3 py-1.5 text-sm outline-none focus:border-cian" />
+            className="mt-1 block w-full rounded-sm border border-regla bg-hoja px-3 py-1.5 text-base outline-none focus:border-cian sm:w-64 sm:text-sm" />
         </label>
         <button type="submit" className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium hover:border-tinta">
           Buscar

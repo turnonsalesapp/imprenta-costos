@@ -112,6 +112,12 @@ Foco en `cian`, borde `regla`, radio pequeño (patrón en selectores del proyect
 Etiqueta de campo: `text-xs font-medium` o eyebrow según densidad. Mensaje de error:
 `text-xs text-[#8A1C1C]`; ayuda/hint: `text-xs text-kraft`.
 
+**Móvil — evita el zoom de iOS.** Un input con fuente < 16px hace que iOS Safari
+haga zoom automático al enfocarlo y "salte" el layout. Para campos en Tailwind usa
+`text-base sm:text-sm` (16px en móvil, 13-14px en escritorio). Un buscador ancho:
+`w-full sm:w-64` para que no desborde la fila en el teléfono. En las calculadoras
+esto ya lo resuelve `calc.css` (sube `.pr .in` a 16px por debajo de 620px).
+
 ## Marca / logo (registro CMYK)
 
 Cuatro barras cian/magenta/amarillo/tinta (`src/app/_components/Nav.tsx`):

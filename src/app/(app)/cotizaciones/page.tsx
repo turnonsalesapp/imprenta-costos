@@ -58,7 +58,7 @@ export default async function CotizacionesPage({
             name="q"
             defaultValue={q}
             placeholder="Cliente, trabajo o papel"
-            className="mt-1 block w-64 rounded-sm border border-regla bg-hoja px-3 py-1.5 text-sm outline-none focus:border-cian"
+            className="mt-1 block w-full rounded-sm border border-regla bg-hoja px-3 py-1.5 text-base outline-none focus:border-cian sm:w-64 sm:text-sm"
           />
         </label>
         <label className="block">
@@ -66,7 +66,7 @@ export default async function CotizacionesPage({
           <select
             name="estado"
             defaultValue={estado}
-            className="mt-1 block rounded-sm border border-regla bg-hoja px-2 py-1.5 text-sm outline-none focus:border-cian"
+            className="mt-1 block rounded-sm border border-regla bg-hoja px-2 py-1.5 text-base outline-none focus:border-cian sm:text-sm"
           >
             <option value="">Todos</option>
             {ESTADOS.map((e) => (

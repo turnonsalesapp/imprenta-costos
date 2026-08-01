@@ -18,7 +18,7 @@ export function LoginForm() {
           autoComplete="username"
           required
           autoFocus
-          className="mt-1 w-full rounded-sm border border-regla bg-hoja px-3 py-2 text-sm outline-none focus:border-cian"
+          className="mt-1 w-full rounded-sm border border-regla bg-hoja px-3 py-2 text-base outline-none focus:border-cian sm:text-sm"
         />
       </label>
 
@@ -29,7 +29,7 @@ export function LoginForm() {
           name="clave"
           autoComplete="current-password"
           required
-          className="mt-1 w-full rounded-sm border border-regla bg-hoja px-3 py-2 text-sm outline-none focus:border-cian"
+          className="mt-1 w-full rounded-sm border border-regla bg-hoja px-3 py-2 text-base outline-none focus:border-cian sm:text-sm"
         />
       </label>
 
