@@ -21,6 +21,7 @@ export function Nav({ usuario }: { usuario: Sesion }) {
     if (puedeCotizar(usuario)) enlaces.push({ href: "/cotizacion-nueva", label: "Cotizar" });
     enlaces.push(
       { href: "/cotizaciones", label: "Cotizaciones" },
+      { href: "/crm", label: "CRM" },
       { href: "/clientes", label: "Clientes" },
     );
   }

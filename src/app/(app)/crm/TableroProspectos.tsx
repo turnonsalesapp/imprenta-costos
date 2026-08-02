@@ -1,0 +1,170 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { Trash2 } from "lucide-react";
+import type { ProspectoEstado } from "@prisma/client";
+import { moverProspectoAction, eliminarProspectoAction } from "@/app/actions/crm";
+
+/**
+ * Tablero Kanban de prospectos. Cada columna es un estado; se cambia el estado
+ * arrastrando la tarjeta a otra columna (drag & drop nativo) o con el selector
+ * de la propia tarjeta (alternativa cómoda en móvil/teclado). El cambio es
+ * optimista: se mueve al instante y, si el servidor falla, se revierte. Mismo
+ * patrón que TableroCotizaciones.
+ */
+
+export type FilaProspecto = {
+  id: string;
+  nombre: string;
+  clienteNombre: string | null;
+  contacto: string | null;
+  detalle: string | null;
+  estado: ProspectoEstado;
+};
+
+// Cada columna hereda el color de estatus (convención Kanban/CRM), tintando solo
+// la cabecera; el cuerpo queda neutro.
+const COLUMNAS: {
+  label: string; estado: ProspectoEstado; head: string;
+}[] = [
+  { label: "Nuevo", estado: "NUEVO", head: "bg-suave text-kraft" },
+  { label: "Contactado", estado: "CONTACTADO", head: "bg-[#E6F4F8] text-cian" },
+  { label: "Convertido", estado: "CONVERTIDO", head: "bg-[#EDF9F1] text-exito" },
+  { label: "Descartado", estado: "DESCARTADO", head: "bg-[#FDEDED] text-[#8A1C1C]" },
+];
+
+// Opciones del selector de cada tarjeta (todas las metas posibles).
+const OPCIONES: { estado: ProspectoEstado; label: string }[] = [
+  { estado: "NUEVO", label: "Nuevo" },
+  { estado: "CONTACTADO", label: "Contactado" },
+  { estado: "CONVERTIDO", label: "Convertido" },
+  { estado: "DESCARTADO", label: "Descartado" },
+];
+
+export function TableroProspectos({ filasIniciales }: { filasIniciales: FilaProspecto[] }) {
+  const [filas, setFilas] = useState<FilaProspecto[]>(filasIniciales);
+  const [arrastrando, setArrastrando] = useState<string | null>(null);
+  const [sobre, setSobre] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  function mover(id: string, estado: ProspectoEstado) {
+    const actual = filas.find((f) => f.id === id);
+    if (!actual || actual.estado === estado) return;
+    const prev = filas;
+    setFilas((fs) => fs.map((f) => (f.id === id ? { ...f, estado } : f)));
+    setError(null);
+    startTransition(async () => {
+      const res = await moverProspectoAction(id, estado);
+      if (res?.error) { setFilas(prev); setError(res.error); }
+    });
+  }
+
+  return (
+    <div className="mt-4">
+      {error && (
+        <div className="mb-3 rounded-sm border border-[#E4B3B3] bg-[#FDECED] px-3 py-2 text-sm text-[#8A1C1C]">
+          {error}
+        </div>
+      )}
+
+      <div className="flex gap-3 overflow-x-auto pb-2">
+        {COLUMNAS.map((col) => {
+          const cards = filas.filter((f) => f.estado === col.estado);
+          const activa = sobre === col.label;
+          return (
+            <section
+              key={col.label}
+              onDragOver={(e) => { e.preventDefault(); setSobre(col.label); }}
+              onDragLeave={() => setSobre((s) => (s === col.label ? null : s))}
+              onDrop={(e) => {
+                e.preventDefault();
+                setSobre(null);
+                if (arrastrando) mover(arrastrando, col.estado);
+                setArrastrando(null);
+              }}
+              className={`flex min-w-[188px] flex-1 flex-col overflow-hidden rounded-sm border bg-suave/60 ${activa ? "border-cian ring-1 ring-cian" : "border-regla"}`}
+            >
+              <div className={`flex items-center gap-2 px-3 py-2 ${col.head}`}>
+                <span className="text-[10px] font-bold uppercase tracking-widest">{col.label}</span>
+                <span className="ml-auto font-mono text-[11px] opacity-70">{cards.length}</span>
+              </div>
+
+              <div className="flex min-h-[56px] flex-1 flex-col gap-2 p-2">
+                {cards.map((c) => (
+                  <article
+                    key={c.id}
+                    draggable
+                    onDragStart={() => setArrastrando(c.id)}
+                    onDragEnd={() => { setArrastrando(null); setSobre(null); }}
+                    className={`cursor-grab rounded-sm border border-regla bg-hoja p-2.5 active:cursor-grabbing ${arrastrando === c.id ? "opacity-50" : ""}`}
+                  >
+                    <div className="text-sm font-medium leading-snug">{c.nombre}</div>
+                    {c.clienteNombre && (
+                      <div className="mt-0.5 truncate text-[11px] text-kraft">{c.clienteNombre}</div>
+                    )}
+                    {c.contacto && (
+                      <div className="mt-0.5 truncate font-mono text-[11px] text-kraft">{c.contacto}</div>
+                    )}
+                    {c.detalle && (
+                      <p className="mt-1 text-[11px] leading-relaxed text-kraft">{c.detalle}</p>
+                    )}
+
+                    <div className="mt-2 border-t border-suave pt-2">
+                      <select
+                        value={c.estado}
+                        onChange={(e) => mover(c.id, e.target.value as ProspectoEstado)}
+                        aria-label="Cambiar estado"
+                        className="w-full rounded-sm border border-regla bg-hoja px-1.5 py-1 text-[11px] text-kraft outline-none focus:border-cian"
+                      >
+                        {OPCIONES.map((o) => (
+                          <option key={o.estado} value={o.estado}>{o.label}</option>
+                        ))}
+                      </select>
+                      <div className="mt-1.5 flex items-center justify-between gap-2">
+                        <Link
+                          href="/cotizacion-nueva"
+                          className="text-[11px] font-medium text-cian hover:underline"
+                        >
+                          Cotizar
+                        </Link>
+                        <form
+                          action={eliminarProspectoAction}
+                          onSubmit={(e) => {
+                            if (!confirm("¿Eliminar este prospecto? No se puede deshacer.")) {
+                              e.preventDefault();
+                              return;
+                            }
+                            setFilas((fs) => fs.filter((f) => f.id !== c.id));
+                          }}
+                        >
+                          <input type="hidden" name="id" value={c.id} />
+                          <button
+                            type="submit"
+                            title="Eliminar"
+                            aria-label="Eliminar prospecto"
+                            className="rounded-sm p-1 text-kraft hover:bg-suave hover:text-[#B23A48]"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+                {cards.length === 0 && (
+                  <div className="px-1 py-5 text-center text-[11px] text-kraft">Sin prospectos</div>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+
+      <p className="mt-3 text-xs text-kraft">
+        Arrastra una tarjeta a otra columna para cambiar su estado, o usa el selector de la tarjeta.
+      </p>
+    </div>
+  );
+}
