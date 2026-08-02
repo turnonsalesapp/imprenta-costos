@@ -1,5 +1,8 @@
 import "server-only";
-import { Prisma, type EstadoOrden, type EstadoEtapa } from "@prisma/client";
+import {
+  Prisma, type EstadoOrden, type EstadoEtapa,
+  type CarrilPieza, type EstadoPieza, type EstadoCobro,
+} from "@prisma/client";
 import { db } from "./db";
 import type { LineaCosto } from "./calculo";
 import { descontarPorOrden } from "./inventario";
@@ -63,6 +66,7 @@ type ItemFuente = {
   papelNombre?: string;
   capacidad?: number;
   pliegos?: number;
+  proveedorNombre?: string | null;
   lineas?: { k: string; label: string }[];
 };
 
@@ -93,11 +97,36 @@ export function proyeccionProd(items: ItemFuente[] | null | undefined): ItemProd
   }));
 }
 
-/** Genera la orden desde una cotización APROBADA. Las etapas salen de sus acabados. */
+/** Dedupe de líneas de acabado (sin papel), en orden de taller, para las etapas. */
+function etapasDeLineas(lineas: LineaCosto[]): { clave: string; nombre: string }[] {
+  const vistas = new Set<string>();
+  const src = (lineas ?? [])
+    .filter((l) => l.k !== "papel")
+    .filter((l) => (vistas.has(l.k) ? false : (vistas.add(l.k), true)))
+    .map((l) => ({ clave: l.k, nombre: l.label, orden: ORDEN_ETAPAS[l.k] ?? 99 }))
+    .sort((a, b) => a.orden - b.orden);
+  return (src.length ? src : [{ clave: "produccion", nombre: "Producción", orden: 0 }])
+    .map((e) => ({ clave: e.clave, nombre: e.nombre }));
+}
+
+/** Carril de una pieza según su tipo: propia/offset al taller, el resto a compras. */
+function carrilDe(tipo: string): CarrilPieza {
+  return esProducible(tipo, tipo) ? "INTERNO" : "TERCERIZADO";
+}
+
+/**
+ * Genera la orden desde una cotización APROBADA. Crea una PIEZA por cada ítem:
+ * las internas (PROPIA/OFFSET) van al taller con sus etapas de acabado; las
+ * tercerizadas (gran formato, proveedor, personalizado) van a compras con estado
+ * POR_COTIZAR. La hoja del taller (Orden.items) mantiene solo lo interno, sin precios.
+ */
 export async function generarOrden(cotizacionId: string): Promise<ResultadoOrden> {
   const cot = await db.cotizacion.findUnique({
     where: { id: cotizacionId },
-    select: { id: true, tipo: true, estado: true, lineas: true, items: true, orden: { select: { id: true } } },
+    select: {
+      id: true, tipo: true, estado: true, lineas: true, items: true,
+      titulo: true, cantidad: true, proveedorNombre: true, orden: { select: { id: true } },
+    },
   });
   if (!cot) return { ok: false, error: "La cotización no existe." };
   if (cot.orden) return { ok: false, error: "Esta cotización ya tiene una orden." };
@@ -105,38 +134,65 @@ export async function generarOrden(cotizacionId: string): Promise<ResultadoOrden
     return { ok: false, error: "Solo se genera orden de una cotización aprobada." };
   }
 
-  // Solo los ítems de producción propia (digital/offset) van al taller.
-  const todos = (cot.items as unknown as ItemFuente[] | null) ?? [];
-  const producibles = todos.length ? todos.filter((it) => esProducible(it.tipo, cot.tipo)) : todos;
-  if (todos.length && !producibles.length) {
-    return { ok: false, error: "La cotización no tiene ítems de producción propia para el taller." };
-  }
+  // Ítems fuente: los guardados o, en cotizaciones viejas, uno sintetizado de la cabecera.
+  const guardados = (cot.items as unknown as ItemFuente[] | null) ?? [];
+  const fuente: ItemFuente[] = guardados.length ? guardados : [{
+    tipo: cot.tipo,
+    titulo: cot.titulo,
+    cantidad: cot.cantidad,
+    proveedorNombre: cot.proveedorNombre ?? null,
+    lineas: (cot.lineas as unknown as { k: string; label: string }[]) ?? [],
+  }];
 
-  // Las etapas salen de las líneas de acabado (excluye el papel) de los ítems producibles,
-  // en orden de taller. Si no hay ítems (cotización vieja), se usan las líneas agregadas.
-  const lineasFuente: LineaCosto[] = producibles.length
-    ? (producibles.flatMap((it) => (it.lineas as LineaCosto[]) ?? []))
-    : ((cot.lineas as unknown as LineaCosto[]) ?? []);
-  const vistas = new Set<string>();
-  const src = lineasFuente
-    .filter((l) => l.k !== "papel")
-    .filter((l) => (vistas.has(l.k) ? false : (vistas.add(l.k), true)))
-    .map((l) => ({ clave: l.k, nombre: l.label, orden: ORDEN_ETAPAS[l.k] ?? 99 }))
-    .sort((a, b) => a.orden - b.orden);
-  const etapas = (src.length ? src : [{ clave: "produccion", nombre: "Producción", orden: 0 }])
-    .map((e, i) => ({ clave: e.clave, nombre: e.nombre, orden: i }));
+  // Cada ítem = una pieza. Internas con etapas; tercerizadas sin etapas.
+  const plan = fuente.map((it, i) => {
+    const tipo = it.tipo ?? cot.tipo;
+    const carril = carrilDe(tipo);
+    const interno = carril === "INTERNO";
+    return {
+      i, it, tipo, carril, interno,
+      estado: (interno ? "EN_COLA" : "POR_COTIZAR") as EstadoPieza,
+      snapshot: proyeccionProd([it])[0],
+      etapas: interno ? etapasDeLineas((it.lineas as unknown as LineaCosto[]) ?? []) : [],
+    };
+  });
 
-  // Proyección SIN precios de los ítems producibles, para la hoja del taller.
-  const itemsProd = proyeccionProd(producibles);
+  const internas = fuente.filter((it) => carrilDe(it.tipo ?? cot.tipo) === "INTERNO");
+  const itemsProd = proyeccionProd(internas.length ? internas : fuente);
 
   const orden = await db.orden.create({
     data: {
       cotizacionId: cot.id,
       items: itemsProd as unknown as Prisma.InputJsonValue,
-      etapas: { create: etapas },
+      piezas: {
+        create: plan.map((p) => ({
+          carril: p.carril,
+          tipo: p.tipo,
+          titulo: p.it.titulo ?? "Ítem",
+          cantidad: Math.round(Number(p.it.cantidad ?? 0)),
+          estado: p.estado,
+          orden: p.i,
+          proveedorNombre: p.interno ? null : (p.it.proveedorNombre ?? cot.proveedorNombre ?? null),
+          snapshot: p.snapshot as unknown as Prisma.InputJsonValue,
+        })),
+      },
     },
-    select: { id: true, numero: true },
+    select: { id: true, numero: true, piezas: { select: { id: true, orden: true } } },
   });
+
+  // Etapas por pieza interna. Se crean con ordenId + piezaId (ordenId sigue NOT NULL
+  // y lo usa el recálculo de estado de la orden, intacto).
+  const etapasData: Prisma.EtapaOrdenCreateManyInput[] = [];
+  for (const p of plan) {
+    if (!p.interno || !p.etapas.length) continue;
+    const creada = orden.piezas.find((x) => x.orden === p.i);
+    if (!creada) continue;
+    p.etapas.forEach((e, j) =>
+      etapasData.push({ ordenId: orden.id, piezaId: creada.id, clave: e.clave, nombre: e.nombre, orden: j }),
+    );
+  }
+  if (etapasData.length) await db.etapaOrden.createMany({ data: etapasData });
+
   return { ok: true, id: orden.id, numero: orden.numero };
 }
 
@@ -159,6 +215,9 @@ export const SELECT_PROD = {
       pliegos: true,
     },
   },
+  estadoCobro: true,
+  fechaFactura: true,
+  fechaCobro: true,
   etapas: {
     orderBy: { orden: "asc" },
     select: {
@@ -166,11 +225,23 @@ export const SELECT_PROD = {
       terminadaEn: true,
     },
   },
+  piezas: {
+    orderBy: { orden: "asc" },
+    select: {
+      id: true, carril: true, tipo: true, titulo: true, cantidad: true,
+      estado: true, orden: true, proveedorNombre: true,
+    },
+  },
 } satisfies Prisma.OrdenSelect;
 
 export type Etapa = {
   id: string; clave: string; nombre: string; orden: number; estado: EstadoEtapa;
   responsable: string | null; terminadaEn: Date | null;
+};
+
+export type PiezaVista = {
+  id: string; carril: CarrilPieza; tipo: string; titulo: string; cantidad: number;
+  estado: EstadoPieza; orden: number; proveedorNombre: string | null;
 };
 
 export type OrdenProd = {
@@ -194,6 +265,10 @@ export type OrdenProd = {
   pliegos: number;
   items: ItemProd[];
   etapas: Etapa[];
+  piezas: PiezaVista[];
+  estadoCobro: EstadoCobro;
+  fechaFactura: Date | null;
+  fechaCobro: Date | null;
 };
 
 type FilaProd = Prisma.OrdenGetPayload<{ select: typeof SELECT_PROD }>;
@@ -220,6 +295,10 @@ function aVista(o: FilaProd): OrdenProd {
     pliegos: Number(o.cotizacion.pliegos),
     items: (o.items as unknown as ItemProd[]) ?? [],
     etapas: o.etapas,
+    piezas: o.piezas,
+    estadoCobro: o.estadoCobro,
+    fechaFactura: o.fechaFactura,
+    fechaCobro: o.fechaCobro,
   };
 }
 
@@ -310,4 +389,108 @@ export async function actualizarOrden(
   data: { fechaEntrega?: Date | null; instrucciones?: string | null },
 ): Promise<void> {
   await db.orden.update({ where: { id }, data });
+}
+
+// ─────────────────────── producción por pieza (Fase 2) ───────────────────────
+
+/** Estados de una pieza INTERNA (taller), en orden de columna del tablero. */
+export const ESTADOS_PIEZA_INTERNO: EstadoPieza[] = [
+  "EN_COLA", "EN_DISENO", "ESPERANDO_ARTE", "EN_IMPRESION", "EN_ACABADO", "LISTA",
+];
+
+/** Estados de una pieza TERCERIZADA (compras al proveedor), en orden de columna. */
+export const ESTADOS_PIEZA_TERCERIZADO: EstadoPieza[] = [
+  "POR_COTIZAR", "COMPRADO", "RECIBIDO", "ENTREGADO",
+];
+
+export const ESTADOS_PIEZA: EstadoPieza[] = [
+  ...ESTADOS_PIEZA_INTERNO, ...ESTADOS_PIEZA_TERCERIZADO,
+];
+
+export const ETIQUETA_PIEZA: Record<EstadoPieza, string> = {
+  EN_COLA: "En cola de diseño",
+  EN_DISENO: "En diseño",
+  ESPERANDO_ARTE: "Esperando arte",
+  EN_IMPRESION: "En impresión",
+  EN_ACABADO: "En acabado",
+  LISTA: "Lista",
+  POR_COTIZAR: "Por cotizar",
+  COMPRADO: "Comprado",
+  RECIBIDO: "Recibido",
+  ENTREGADO: "Entregado",
+};
+
+export const ESTADOS_COBRO: EstadoCobro[] = ["NO_FACTURADO", "FACTURADO", "COBRADO"];
+
+export const ETIQUETA_COBRO: Record<EstadoCobro, string> = {
+  NO_FACTURADO: "No facturado",
+  FACTURADO: "Facturado",
+  COBRADO: "Cobrado",
+};
+
+/** Cambia el estado de una pieza (mover tarjeta en el tablero de producción). */
+export async function cambiarEstadoPieza(
+  piezaId: string, estado: EstadoPieza,
+): Promise<string | null> {
+  const p = await db.piezaOrden.findUnique({
+    where: { id: piezaId }, select: { ordenId: true },
+  });
+  if (!p) return null;
+  await db.piezaOrden.update({ where: { id: piezaId }, data: { estado } });
+  return p.ordenId;
+}
+
+/** Cambia el estado de cobro de la orden, sellando la fecha correspondiente. */
+export async function cambiarEstadoCobro(id: string, estado: EstadoCobro): Promise<void> {
+  const data: Prisma.OrdenUpdateInput = { estadoCobro: estado };
+  if (estado === "FACTURADO") data.fechaFactura = new Date();
+  if (estado === "COBRADO") data.fechaCobro = new Date();
+  if (estado === "NO_FACTURADO") { data.fechaFactura = null; data.fechaCobro = null; }
+  await db.orden.update({ where: { id }, data });
+}
+
+/** Una pieza en el tablero de producción, con contexto de su orden. SIN precios. */
+export type PiezaTablero = {
+  id: string;
+  carril: CarrilPieza;
+  tipo: string;
+  titulo: string;
+  cantidad: number;
+  estado: EstadoPieza;
+  proveedorNombre: string | null;
+  ordenId: string;
+  ordenNumero: number;
+  cliente: string | null;
+  fechaEntrega: Date | null;
+};
+
+/**
+ * Tablero de producción POR PIEZA: piezas de las órdenes activas. Igual que el
+ * taller, NO selecciona ninguna columna de dinero (invariante TALLER-sin-precios).
+ */
+export async function tableroPiezas(): Promise<PiezaTablero[]> {
+  const filas = await db.piezaOrden.findMany({
+    where: { ordenProd: { estado: { in: ["PENDIENTE", "EN_PROCESO", "TERMINADA"] } } },
+    orderBy: [{ creadaEn: "asc" }, { orden: "asc" }],
+    select: {
+      id: true, carril: true, tipo: true, titulo: true, cantidad: true,
+      estado: true, proveedorNombre: true, ordenId: true,
+      ordenProd: {
+        select: { numero: true, fechaEntrega: true, cotizacion: { select: { clienteNombre: true } } },
+      },
+    },
+  });
+  return filas.map((p) => ({
+    id: p.id,
+    carril: p.carril,
+    tipo: p.tipo,
+    titulo: p.titulo,
+    cantidad: p.cantidad,
+    estado: p.estado,
+    proveedorNombre: p.proveedorNombre,
+    ordenId: p.ordenId,
+    ordenNumero: p.ordenProd.numero,
+    cliente: p.ordenProd.cotizacion.clienteNombre,
+    fechaEntrega: p.ordenProd.fechaEntrega,
+  }));
 }
