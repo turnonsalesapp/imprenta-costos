@@ -30,7 +30,7 @@ const COLUMNAS: {
   label: string; estado: EstadoCotizacion; incluye: EstadoCotizacion[]; head: string;
 }[] = [
   { label: "Borrador", estado: "BORRADOR", incluye: ["BORRADOR"], head: "bg-suave text-kraft" },
-  { label: "Pendiente de aprobación", estado: "PENDIENTE", incluye: ["PENDIENTE"], head: "bg-[#F1ECF8] text-[#5B3E8F]" },
+  { label: "Pendiente de aprobación", estado: "PENDIENTE", incluye: ["PENDIENTE"], head: "bg-[#FFF9E6] text-[#5C4A00]" },
   { label: "Enviada al cliente", estado: "ENVIADA", incluye: ["ENVIADA"], head: "bg-[#E6F4F8] text-cian" },
   { label: "Ganadas", estado: "APROBADA", incluye: ["APROBADA"], head: "bg-[#EDF9F1] text-exito" },
   { label: "Perdidas", estado: "RECHAZADA", incluye: ["RECHAZADA", "VENCIDA"], head: "bg-[#FDECED] text-[#8A1C1C]" },

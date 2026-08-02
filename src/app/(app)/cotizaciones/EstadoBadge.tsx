@@ -3,11 +3,11 @@ import { ETIQUETA_ESTADO } from "@/lib/cotizaciones";
 
 const CLASES: Record<EstadoCotizacion, string> = {
   BORRADOR: "bg-suave text-kraft",
-  PENDIENTE: "bg-[#F1ECF8] text-[#5B3E8F]",
+  PENDIENTE: "bg-[#FFF9E6] text-[#5C4A00]",
   ENVIADA: "bg-[#E6F4F8] text-cian",
   APROBADA: "bg-[#EDF9F1] text-exito",
   RECHAZADA: "bg-[#FDEDED] text-[#8A1C1C]",
-  VENCIDA: "bg-[#FFF9E6] text-[#5C4A00]",
+  VENCIDA: "bg-[#FBEBD9] text-[#8A4B00]",
 };
 
 export function EstadoBadge({ estado }: { estado: EstadoCotizacion }) {

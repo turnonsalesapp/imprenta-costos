@@ -31,8 +31,12 @@ No están en el config (son `bg-[#...]` puntuales); mantén el mapa consistente:
 | Info / enviada | `bg-[#E6F4F8]` | `text-cian` |
 | Éxito / aprobada | `bg-[#EDF9F1]` | `text-exito` |
 | Error / rechazada | `bg-[#FDEDED]` | `text-[#8A1C1C]` |
-| Aviso / vencida | `bg-[#FFF9E6]` | `text-[#5C4A00]` |
+| Aviso / pendiente | `bg-[#FFF9E6]` | `text-[#5C4A00]` |
+| Expirada / vencida | `bg-[#FBEBD9]` | `text-[#8A4B00]` |
 | Neutro / borrador | `bg-suave` | `text-kraft` |
+
+Convención de estatus (Kanban/CRM): gris = borrador · amarillo = pendiente ·
+azul = enviada · verde = ganada · rojo = perdida · naranja = vencida.
 
 Si añades un estado nuevo, crea su par (fondo muy claro + texto oscuro del mismo tono)
 siguiendo esta lógica; comprueba contraste AA del texto sobre su fondo.
