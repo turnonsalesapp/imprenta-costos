@@ -430,3 +430,59 @@ model RegistroAuditoria {
 
   @@index([fecha])
 }
+
+// ─────────────────────────── CRM comercial ───────────────────────────
+
+/// Estado de un prospecto/oportunidad ANTES de convertirse en cotización.
+/// Reemplaza la columna "Clientes" del tablero comercial de Trello.
+enum ProspectoEstado {
+  NUEVO       // recién capturado
+  CONTACTADO  // ya se le habló
+  CONVERTIDO  // se volvió cotización
+  DESCARTADO  // no prosperó
+}
+
+/// Oportunidad comercial previa a cotizar. Se enlaza por id (sin FK dura) al
+/// cliente y, al convertirse, a la cotización creada.
+model Prospecto {
+  id            String          @id @default(cuid())
+  nombre        String          // qué quiere / nombre de la oportunidad
+  clienteNombre String?         // cliente (texto libre o copia del nombre)
+  clienteId     String?         // id del Cliente si ya existe
+  contacto      String?         // teléfono/correo de contacto
+  detalle       String?
+  estado        ProspectoEstado @default(NUEVO)
+  cotizacionId  String?         // cotización creada al convertir
+  usuarioId     String?         // quién lo capturó
+  creadoEn      DateTime        @default(now()) @db.Timestamptz(3)
+  actualizadoEn DateTime        @updatedAt @db.Timestamptz(3)
+
+  @@index([estado])
+}
+
+/// Tipo de gestión comercial agendada. Reemplaza "Agendar Reunión" de Trello.
+enum ActividadTipo {
+  REUNION
+  LLAMADA
+  SEGUIMIENTO
+  NOTA
+}
+
+/// Actividad/recordatorio comercial (reunión, llamada, seguimiento). Se enlaza
+/// por id (sin FK dura) a cliente, prospecto o cotización, lo que aplique.
+model Actividad {
+  id            String        @id @default(cuid())
+  tipo          ActividadTipo @default(REUNION)
+  titulo        String
+  fecha         DateTime?     @db.Timestamptz(3) // cuándo está agendada
+  hecha         Boolean       @default(false)
+  notas         String?
+  clienteId     String?
+  clienteNombre String?
+  prospectoId   String?
+  cotizacionId  String?
+  usuarioId     String?
+  creadoEn      DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([hecha, fecha])
+}
