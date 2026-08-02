@@ -1,6 +1,7 @@
 import "server-only";
 import { Prisma, type EstadoCotizacion, type TipoCotizacion } from "@prisma/client";
 import { db } from "./db";
+import { generarOrden } from "./ordenes";
 import { cargarConfig, snapshot } from "./config";
 import {
   calcular, precioDesdeCosto, n, type LineaCosto, type Entrada, type Config,
@@ -1418,6 +1419,21 @@ export async function cambiarEstadoCotizacion(
   estado: EstadoCotizacion,
 ): Promise<void> {
   await db.cotizacion.update({ where: { id }, data: { estado } });
+
+  // Handoff automático: al ganar (APROBADA = Orden de Venta), la orden de
+  // producción se genera sola, sin recapturar nada. Antes había que pulsar
+  // "Generar orden" a mano (equivalía a mover la tarjeta a Producción en Trello).
+  // Best-effort: si la cotización es 100% tercerizada (sin ítems de taller) o ya
+  // tiene orden, generarOrden devuelve error y no pasa nada — no rompe el cambio.
+  if (estado === "APROBADA") {
+    const yaTiene = await db.orden.findUnique({
+      where: { cotizacionId: id },
+      select: { id: true },
+    });
+    if (!yaTiene) {
+      try { await generarOrden(id); } catch { /* handoff best-effort */ }
+    }
+  }
 }
 
 /**
