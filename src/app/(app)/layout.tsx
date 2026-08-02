@@ -1,5 +1,6 @@
 import { requireUsuario } from "@/lib/auth";
 import { Nav } from "@/app/_components/Nav";
+import { VisitaGuiada } from "@/app/_components/VisitaGuiada";
 
 /**
  * Layout de todo lo que va detrás del login. `requireUsuario()` es la guardia
@@ -13,6 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen">
       <Nav usuario={usuario} />
       <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+      <VisitaGuiada />
     </div>
   );
 }

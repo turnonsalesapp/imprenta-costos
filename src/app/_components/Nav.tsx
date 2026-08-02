@@ -3,6 +3,7 @@ import type { Sesion } from "@/lib/auth";
 import { ETIQUETA_ROL, puedeAdministrar, puedeVerPrecios, puedeCotizar } from "@/lib/roles";
 import { logoutAction } from "@/app/actions/auth";
 import { MenuMovil, type Enlace } from "./MenuMovil";
+import { BotonGuia } from "./BotonGuia";
 
 /**
  * Barra de navegación. Los enlaces se arman según el rol, pero eso es solo
@@ -66,6 +67,7 @@ export function Nav({ usuario }: { usuario: Sesion }) {
               {ETIQUETA_ROL[usuario.rol]}
             </div>
           </div>
+          <BotonGuia />
           <form action={logoutAction}>
             <button
               type="submit"
