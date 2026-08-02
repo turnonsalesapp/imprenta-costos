@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUsuario } from "@/lib/auth";
-import { obtenerOrden, ESTADOS_ORDEN, ETIQUETA_ORDEN } from "@/lib/ordenes";
+import { obtenerOrden, ESTADOS_ORDEN, ETIQUETA_ORDEN, ETIQUETA_PIEZA } from "@/lib/ordenes";
 import { cambiarEstadoOrdenAction, actualizarOrdenAction } from "@/app/actions/ordenes";
 import { fmtNum } from "@/lib/calculo";
 import { EtapaToggle } from "../EtapaToggle";
 import { OrdenBadge } from "../OrdenBadge";
+import { TipoBadges } from "../../cotizaciones/TipoBadges";
 import { BotonImprimir } from "./BotonImprimir";
+import { SelectorPieza } from "./SelectorPieza";
+import { SelectorCobro } from "./SelectorCobro";
 import { SectionTitle } from "@/app/_components/ui";
+import type { TipoCotizacion } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -134,6 +138,43 @@ export default async function OrdenPage({
             </div>
           </div>
 
+          {/* Piezas */}
+          {o.piezas.length > 0 ? (
+            <div className="mt-5">
+              <h2 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
+                Piezas
+              </h2>
+              <ul className="space-y-2">
+                {o.piezas.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-start justify-between gap-3 rounded-sm border border-regla bg-hoja px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="-ml-1.5 flex flex-wrap items-center gap-y-1">
+                        <TipoBadges tipos={[p.tipo as TipoCotizacion]} />
+                      </div>
+                      <div className="mt-1 text-sm font-medium">{p.titulo}</div>
+                      <div className="mt-0.5 font-mono text-[11px] text-kraft">
+                        {fmtNum(p.cantidad, 0)} pzs
+                        {p.carril === "TERCERIZADO" && p.proveedorNombre ? ` · ${p.proveedorNombre}` : ""}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      {gestiona ? (
+                        <SelectorPieza id={p.id} carril={p.carril} estado={p.estado} />
+                      ) : (
+                        <span className="text-[11px] font-bold uppercase tracking-wide text-kraft">
+                          {ETIQUETA_PIEZA[p.estado]}
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           {o.instrucciones ? (
             <div className="mt-5 border-t border-regla pt-3">
               <h2 className="mb-1 text-[10px] font-bold uppercase tracking-widest text-kraft">Instrucciones</h2>
@@ -192,6 +233,13 @@ export default async function OrdenPage({
               El estado avanza solo al marcar etapas; aquí lo forzas (entregada, anulada).
             </p>
           </form>
+
+          <SelectorCobro
+            id={o.id}
+            estado={o.estadoCobro}
+            fechaFactura={o.fechaFactura ? o.fechaFactura.toISOString() : null}
+            fechaCobro={o.fechaCobro ? o.fechaCobro.toISOString() : null}
+          />
         </div>
       ) : null}
     </>

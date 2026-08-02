@@ -110,7 +110,7 @@ function etapasDeLineas(lineas: LineaCosto[]): { clave: string; nombre: string }
 }
 
 /** Carril de una pieza según su tipo: propia/offset al taller, el resto a compras. */
-function carrilDe(tipo: string): CarrilPieza {
+export function carrilDe(tipo: string): CarrilPieza {
   return esProducible(tipo, tipo) ? "INTERNO" : "TERCERIZADO";
 }
 
@@ -464,6 +464,16 @@ export type PiezaTablero = {
   fechaEntrega: Date | null;
 };
 
+// Selección del tablero de producción: como SELECT_PROD, JAMÁS una columna de
+// dinero. Se exporta para que la prueba del invariante la escanee.
+export const SELECT_PIEZA_TABLERO = {
+  id: true, carril: true, tipo: true, titulo: true, cantidad: true,
+  estado: true, proveedorNombre: true, ordenId: true,
+  ordenProd: {
+    select: { numero: true, fechaEntrega: true, cotizacion: { select: { clienteNombre: true } } },
+  },
+} satisfies Prisma.PiezaOrdenSelect;
+
 /**
  * Tablero de producción POR PIEZA: piezas de las órdenes activas. Igual que el
  * taller, NO selecciona ninguna columna de dinero (invariante TALLER-sin-precios).
@@ -472,13 +482,7 @@ export async function tableroPiezas(): Promise<PiezaTablero[]> {
   const filas = await db.piezaOrden.findMany({
     where: { ordenProd: { estado: { in: ["PENDIENTE", "EN_PROCESO", "TERMINADA"] } } },
     orderBy: [{ creadaEn: "asc" }, { orden: "asc" }],
-    select: {
-      id: true, carril: true, tipo: true, titulo: true, cantidad: true,
-      estado: true, proveedorNombre: true, ordenId: true,
-      ordenProd: {
-        select: { numero: true, fechaEntrega: true, cotizacion: { select: { clienteNombre: true } } },
-      },
-    },
+    select: SELECT_PIEZA_TABLERO,
   });
   return filas.map((p) => ({
     id: p.id,

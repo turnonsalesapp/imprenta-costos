@@ -1,19 +1,77 @@
 import Link from "next/link";
 import { requireUsuario } from "@/lib/auth";
-import { tablero, type OrdenProd } from "@/lib/ordenes";
+import { tablero, tableroPiezas, type OrdenProd } from "@/lib/ordenes";
 import { fmtNum } from "@/lib/calculo";
 import { EtapaToggle } from "./EtapaToggle";
 import { OrdenBadge } from "./OrdenBadge";
+import { TableroProduccion } from "./TableroProduccion";
 import { PageHeader, EmptyState } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Tablero del taller. Accesible a todos los roles (es la pantalla del TALLER).
- * Sin un solo precio: `tablero()` no selecciona ninguna columna de dinero.
+ * Sin un solo precio: ni `tablero()` ni `tableroPiezas()` seleccionan dinero.
+ * Dos vistas: "Tablero" (producción por pieza, por defecto) y "Órdenes" (grilla).
  */
-export default async function TallerPage() {
+export default async function TallerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ vista?: string }>;
+}) {
   await requireUsuario();
+  const sp = await searchParams;
+  const esOrdenes = sp.vista === "ordenes";
+
+  const toggle = (
+    <div className="inline-flex overflow-hidden rounded-sm border border-regla">
+      <Link href="/taller"
+        className={`px-3 py-1.5 text-sm font-medium ${!esOrdenes ? "bg-tinta text-hoja" : "text-kraft hover:text-tinta"}`}>
+        Tablero
+      </Link>
+      <Link href="/taller?vista=ordenes"
+        className={`border-l border-regla px-3 py-1.5 text-sm font-medium ${esOrdenes ? "bg-tinta text-hoja" : "text-kraft hover:text-tinta"}`}>
+        Órdenes
+      </Link>
+    </div>
+  );
+
+  if (!esOrdenes) {
+    const piezas = await tableroPiezas();
+    return (
+      <>
+        <PageHeader
+          title="Taller"
+          eyebrow={`${piezas.length} ${piezas.length === 1 ? "pieza en producción" : "piezas en producción"}`}
+        >
+          {toggle}
+        </PageHeader>
+
+        {piezas.length === 0 ? (
+          <EmptyState title="No hay piezas en producción">
+            Las piezas aparecen aquí al generarse una orden desde una cotización aprobada.
+          </EmptyState>
+        ) : (
+          <TableroProduccion
+            filasIniciales={piezas.map((p) => ({
+              id: p.id,
+              carril: p.carril,
+              tipo: p.tipo,
+              titulo: p.titulo,
+              cantidad: p.cantidad,
+              estado: p.estado,
+              proveedorNombre: p.proveedorNombre,
+              ordenId: p.ordenId,
+              ordenNumero: p.ordenNumero,
+              cliente: p.cliente,
+              fechaEntrega: p.fechaEntrega ? p.fechaEntrega.toISOString() : null,
+            }))}
+          />
+        )}
+      </>
+    );
+  }
+
   const ordenes = await tablero();
 
   const hoy = new Date();
@@ -26,7 +84,9 @@ export default async function TallerPage() {
       <PageHeader
         title="Taller"
         eyebrow={`${ordenes.length} ${ordenes.length === 1 ? "trabajo activo" : "trabajos activos"}`}
-      />
+      >
+        {toggle}
+      </PageHeader>
 
       {ordenes.length === 0 ? (
         <EmptyState title="No hay trabajos en producción">

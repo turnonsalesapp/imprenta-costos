@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SELECT_PROD, proyeccionProd } from "./ordenes";
+import { SELECT_PROD, SELECT_PIEZA_TABLERO, proyeccionProd, carrilDe } from "./ordenes";
 import { puedeVerPrecios } from "./roles";
 
 /**
@@ -49,6 +49,28 @@ describe("invariante TALLER-sin-precios", () => {
     expect(puedeVerPrecios("TALLER")).toBe(false);
     expect(puedeVerPrecios("ADMIN")).toBe(true);
     expect(puedeVerPrecios("VENDEDOR")).toBe(true);
+  });
+
+  it("el tablero de producción por pieza tampoco selecciona dinero", () => {
+    const clavesPieza = clavesDe(SELECT_PIEZA_TABLERO);
+    const filtradas = COLUMNAS_PROHIBIDAS.filter((c) => clavesPieza.has(c));
+    expect(filtradas).toEqual([]);
+    // Y sí trae lo que el tablero necesita.
+    expect(clavesPieza.has("estado")).toBe(true);
+    expect(clavesPieza.has("carril")).toBe(true);
+  });
+});
+
+describe("carril de producción por pieza", () => {
+  it("propia y offset van al taller (INTERNO)", () => {
+    expect(carrilDe("PROPIA")).toBe("INTERNO");
+    expect(carrilDe("OFFSET")).toBe("INTERNO");
+  });
+
+  it("gran formato, proveedor y personalizado van a compras (TERCERIZADO)", () => {
+    expect(carrilDe("GRAN_FORMATO")).toBe("TERCERIZADO");
+    expect(carrilDe("PROVEEDOR")).toBe("TERCERIZADO");
+    expect(carrilDe("PERSONALIZADO")).toBe("TERCERIZADO");
   });
 });
 
