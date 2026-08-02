@@ -29,6 +29,7 @@ export function Nav({ usuario }: { usuario: Sesion }) {
     enlaces.push(
       { href: "/variables", label: "Variables" },
       { href: "/inventario", label: "Inventario" },
+      { href: "/proveedores", label: "Proveedores" },
       { href: "/consumo", label: "Consumo" },
       { href: "/usuarios", label: "Usuarios" },
       { href: "/auditoria", label: "Auditoría" },
