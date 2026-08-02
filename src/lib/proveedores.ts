@@ -231,6 +231,28 @@ export function construirDiff(
   return out;
 }
 
+/** Dry-run: construye el diff de una carga contra el catálogo y la lista vigente
+ *  del proveedor. No escribe nada. */
+export async function diffImportacion(
+  proveedorId: string, filas: FilaImport[],
+): Promise<DiffFila[]> {
+  const papeles = await db.papel.findMany({
+    select: { id: true, clave: true, nombre: true, hojas: true },
+  });
+  const precios = await db.precioProveedorPapel.findMany({
+    where: { proveedorId },
+    select: { papelId: true, precio: true, unidad: true, hojas: true },
+  });
+  const porId = new Map(papeles.map((p) => [p.id, p]));
+  const actuales = new Map<string, number>(
+    precios.map((pr) => [
+      pr.papelId,
+      precioAResma(num(pr.precio), pr.unidad, pr.hojas ?? porId.get(pr.papelId)?.hojas ?? 0),
+    ]),
+  );
+  return construirDiff(filas, papeles, actuales);
+}
+
 export type ResultadoImport = {
   ok: boolean;
   error?: string;
