@@ -2,10 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import type { EstadoOrden } from "@prisma/client";
+import type { EstadoOrden, EstadoPieza, EstadoCobro } from "@prisma/client";
 import { requireUsuario, requireRol } from "@/lib/auth";
 import {
   generarOrden, marcarEtapa, cambiarEstadoOrden, actualizarOrden, ESTADOS_ORDEN,
+  cambiarEstadoPieza, cambiarEstadoCobro, ESTADOS_PIEZA, ESTADOS_COBRO,
 } from "@/lib/ordenes";
 
 /** Genera la orden desde una cotización aprobada (ADMIN/VENDEDOR). */
@@ -32,6 +33,30 @@ export async function marcarEtapaAction(formData: FormData): Promise<void> {
   const ordenId = await marcarEtapa(etapaId, lista, usuario.nombre);
   revalidatePath("/taller");
   if (ordenId) revalidatePath(`/taller/${ordenId}`);
+}
+
+/** Mueve una pieza a otro estado en el tablero de producción. La hace el TALLER. */
+export async function moverPiezaAction(
+  id: string, estado: EstadoPieza,
+): Promise<{ error: string | null }> {
+  await requireUsuario();
+  if (!id || !ESTADOS_PIEZA.includes(estado)) return { error: "Estado inválido." };
+  const ordenId = await cambiarEstadoPieza(id, estado);
+  revalidatePath("/taller");
+  if (ordenId) revalidatePath(`/taller/${ordenId}`);
+  return { error: null };
+}
+
+/** Cambia el estado de cobro de la orden (ADMIN/VENDEDOR). */
+export async function cambiarCobroAction(
+  id: string, estado: EstadoCobro,
+): Promise<{ error: string | null }> {
+  await requireRol("ADMIN", "VENDEDOR");
+  if (!id || !ESTADOS_COBRO.includes(estado)) return { error: "Estado de cobro inválido." };
+  await cambiarEstadoCobro(id, estado);
+  revalidatePath("/taller");
+  revalidatePath(`/taller/${id}`);
+  return { error: null };
 }
 
 /** Cambia el estado de la orden a mano (ADMIN/VENDEDOR): entregada, anulada… */
