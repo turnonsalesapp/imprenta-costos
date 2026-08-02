@@ -83,8 +83,10 @@ export async function parsearExcel(data: ArrayBuffer): Promise<FilaImport[]> {
   const cUnidad = col("unidad");
 
   const filas: FilaImport[] = [];
+  const MAX_FILAS = 5000; // tope defensivo
   ws.eachRow((row, n) => {
     if (n === 1) return; // encabezado
+    if (filas.length >= MAX_FILAS) return;
     const cel = (c: number) => (c ? row.getCell(c).value : null);
     const clave = celTexto(cel(cClave));
     const precio = celNumero(cel(cPrecio));

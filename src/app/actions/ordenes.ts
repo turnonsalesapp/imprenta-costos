@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { EstadoOrden, EstadoPieza, EstadoCobro } from "@prisma/client";
+import { db } from "@/lib/db";
 import { requireUsuario, requireRol } from "@/lib/auth";
 import {
   generarOrden, marcarEtapa, cambiarEstadoOrden, actualizarOrden, ESTADOS_ORDEN,
@@ -14,13 +15,21 @@ export async function generarOrdenAction(formData: FormData): Promise<void> {
   await requireRol("ADMIN", "VENDEDOR");
   const cotizacionId = String(formData.get("cotizacionId") ?? "");
 
-  const r = await generarOrden(cotizacionId);
-  if (!r.ok) {
-    // El botón solo aparece cuando procede; ante un caso raro, vuelve al detalle.
-    redirect(`/cotizaciones/${cotizacionId}`);
+  let destino: string | null = null;
+  try {
+    const r = await generarOrden(cotizacionId);
+    if (r.ok) destino = `/taller/${r.id}`;
+  } catch {
+    // Carrera con el handoff automático (violación de @unique): la orden ya existe.
+    const orden = await db.orden.findUnique({
+      where: { cotizacionId }, select: { id: true },
+    });
+    if (orden) destino = `/taller/${orden.id}`;
   }
   revalidatePath(`/cotizaciones/${cotizacionId}`);
-  redirect(`/taller/${r.id}`);
+  revalidatePath("/taller");
+  // El botón solo aparece cuando procede; ante un caso raro, vuelve al detalle.
+  redirect(destino ?? `/cotizaciones/${cotizacionId}`);
 }
 
 /** Marca una etapa lista o pendiente. La puede hacer el TALLER. */

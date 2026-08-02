@@ -1,6 +1,9 @@
 -- Fase 3: proveedores y listas de precios. Backfill: el catálogo actual se vuelve
 -- la lista del proveedor "Principal" (predeterminado y preferido de cada papel).
 
+-- gen_random_uuid() es nativo en PostgreSQL 13+; en versiones previas vive en pgcrypto.
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE "Proveedor" (
     "id" TEXT NOT NULL,
     "nombre" TEXT NOT NULL,

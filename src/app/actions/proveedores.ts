@@ -60,6 +60,10 @@ export async function previewImportAction(
   if (!(archivo instanceof File) || archivo.size === 0) {
     return { diff: [], filas: [], error: "Sube un archivo .xlsx con la lista." };
   }
+  // Un .xlsx es un ZIP: acota el tamaño antes de descomprimir en memoria.
+  if (archivo.size > 4 * 1024 * 1024) {
+    return { diff: [], filas: [], error: "El archivo supera 4 MB; divide la lista." };
+  }
   try {
     const filas = await parsearExcel(await archivo.arrayBuffer());
     if (!filas.length) return { diff: [], filas: [], error: "El archivo no tiene filas legibles." };

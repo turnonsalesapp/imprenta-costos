@@ -152,7 +152,7 @@ export async function comparadorPapeles(): Promise<ComparadorPapel[]> {
     let min = Infinity;
     for (const pr of precios) if (pr.precioResma < min) min = pr.precioResma;
     for (const pr of precios) pr.esMasBarato = precios.length > 1 && pr.precioResma === min;
-    const ahorro = precios.length && isFinite(min) ? Math.max(0, efectivo - min) : 0;
+    const ahorro = precios.length > 1 && isFinite(min) ? Math.max(0, efectivo - min) : 0;
     return {
       papelId: p.id, clave: p.clave, nombre: p.nombre, hojas: p.hojas,
       precioEfectivo: efectivo, preferidoId: p.proveedorPreferidoId,
@@ -171,9 +171,10 @@ export async function fijarPreferido(papelId: string, proveedorId: string): Prom
   if (!pr) return;
   const papel = await db.papel.findUnique({ where: { id: papelId }, select: { hojas: true } });
   const resma = precioAResma(num(pr.precio), pr.unidad, pr.hojas ?? papel?.hojas ?? 0);
+  // Marca el preferido siempre; solo copia el precio efectivo si es válido (>0).
   await db.papel.update({
     where: { id: papelId },
-    data: { proveedorPreferidoId: proveedorId, precio: resma },
+    data: { proveedorPreferidoId: proveedorId, ...(resma > 0 ? { precio: resma } : {}) },
   });
 }
 
@@ -200,6 +201,25 @@ export type DiffFila = {
 type PapelRef = { id: string; clave: string; nombre: string; hojas: number };
 
 /**
+ * Valida y normaliza una fila cruda (precio, unidad, hojas). Devuelve null si es
+ * inválida: precio no numérico o <= 0; unidad por-hoja/por-millar sin hojas > 0.
+ * Una unidad vacía es "resma"; una unidad desconocida también cae a "resma".
+ */
+function normalizarFila(
+  f: FilaImport, hojasFallback: number,
+): { precio: number; unidad: UnidadPrecio; hojas: number; precioResma: number } | null {
+  const precio = Number(f.precio ?? NaN);
+  if (!isFinite(precio) || precio <= 0) return null;
+  const u = (f.unidad ?? "").trim().toLowerCase();
+  const unidad: UnidadPrecio = (UNIDADES as readonly string[]).includes(u) ? (u as UnidadPrecio) : "resma";
+  const hojas = Number(f.hojas ?? hojasFallback) || hojasFallback;
+  if ((unidad === "hoja" || unidad === "millar") && !(hojas > 0)) return null;
+  const precioResma = precioAResma(precio, unidad, hojas);
+  if (!(precioResma > 0)) return null;
+  return { precio, unidad, hojas, precioResma };
+}
+
+/**
  * Construye el diff de una importación contra el catálogo y los precios actuales
  * del proveedor. Puro y testeable: no toca la base. Empareja por `clave`.
  */
@@ -212,21 +232,20 @@ export function construirDiff(
   const out: DiffFila[] = [];
   for (const f of filas) {
     const clave = (f.clave ?? "").trim();
-    const precio = Number(f.precio ?? NaN);
-    if (!clave || !isFinite(precio)) continue;
+    if (!clave) continue;
     const papel = porClave.get(clave.toLowerCase());
+    const norm = normalizarFila(f, papel?.hojas ?? 0);
+    if (!norm) continue; // precio/unidad/hojas inválidos: se ignora la fila
     if (!papel) {
       out.push({ clave, nombre: f.nombre ?? clave, estado: "sin_papel", precioResma: 0, anterior: null });
       continue;
     }
-    const hojas = Number(f.hojas ?? papel.hojas) || papel.hojas;
-    const resma = precioAResma(precio, f.unidad ?? "resma", hojas);
     const anterior = preciosActuales.get(papel.id) ?? null;
     const estado: DiffFila["estado"] =
       anterior == null ? "nuevo"
-      : Math.abs(anterior - resma) < 1e-6 ? "igual"
-      : resma > anterior ? "sube" : "baja";
-    out.push({ clave: papel.clave, nombre: papel.nombre, estado, precioResma: resma, anterior });
+      : Math.abs(anterior - norm.precioResma) < 1e-6 ? "igual"
+      : norm.precioResma > anterior ? "sube" : "baja";
+    out.push({ clave: papel.clave, nombre: papel.nombre, estado, precioResma: norm.precioResma, anterior });
   }
   return out;
 }
@@ -279,42 +298,47 @@ export async function importarLista(
   });
   const porClave = new Map(papeles.map((p) => [p.clave.trim().toLowerCase(), p]));
 
-  let aplicados = 0;
+  // Prepara el trabajo validado ANTES de escribir, para aplicarlo atómicamente.
   const sinPapel: string[] = [];
+  const trabajo: {
+    papelId: string; precio: number; unidad: string; hojas: number;
+    medida: string | null; precioResma: number; mandaEste: boolean; preferidoActual: string | null;
+  }[] = [];
   for (const f of filas) {
     const clave = (f.clave ?? "").trim();
-    const precio = Number(f.precio ?? NaN);
-    if (!clave || !isFinite(precio)) continue;
+    if (!clave) continue;
     const papel = porClave.get(clave.toLowerCase());
+    const norm = normalizarFila(f, papel?.hojas ?? 0);
+    if (!norm) continue; // fila inválida (precio<=0, unidad/hojas mal)
     if (!papel) { sinPapel.push(clave); continue; }
-
-    const unidad = (f.unidad ?? "resma").trim() || "resma";
-    const hojas = Number(f.hojas ?? papel.hojas) || papel.hojas;
-
-    await db.precioProveedorPapel.upsert({
-      where: { papelId_proveedorId: { papelId: papel.id, proveedorId } },
-      create: {
-        papelId: papel.id, proveedorId, precio, unidad, hojas,
-        medida: f.medida?.trim() || null, vigenteDesde: new Date(),
-      },
-      update: { precio, unidad, hojas, medida: f.medida?.trim() || null, vigenteDesde: new Date() },
-    });
-
-    // Actualiza el precio efectivo si este proveedor manda para el papel.
     const mandaEste =
       papel.proveedorPreferidoId === proveedorId ||
       (prov.predeterminado && papel.proveedorPreferidoId == null);
-    if (mandaEste) {
-      const resma = precioAResma(precio, unidad, hojas);
-      await db.papel.update({
-        where: { id: papel.id },
-        data: {
-          precio: resma,
-          proveedorPreferidoId: papel.proveedorPreferidoId ?? proveedorId,
-        },
-      });
-    }
-    aplicados++;
+    trabajo.push({
+      papelId: papel.id, precio: norm.precio, unidad: norm.unidad, hojas: norm.hojas,
+      medida: f.medida?.trim() || null, precioResma: norm.precioResma, mandaEste,
+      preferidoActual: papel.proveedorPreferidoId,
+    });
   }
-  return { ok: true, aplicados, sinPapel };
+
+  // Todo o nada: si algo falla, no queda el catálogo a medio actualizar.
+  await db.$transaction(async (tx) => {
+    for (const t of trabajo) {
+      await tx.precioProveedorPapel.upsert({
+        where: { papelId_proveedorId: { papelId: t.papelId, proveedorId } },
+        create: {
+          papelId: t.papelId, proveedorId, precio: t.precio, unidad: t.unidad,
+          hojas: t.hojas, medida: t.medida, vigenteDesde: new Date(),
+        },
+        update: { precio: t.precio, unidad: t.unidad, hojas: t.hojas, medida: t.medida, vigenteDesde: new Date() },
+      });
+      if (t.mandaEste) {
+        await tx.papel.update({
+          where: { id: t.papelId },
+          data: { precio: t.precioResma, proveedorPreferidoId: t.preferidoActual ?? proveedorId },
+        });
+      }
+    }
+  });
+  return { ok: true, aplicados: trabajo.length, sinPapel };
 }

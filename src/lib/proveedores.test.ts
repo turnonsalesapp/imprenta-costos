@@ -55,4 +55,18 @@ describe("diff de importación de lista de precios", () => {
     ];
     expect(construirDiff(filas, papeles, new Map())).toEqual([]);
   });
+
+  it("rechaza precios negativos o cero (no corrompen el precio efectivo)", () => {
+    const filas: FilaImport[] = [
+      { clave: "Glase-115", precio: -5, unidad: "resma" },
+      { clave: "Bond-75", precio: 0, unidad: "resma" },
+    ];
+    expect(construirDiff(filas, papeles, new Map())).toEqual([]);
+  });
+
+  it("rechaza unidad por-hoja sin hojas válidas", () => {
+    const sinHojas = [{ id: "p3", clave: "X", nombre: "X", hojas: 0 }];
+    const filas: FilaImport[] = [{ clave: "X", precio: 0.04, unidad: "hoja" }];
+    expect(construirDiff(filas, sinHojas, new Map())).toEqual([]);
+  });
 });

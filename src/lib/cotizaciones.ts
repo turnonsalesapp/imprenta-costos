@@ -1431,7 +1431,10 @@ export async function cambiarEstadoCotizacion(
       select: { id: true },
     });
     if (!yaTiene) {
-      try { await generarOrden(id); } catch { /* handoff best-effort */ }
+      // Best-effort: una carrera P2002 (otra aprobación ganó) es benigna, pero un
+      // fallo real (BD, items corruptos) no debe pasar en silencio total.
+      try { await generarOrden(id); }
+      catch (e) { console.error("Handoff automático falló al generar la orden:", e); }
     }
   }
 }

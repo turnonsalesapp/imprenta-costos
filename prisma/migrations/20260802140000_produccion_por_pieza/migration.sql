@@ -2,6 +2,9 @@
 -- cobro en la Orden y etapas colgadas de la pieza. Backfill: una pieza canónica
 -- por cada orden existente, con sus etapas reasignadas.
 
+-- gen_random_uuid() es nativo en PostgreSQL 13+; en versiones previas vive en pgcrypto.
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- 1) Enums nuevos.
 CREATE TYPE "CarrilPieza" AS ENUM ('INTERNO', 'TERCERIZADO');
 CREATE TYPE "EstadoPieza" AS ENUM (

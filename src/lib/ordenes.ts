@@ -160,38 +160,43 @@ export async function generarOrden(cotizacionId: string): Promise<ResultadoOrden
   const internas = fuente.filter((it) => carrilDe(it.tipo ?? cot.tipo) === "INTERNO");
   const itemsProd = proyeccionProd(internas.length ? internas : fuente);
 
-  const orden = await db.orden.create({
-    data: {
-      cotizacionId: cot.id,
-      items: itemsProd as unknown as Prisma.InputJsonValue,
-      piezas: {
-        create: plan.map((p) => ({
-          carril: p.carril,
-          tipo: p.tipo,
-          titulo: p.it.titulo ?? "Ítem",
-          cantidad: Math.round(Number(p.it.cantidad ?? 0)),
-          estado: p.estado,
-          orden: p.i,
-          proveedorNombre: p.interno ? null : (p.it.proveedorNombre ?? cot.proveedorNombre ?? null),
-          snapshot: p.snapshot as unknown as Prisma.InputJsonValue,
-        })),
+  // Todo o nada: la orden, sus piezas y las etapas se crean en una transacción,
+  // para que nunca quede una orden con piezas pero sin sus etapas de acabado.
+  const orden = await db.$transaction(async (tx) => {
+    const o = await tx.orden.create({
+      data: {
+        cotizacionId: cot.id,
+        items: itemsProd as unknown as Prisma.InputJsonValue,
+        piezas: {
+          create: plan.map((p) => ({
+            carril: p.carril,
+            tipo: p.tipo,
+            titulo: p.it.titulo ?? "Ítem",
+            cantidad: Math.round(Number(p.it.cantidad ?? 0)),
+            estado: p.estado,
+            orden: p.i,
+            proveedorNombre: p.interno ? null : (p.it.proveedorNombre ?? cot.proveedorNombre ?? null),
+            snapshot: p.snapshot as unknown as Prisma.InputJsonValue,
+          })),
+        },
       },
-    },
-    select: { id: true, numero: true, piezas: { select: { id: true, orden: true } } },
-  });
+      select: { id: true, numero: true, piezas: { select: { id: true, orden: true } } },
+    });
 
-  // Etapas por pieza interna. Se crean con ordenId + piezaId (ordenId sigue NOT NULL
-  // y lo usa el recálculo de estado de la orden, intacto).
-  const etapasData: Prisma.EtapaOrdenCreateManyInput[] = [];
-  for (const p of plan) {
-    if (!p.interno || !p.etapas.length) continue;
-    const creada = orden.piezas.find((x) => x.orden === p.i);
-    if (!creada) continue;
-    p.etapas.forEach((e, j) =>
-      etapasData.push({ ordenId: orden.id, piezaId: creada.id, clave: e.clave, nombre: e.nombre, orden: j }),
-    );
-  }
-  if (etapasData.length) await db.etapaOrden.createMany({ data: etapasData });
+    // Etapas por pieza interna. Se crean con ordenId + piezaId (ordenId sigue NOT
+    // NULL y lo usa el recálculo de estado de la orden por etapas, intacto).
+    const etapasData: Prisma.EtapaOrdenCreateManyInput[] = [];
+    for (const p of plan) {
+      if (!p.interno || !p.etapas.length) continue;
+      const creada = o.piezas.find((x) => x.orden === p.i);
+      if (!creada) continue;
+      p.etapas.forEach((e, j) =>
+        etapasData.push({ ordenId: o.id, piezaId: creada.id, clave: e.clave, nombre: e.nombre, orden: j }),
+      );
+    }
+    if (etapasData.length) await tx.etapaOrden.createMany({ data: etapasData });
+    return o;
+  });
 
   return { ok: true, id: orden.id, numero: orden.numero };
 }
@@ -437,7 +442,41 @@ export async function cambiarEstadoPieza(
   });
   if (!p) return null;
   await db.piezaOrden.update({ where: { id: piezaId }, data: { estado } });
+  await recomputarEstadoOrdenPorPiezas(p.ordenId);
   return p.ordenId;
+}
+
+const PIEZA_TERMINAL: EstadoPieza[] = ["LISTA", "ENTREGADO"];
+const PIEZA_INICIAL: EstadoPieza[] = ["EN_COLA", "POR_COTIZAR"];
+
+/**
+ * Recalcula el estado de la orden a partir de sus PIEZAS. Solo gobierna las
+ * órdenes SIN etapas (100% tercerizadas): las que tienen etapas las sigue
+ * gobernando `recomputarEstadoOrden` (por etapas, que además descuenta papel).
+ * Sin esto, una orden solo de compras nacía PENDIENTE y no salía nunca del tablero.
+ */
+async function recomputarEstadoOrdenPorPiezas(ordenId: string): Promise<void> {
+  const o = await db.orden.findUnique({
+    where: { id: ordenId },
+    select: {
+      estado: true,
+      etapas: { select: { id: true } },
+      piezas: { select: { estado: true } },
+    },
+  });
+  if (!o) return;
+  if (o.estado === "ENTREGADA" || o.estado === "ANULADA") return; // no pisar finales
+  if (o.etapas.length > 0 || o.piezas.length === 0) return;       // esas las lleva las etapas
+
+  const todasTerminal = o.piezas.every((p) => PIEZA_TERMINAL.includes(p.estado));
+  const algunaAvanzada = o.piezas.some((p) => !PIEZA_INICIAL.includes(p.estado));
+  const nuevo: EstadoOrden = todasTerminal ? "TERMINADA" : algunaAvanzada ? "EN_PROCESO" : "PENDIENTE";
+  if (nuevo !== o.estado) {
+    await db.orden.update({
+      where: { id: ordenId },
+      data: { estado: nuevo, cerradaEn: nuevo === "TERMINADA" ? new Date() : null },
+    });
+  }
 }
 
 /** Cambia el estado de cobro de la orden, sellando la fecha correspondiente. */

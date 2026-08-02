@@ -160,6 +160,7 @@ export async function cambiarEstadoAction(formData: FormData): Promise<void> {
   });
   revalidatePath(`/cotizaciones/${id}`);
   revalidatePath("/cotizaciones");
+  revalidatePath("/taller"); // el handoff pudo generar la orden
 }
 
 /**
@@ -178,6 +179,7 @@ export async function moverEstadoAction(
     accion: "cotizacion.estado", entidad: id, detalle: `Estado → ${estado}`,
   });
   revalidatePath("/cotizaciones");
+  revalidatePath("/taller"); // el handoff pudo generar la orden
   return { error: null };
 }
 
