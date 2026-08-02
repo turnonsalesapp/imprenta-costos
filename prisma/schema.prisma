@@ -88,8 +88,54 @@ model Papel {
   stock    Decimal @db.Decimal(14, 2) @default(0)
   stockMin Decimal @db.Decimal(14, 2) @default(0) // avisa cuando el stock baja de aquí
 
+  // Proveedor preferido para costear ESTE papel (Fase 3). Si es null, se usa el
+  // proveedor global `predeterminado`. `precio` de arriba es el precio EFECTIVO
+  // (copia del preferido) para que el motor de cálculo no cambie.
+  proveedorPreferidoId String?
+
   trabajos    Trabajo[]
   movimientos MovimientoInventario[]
+  proveedorPreferido Proveedor?             @relation(fields: [proveedorPreferidoId], references: [id], onDelete: SetNull)
+  preciosProveedor   PrecioProveedorPapel[]
+}
+
+// ─────────────────────── proveedores y listas de precios (Fase 3) ───────────────────────
+
+/// Proveedor de papel/material. Se pueden cargar varias listas de precios y
+/// comparar; el `predeterminado` es el respaldo global cuando un papel no tiene
+/// proveedor preferido propio.
+model Proveedor {
+  id             String   @id @default(cuid())
+  nombre         String   @unique
+  moneda         String   @default("USD")
+  contacto       String?
+  notas          String?
+  predeterminado Boolean  @default(false)
+  activo         Boolean  @default(true)
+  creadoEn       DateTime @default(now()) @db.Timestamptz(3)
+
+  precios          PrecioProveedorPapel[]
+  papelesPreferido Papel[]
+}
+
+/// Precio de un papel según un proveedor. Una fila por (papel, proveedor): es el
+/// precio VIGENTE de esa lista. Permite comparar costos entre proveedores.
+model PrecioProveedorPapel {
+  id           String   @id @default(cuid())
+  papelId      String
+  proveedorId  String
+  precio       Decimal  @db.Decimal(12, 4) // en la unidad indicada
+  unidad       String   @default("resma")  // "resma" | "hoja" | "millar"
+  hojas        Int?                         // hojas por resma según este proveedor
+  medida       String?
+  vigenteDesde DateTime @default(now()) @db.Timestamptz(3)
+  notas        String?
+
+  papel     Papel     @relation(fields: [papelId], references: [id], onDelete: Cascade)
+  proveedor Proveedor @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
+
+  @@unique([papelId, proveedorId])
+  @@index([proveedorId])
 }
 
 enum TipoMovimiento {
