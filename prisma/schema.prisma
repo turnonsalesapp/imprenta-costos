@@ -378,12 +378,17 @@ model Orden {
   /// una columna de precio pueda filtrarse por aquí.
   items        Json?
   inventarioAplicado Boolean @default(false) // si ya descontó el papel al terminar
+  // Seguimiento de cobro (NO es factura fiscal): NO_FACTURADO → FACTURADO → COBRADO.
+  estadoCobro  EstadoCobro @default(NO_FACTURADO)
+  fechaFactura DateTime? @db.Timestamptz(3)
+  fechaCobro   DateTime? @db.Timestamptz(3)
   creadaEn     DateTime @default(now()) @db.Timestamptz(3)
   cerradaEn    DateTime? @db.Timestamptz(3)
 
-  cotizacion Cotizacion  @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
-  usuario    Usuario?    @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  cotizacion Cotizacion   @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+  usuario    Usuario?     @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   etapas     EtapaOrden[]
+  piezas     PiezaOrden[]
 
   @@index([estado])
   @@index([fechaEntrega])
@@ -408,10 +413,70 @@ model EtapaOrden {
   iniciadaEn  DateTime? @db.Timestamptz(3)
   terminadaEn DateTime? @db.Timestamptz(3)
   notas       String?
+  piezaId     String?   // etapa de una pieza concreta (Fase 2: producción por pieza)
 
-  ordenProd Orden @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  ordenProd Orden       @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  pieza     PiezaOrden? @relation(fields: [piezaId], references: [id], onDelete: Cascade)
 
   @@index([ordenId])
+  @@index([piezaId])
+}
+
+// ─────────────────────── producción por pieza (Fase 2) ───────────────────────
+
+/// Carril de una pieza: producción interna (taller) o tercerizada (compras).
+enum CarrilPieza {
+  INTERNO     // PROPIA / OFFSET → taller: diseño, impresión, acabado
+  TERCERIZADO // GRAN_FORMATO / PROVEEDOR / PERSONALIZADO → compra al proveedor
+}
+
+/// Estado de una pieza dentro de su carril. El tablero de producción muestra
+/// las columnas que aplican a cada carril.
+enum EstadoPieza {
+  // Carril INTERNO (taller)
+  EN_COLA        // en cola de diseño
+  EN_DISENO
+  ESPERANDO_ARTE // esperando artes del cliente
+  EN_IMPRESION
+  EN_ACABADO
+  LISTA          // terminada en taller
+  // Carril TERCERIZADO (compras al proveedor)
+  POR_COTIZAR
+  COMPRADO
+  RECIBIDO
+  ENTREGADO
+}
+
+/// Seguimiento de cobro de la orden. Solo estado (no factura fiscal).
+enum EstadoCobro {
+  NO_FACTURADO
+  FACTURADO
+  COBRADO
+}
+
+/// Una PIEZA de una orden: cada ítem de la cotización (interno o tercerizado) se
+/// sigue por separado con su propio estado. El snapshot NO lleva precios (es lo
+/// que ve el taller). Las etapas de acabado cuelgan de la pieza interna.
+model PiezaOrden {
+  id              String      @id @default(cuid())
+  ordenId         String
+  carril          CarrilPieza
+  tipo            String      // TipoCotizacion del ítem (PROPIA/OFFSET/GRAN_FORMATO/...)
+  titulo          String
+  cantidad        Int         @default(0)
+  estado          EstadoPieza
+  orden           Int         @default(0)
+  proveedorNombre String?     // proveedor de la pieza tercerizada
+  snapshot        Json?       // ItemProd sin precios, para la hoja del taller
+  notas           String?
+  creadaEn        DateTime    @default(now()) @db.Timestamptz(3)
+  actualizadaEn   DateTime    @updatedAt @db.Timestamptz(3)
+
+  ordenProd Orden        @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  etapas    EtapaOrden[]
+
+  @@index([ordenId])
+  @@index([estado])
 }
 
 // ─────────────────────────── auditoría ───────────────────────────
