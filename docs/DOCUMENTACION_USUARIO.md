@@ -26,8 +26,8 @@ organizado por tarea; busca lo que necesitas hacer y sigue el flujo.
 10. [Cotización con varios ítems y de tipos mezclados](#10-mixtas)
 11. [Herramientas de decisión: comparadores y sugeridor](#11-comparadores)
 12. [Interpretar la solicitud del cliente con IA](#12-ia)
-13. [Cotizaciones: estados, edición, PDF, CSV, Orden de Venta](#13-cotizaciones)
-14. [Órdenes de producción / Taller](#14-taller)
+13. [Cotizaciones: estados, tablero Kanban, edición, PDF, CSV, Orden de Venta](#13-cotizaciones)
+14. [Órdenes de producción / Taller (producción por pieza)](#14-taller)
 15. [Inventario de papel](#15-inventario)
 16. [Consumo de papel por mes](#16-consumo)
 17. [Clientes y trabajos repetidos](#17-clientes)
@@ -35,7 +35,9 @@ organizado por tarea; busca lo que necesitas hacer y sigue el flujo.
 19. [Tasas de cambio](#19-tasas)
 20. [Usuarios](#20-usuarios)
 21. [Auditoría](#21-auditoría)
-22. [Glosario rápido](#22-glosario)
+22. [CRM: prospectos y actividades](#22-crm)
+23. [Proveedores y listas de precios de papel](#23-proveedores)
+24. [Glosario rápido](#24-glosario)
 
 ---
 
@@ -72,7 +74,9 @@ la protección real está en el servidor (no depende de esconder botones).
 > verificado por pruebas automáticas.
 
 Solo el ADMIN puede: editar Variables, papeles, acabados, catálogos (gran formato,
-POP, equipos), crear/editar usuarios y ver Auditoría.
+POP, equipos), gestionar **Proveedores** y sus listas de precios, crear/editar
+usuarios y ver Auditoría. El **estado de cobro** de las órdenes lo mueven ADMIN y
+VENDEDOR; el **CRM** (prospectos y actividades) es de ADMIN y VENDEDOR.
 
 **Permisos de cotización (por usuario).** El ADMIN puede afinar, para cada
 vendedor, **qué tipos de trabajo puede cotizar** (Digital, Offset, Proveedor, Gran
@@ -97,8 +101,10 @@ Según el rol verás algunos de estos enlaces:
 - **Gran formato** — banners, viniles, pendones, roll-ups, etiquetas.
 - **Personalizados** — chapas, llaveros, DTF, sublimación, láser (material POP).
 - **Armar cotiz.** — revisar y guardar una cotización con varios ítems mezclados.
-- **Cotizaciones** — listado, búsqueda, detalle, PDF, CSV.
+- **Cotizaciones** — listado o **tablero Kanban**, búsqueda, detalle, PDF, CSV.
+- **CRM** — prospectos (leads) y actividades comerciales (ADMIN / VENDEDOR).
 - **Clientes** — CRM básico y trabajos repetidos.
+- **Proveedores** — listas de precios de papel y comparador (solo ADMIN).
 - **Variables**, **Inventario**, **Consumo**, **Usuarios**, **Auditoría** — solo ADMIN.
 
 ---
@@ -358,13 +364,23 @@ Si el administrador activó la función, arriba de la calculadora Digital aparec
 Menú **Cotizaciones**: listado con búsqueda (por título, cliente, descripción o
 papel) y filtro por estado.
 
+- **Lista o Tablero (Kanban):** arriba tienes un selector **Lista / Tablero**. La
+  **Lista** es la tabla de siempre (con filtro por estado y export); el **Tablero**
+  muestra las cotizaciones en columnas por estado y puedes **arrastrar una tarjeta**
+  de una columna a otra para cambiarle el estado (por ejemplo, de *Enviada* a
+  *Aprobada*). La búsqueda funciona en las dos vistas.
 - **Tipos a la vista:** cada fila muestra una etiqueta por **cada tipo de trabajo
   que contiene** (Digital, Offset, Proveedor, Gran formato, Personalizado). Una
   cotización con varios tipos muestra varias etiquetas.
-- **Estados:** Borrador → Enviada → Aprobada / Rechazada / Vencida. El estado se
-  cambia desde el detalle.
+- **Estados:** Borrador → **Pendiente de aprobación** → Enviada → Aprobada /
+  Rechazada / Vencida. El estado se cambia desde el detalle o arrastrando la tarjeta
+  en el Tablero. La *Pendiente de aprobación* es el paso opcional en que la cotización
+  espera el visto bueno interno antes de enviarla al cliente. Cada estado tiene su
+  **color**: gris (borrador), ámbar (pendiente), azul (enviada), verde (aprobada /
+  ganada), rojo (rechazada / perdida), naranja (vencida).
 - **Orden de Venta:** cuando una cotización pasa a **Aprobada**, el mismo documento
-  se presenta como **Orden de Venta** (mismo número, mismo registro).
+  se presenta como **Orden de Venta** (mismo número, mismo registro) y **la orden de
+  producción se genera sola** (ver [§14](#14-taller)).
 - **Acciones por fila:** a la derecha de cada cotización, sin abrir el detalle:
   **Editar** (solo borradores), **Usar como base**, **Imprimir/PDF** y **Eliminar**.
   Cada acción aparece solo si tu rol y permisos la permiten.
@@ -391,22 +407,50 @@ papel) y filtro por estado.
 
 ## 14. Taller
 
-### 14.1 Generar la orden (ADMIN / VENDEDOR)
-Desde una cotización **Aprobada** con ítems de producción propia (Digital u
-Offset), genera la **orden de producción**. Los trabajos **tercerizados** (proveedor,
-gran formato, personalizados) **no** generan orden de taller. Las **etapas** salen de
-los acabados de los ítems producibles, en el orden en que se ejecutan (pruebas →
-planchas → arranque → impresión → laminado → troquel → pegado → guillotina).
+### 14.1 La orden se genera sola (handoff automático)
+Cuando pasas una cotización a **Aprobada** (= Orden de Venta), **la orden de
+producción se crea sola**, sin recapturar nada: comercial le pasa el trabajo a
+producción de un solo movimiento. Antes había que pulsar "Generar orden" a mano; ese
+botón **queda en el detalle como respaldo** por si hiciera falta rehacerla.
+
+A diferencia de antes, **todos los ítems entran a producción**, no solo los de
+producción propia. Cada ítem se convierte en una **pieza** con su propio estado, en
+uno de dos **carriles**:
+
+- **Carril interno (taller):** ítems Digital y Offset. Recorre *En cola de diseño →
+  En diseño → Esperando arte → En impresión → En acabado → Lista*. Sus **etapas** de
+  acabado salen de la cotización, en el orden en que se ejecutan (pruebas → planchas →
+  arranque → impresión → laminado → troquel → pegado → guillotina).
+- **Carril tercerizado (compras al proveedor):** ítems de Gran formato, Proveedor y
+  Personalizados —que antes **no** se controlaban en producción—. Recorre *Por cotizar
+  → Comprado → Recibido → Entregado*.
 
 ### 14.2 Tablero del taller (rol TALLER incluido)
-Menú **Taller**: órdenes por estado (Pendiente, En proceso, Terminada), ordenadas
-por fecha de entrega. El TALLER ve la receta y las etapas, **sin ningún precio**.
+Menú **Taller**, con un selector de dos vistas:
+
+- **Tablero** (por defecto): **producción por pieza**. Cada pieza es una tarjeta en la
+  columna de su estado; **arrastra la tarjeta** para avanzarla (el rol **TALLER puede
+  mover piezas**). Las piezas internas y las tercerizadas se ven juntas, cada una con
+  las columnas de su carril.
+- **Órdenes:** la vista clásica —una tarjeta por orden con sus etapas—, por estado
+  (Pendiente, En proceso, Terminada) y ordenada por fecha de entrega; las **atrasadas**
+  se marcan.
+
+En ambas vistas el TALLER ve la receta, las etapas y las piezas **sin ningún precio**.
 
 ### 14.3 Trabajar una orden
-- Marca cada **etapa** como lista (con responsable) a medida que avanza.
-- La orden pasa por Pendiente → En proceso → **Terminada** → Entregada.
+- En el **Tablero**, mueve cada **pieza** por sus estados; en la vista de detalle o en
+  **Órdenes**, marca cada **etapa** como lista (con responsable) a medida que avanza.
+- La orden pasa por Pendiente → En proceso → **Terminada** → Entregada. El sistema la
+  actualiza sola según avancen sus etapas o sus piezas.
 - Al llegar a **Terminada**, el sistema **descuenta el papel consumido del
   inventario** automáticamente y **una sola vez** (aunque se marque dos veces).
+
+### 14.4 Estado de cobro (ADMIN / VENDEDOR)
+Cada orden lleva un **seguimiento de cobro**, aparte de su avance de producción:
+**No facturado → Facturado → Cobrado**, y al marcar cada paso se guarda la **fecha**.
+Lo gestionan ADMIN y VENDEDOR desde el detalle de la orden. **No es una factura
+fiscal**: es solo un semáforo para saber qué está por cobrar. El TALLER no lo ve.
 
 ---
 
@@ -530,7 +574,88 @@ de usuarios y override de IA por usuario. Cada registro guarda quién, cuándo y
 
 ---
 
-## 22. Glosario
+## 22. CRM
+
+Menú **CRM** (ADMIN / VENDEDOR). Es el tablero comercial **antes** de cotizar:
+sirve para no perder oportunidades ni compromisos con los clientes. Tiene dos partes.
+
+### 22.1 Prospectos (leads)
+Un **prospecto** es una oportunidad todavía sin cotización: "Fulano quiere 500
+volantes", "la panadería preguntó por menús". Se lleva en un **tablero** de cuatro
+columnas por las que arrastras la tarjeta:
+
+- **Nuevo** — recién capturado.
+- **Contactado** — ya le hablaste.
+- **Convertido** — se volvió cotización.
+- **Descartado** — no prosperó.
+
+Para crear uno, usa **Nuevo prospecto** (arriba): *Oportunidad* (obligatorio),
+*Cliente*, *Contacto* (correo o teléfono) y *Detalle* (qué necesita, presupuesto
+estimado, notas). Arrastra la tarjeta a la columna que corresponda a medida que
+avanza; también puedes eliminar un prospecto que ya no aplica.
+
+### 22.2 Actividades
+Una **actividad** es una gestión agendada: **Reunión, Llamada, Seguimiento** o
+**Nota**. Con **Agendar actividad** pones el *Tipo*, una *Fecha* (opcional), el
+*Título* (p. ej. "Llamar para confirmar arte"), el *Cliente* y unas *Notas*. La lista
+muestra las **pendientes** primero por fecha; cuando la cumples, la marcas como
+**hecha** y desaparece de la lista de pendientes.
+
+> El CRM se enlaza con clientes, prospectos y cotizaciones de forma flexible: no exige
+> que el cliente ya exista para anotar una oportunidad o una llamada.
+
+---
+
+## 23. Proveedores
+
+Menú **Proveedores** (**solo ADMIN**). Aquí llevas **de quién compras el papel** y a
+qué precio, para costear con el proveedor más conveniente sin cambiar nada más del
+sistema.
+
+### 23.1 Proveedores y predeterminado
+- **Nuevo proveedor:** *Nombre* (obligatorio), *Moneda* (USD por defecto), *Contacto*
+  y *Notas*.
+- **Predeterminado:** marca **un** proveedor como el **predeterminado global** con
+  *Hacer predeterminado*. Es el proveedor de respaldo: se usa para costear cualquier
+  papel que no tenga un proveedor propio asignado. El predeterminado no se puede
+  borrar (primero nombra otro).
+
+### 23.2 Comparador de precios
+Por **cada papel** del catálogo, el comparador muestra el precio de **todos** los
+proveedores que tienen lista, **normalizado a resma completa** (aunque uno cotice por
+hoja y otro por millar, se comparan parejo). Marca el **más barato**, muestra el
+**ahorro potencial** frente al precio actual y señala el **preferido**.
+
+- **Proveedor preferido (por papel):** con **Hacer preferido** eliges de qué proveedor
+  sale el precio de ese papel. Ese precio pasa a ser el **precio efectivo** —el que usa
+  el motor para cotizar—. Así puedes tener un proveedor global y, para papeles puntuales,
+  preferir otro más barato.
+
+### 23.3 Importar una lista de precios (Excel)
+Para cargar los precios de un proveedor de una vez, desde un **.xlsx**:
+
+1. **Descargar plantilla:** baja la plantilla ya **pre-rellenada con tu catálogo**
+   (trae la columna **Clave**, que es la que empareja cada fila con el papel correcto —
+   no la cambies). Llena la columna **Precio** y, si hace falta, ajusta **Unidad**
+   (*resma*, *hoja* o *millar*) y **Hojas**.
+2. **Importar lista:** elige el proveedor y sube el archivo.
+3. **Vista previa:** antes de confirmar, ves el **diff** de cada papel: si el precio
+   **sube**, **baja**, queda **igual**, es **nuevo** o si la fila **no coincide** con
+   ningún papel del catálogo (*sin papel*, se ignora).
+4. **Confirmar:** se guardan los precios de ese proveedor. Si el proveedor es el
+   **preferido** de un papel (o el predeterminado y el papel no tiene preferido), su
+   nuevo precio actualiza el **precio efectivo** de ese papel automáticamente.
+
+Puedes cargar **varias listas** (una por proveedor) y compararlas lado a lado en el
+comparador.
+
+> **Lo importante:** el motor de cálculo **no cambia**. Sigue leyendo el precio del
+> papel; lo que hacen los proveedores es decidir **de dónde sale** ese precio y dejarte
+> ver cuánto ahorrarías cambiando de proveedor.
+
+---
+
+## 24. Glosario
 
 | Término | Qué significa |
 |---|---|
@@ -549,8 +674,18 @@ de usuarios y override de IA por usuario. Cada registro guarda quién, cuándo y
 | **Precio a mano** | Precio unitario fijado manualmente que manda sobre el calculado. |
 | **Snapshot** | Copia congelada de papeles, acabados y variables que guarda cada cotización; la hace inmutable. |
 | **Borrador** | Único estado en que una cotización se puede editar. |
+| **Pendiente de aprobación** | Estado intermedio (entre Borrador y Enviada) en que la cotización espera el visto bueno interno. |
 | **Orden de Venta** | Una cotización Aprobada; mismo documento, listo para producir. |
+| **Handoff** | El paso automático de comercial a producción: al aprobar, la orden se genera sola. |
 | **Orden de producción** | Papel para el taller generado de una cotización aprobada. **No lleva precios.** |
+| **Pieza** | Cada ítem de la cotización se sigue por separado en producción, con su propio estado. |
+| **Carril interno / tercerizado** | Interno = ítems propios (Digital/Offset) que van al taller; tercerizado = ítems que se compran a un proveedor. |
+| **Estado de cobro** | Semáforo de cobro de la orden (No facturado → Facturado → Cobrado). No es factura fiscal. |
+| **Prospecto** | Oportunidad/lead comercial antes de cotizar (tablero del CRM). |
+| **Actividad** | Gestión comercial agendada (reunión, llamada, seguimiento, nota) con fecha y "hecha". |
+| **Proveedor predeterminado** | Proveedor de respaldo global, para papeles sin proveedor propio. |
+| **Proveedor preferido** | Proveedor elegido para costear un papel concreto; su precio es el que usa el motor. |
+| **Precio efectivo** | El precio de resma con que el sistema cotiza un papel (copia del preferido o del predeterminado). |
 | **Mixta** | Cotización con ítems de varios tipos a la vez. |
 
 ---

@@ -93,9 +93,16 @@ Menú **Cotizar prov.** Cuando el trabajo lo hace un tercero y solo aplicas tu m
 
 ## 5. Cotizaciones: estados, edición, PDF y CSV
 
-Menú **Cotizaciones**: listado con búsqueda y filtro por estado.
+Menú **Cotizaciones**: listado con búsqueda y filtro por estado, o **tablero Kanban**.
 
-- **Estados:** Borrador → Enviada → Aprobada / Rechazada / Vencida. Cambias el estado desde el detalle.
+- **Lista o Tablero:** con el selector **Lista / Tablero** cambias de la tabla de
+  siempre a un **tablero Kanban** por estado, donde **arrastras** cada tarjeta a otra
+  columna para cambiarle el estado.
+- **Estados:** Borrador → **Pendiente de aprobación** → Enviada → Aprobada / Rechazada
+  / Vencida. Cambias el estado desde el detalle o arrastrando la tarjeta en el Tablero.
+  La *Pendiente de aprobación* es el paso opcional de visto bueno interno antes de
+  enviar al cliente. Cada estado tiene su color (gris borrador, ámbar pendiente, azul
+  enviada, verde aprobada, rojo rechazada, naranja vencida).
 - **Editar:** solo si está en **Borrador**. Al guardar se actualiza esa misma cotización.
 - **Duplicar:** desde el detalle, "usar como base" crea una **nueva** cotización con la misma estructura (útil para variantes).
 - **Imprimir / PDF:** el detalle tiene versión imprimible con el membrete de la empresa (usa *Imprimir* del navegador → Guardar como PDF).
@@ -107,16 +114,32 @@ Menú **Cotizaciones**: listado con búsqueda y filtro por estado.
 
 ## 6. Órdenes de producción / Taller
 
-### 6.1 Generar una orden (ADMIN / VENDEDOR)
-Desde una cotización **Aprobada**, genera la **orden de producción**. Las etapas del taller salen de los acabados de la cotización, en el orden correcto (impresión → laminado → troquel → pegado → guillotina…).
+### 6.1 La orden se genera sola (handoff automático)
+Cuando pasas una cotización a **Aprobada** (= Orden de Venta), **la orden de producción
+se crea sola** (el botón "Generar orden" queda de respaldo). Ahora **todos** los ítems
+entran a producción: cada ítem es una **pieza** con su propio estado, en uno de dos
+carriles:
+- **Carril interno (taller):** Digital y Offset → *En cola de diseño → En diseño →
+  Esperando arte → En impresión → En acabado → Lista*. Sus **etapas** salen de los
+  acabados, en orden (impresión → laminado → troquel → pegado → guillotina…).
+- **Carril tercerizado (compras):** Gran formato, Proveedor y Personalizados —que antes
+  no se controlaban— → *Por cotizar → Comprado → Recibido → Entregado*.
 
 ### 6.2 Tablero del taller (todos los roles, incluido TALLER)
-Menú **Taller**: muestra las órdenes por estado. El TALLER ve la receta y las etapas, **sin ningún precio**.
+Menú **Taller**, con dos vistas: **Tablero** (por pieza; arrastra la tarjeta para
+avanzarla — el **TALLER puede mover piezas**) y **Órdenes** (la vista clásica por
+estado). En ambas, el TALLER ve la receta, las etapas y las piezas **sin ningún precio**.
 
 ### 6.3 Trabajar una orden
-- Marca cada **etapa** como en proceso / lista a medida que avanza.
-- La orden pasa por Pendiente → En proceso → **Terminada** → Entregada.
-- Al marcar **Terminada**, el sistema **descuenta el papel consumido del inventario** automáticamente (una sola vez).
+- Mueve cada **pieza** por sus estados, o marca cada **etapa** como en proceso / lista a
+  medida que avanza. La orden pasa por Pendiente → En proceso → **Terminada** → Entregada.
+- Al llegar a **Terminada**, el sistema **descuenta el papel consumido del inventario**
+  automáticamente (una sola vez).
+
+### 6.4 Estado de cobro (ADMIN / VENDEDOR)
+Cada orden tiene un **seguimiento de cobro** aparte de la producción: **No facturado →
+Facturado → Cobrado**, con su fecha. Es solo un semáforo de qué está por cobrar, **no
+una factura fiscal**. El TALLER no lo ve.
 
 ---
 
@@ -146,7 +169,38 @@ Los papeles se agrupan por **categoría** de material.
 
 ---
 
-## 10. Glosario rápido
+## 10. CRM: prospectos y actividades (ADMIN / VENDEDOR)
+
+Menú **CRM**: el tablero comercial **antes** de cotizar.
+- **Prospectos (leads):** oportunidades sin cotización aún, en un tablero de cuatro
+  columnas que arrastras: **Nuevo → Contactado → Convertido / Descartado**. Crea uno con
+  *Oportunidad*, *Cliente*, *Contacto* y *Detalle*.
+- **Actividades:** gestiones agendadas (**Reunión, Llamada, Seguimiento, Nota**) con
+  fecha, título, cliente y notas. Las pendientes salen primero por fecha; al cumplirlas
+  las marcas como **hechas**.
+
+---
+
+## 11. Proveedores y listas de precios (solo ADMIN)
+
+Menú **Proveedores**: de quién compras el papel y a qué precio.
+- **Alta y predeterminado:** registras proveedores y marcas **uno** como
+  **predeterminado global** (respaldo para papeles sin proveedor propio; no se borra).
+- **Comparador:** por cada papel, ves el precio de todos los proveedores **normalizado a
+  resma**, con el **más barato** marcado y el **ahorro potencial**. Con **Hacer
+  preferido** eliges de qué proveedor sale el precio de un papel; ese pasa a ser su
+  **precio efectivo** (el que usa el motor).
+- **Importar lista (Excel):** descarga la **plantilla pre-rellenada** con tu catálogo
+  (columna **Clave** para emparejar), llena la columna **Precio** (unidad *resma*, *hoja*
+  o *millar*), súbela y revisa la **vista previa** (sube / baja / igual / nuevo / sin
+  papel) antes de **confirmar**. Puedes cargar varias listas y compararlas.
+
+> El motor de cálculo **no cambia**: sigue leyendo el precio del papel; los proveedores
+> solo deciden **de dónde sale** ese precio.
+
+---
+
+## 12. Glosario rápido
 
 | Término | Qué significa |
 |---|---|
@@ -157,3 +211,8 @@ Los papeles se agrupan por **categoría** de material.
 | **Utilidad protegida** | Tu ganancia también protegida contra el diferencial. |
 | **Snapshot** | La copia congelada de precios y variables que guarda cada cotización. |
 | **Borrador** | Único estado en el que una cotización se puede editar. |
+| **Handoff** | Al aprobar una cotización, la orden de producción se genera sola. |
+| **Pieza / carril** | Cada ítem se sigue en producción por separado; carril interno (taller) o tercerizado (compras). |
+| **Estado de cobro** | Semáforo de cobro de la orden (No facturado → Facturado → Cobrado); no es factura fiscal. |
+| **Prospecto** | Oportunidad comercial antes de cotizar (CRM). |
+| **Precio efectivo** | Precio de resma con que el motor cotiza un papel; copia del proveedor preferido o predeterminado. |

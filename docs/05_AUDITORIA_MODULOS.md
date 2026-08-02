@@ -232,3 +232,67 @@ no cambian: una por color). Semilla: prensa de 4, 2 y 1 color.
 
 Ninguno es un error de cálculo: son **supuestos del modelo** que conviene explicitar
 y afinar con los números del taller.
+
+---
+
+## Módulos nuevos (Fases 1–3): comercial, producción por pieza y proveedores
+
+Estas fases **no tocan la cola de precio** ni los seis motores de costo de arriba:
+son de **flujo** (comercial → producción) y de **origen de datos** (de dónde sale el
+precio del papel). Se documentan aquí porque cambian cómo se mueve un trabajo por el
+sistema y extienden el invariante TALLER-sin-precios.
+
+### Fase 1 — Comercial (`lib/crm.ts`, `lib/cotizaciones.ts`)
+- **Handoff automático.** Al pasar una cotización a **APROBADA** (= Orden de Venta),
+  `cambiarEstadoCotizacion` llama a `generarOrden` si la cotización aún no tiene orden.
+  Es *best-effort*: si es 100 % tercerizada o hay una carrera de doble aprobación, el
+  fallo se registra y **no** rompe el cambio de estado. El botón "Generar orden" del
+  detalle queda como respaldo manual.
+- **Estado `PENDIENTE`** (pendiente de aprobación) entre BORRADOR y ENVIADA. Colores de
+  estado al estándar: gris=borrador, ámbar=pendiente, azul=enviada, verde=ganada,
+  rojo=perdida, naranja=vencida (`EstadoBadge`).
+- **Kanban de cotizaciones** (toggle Lista/Tablero con arrastrar/soltar) y **CRM**
+  (`/crm`): tablero de prospectos (NUEVO→CONTACTADO→CONVERTIDO/DESCARTADO) y actividades.
+  Sin dinero en juego: son datos comerciales, no cálculo.
+
+### Fase 2 — Producción por pieza (`lib/ordenes.ts`)
+- Cada ítem de la cotización se convierte en una **`PiezaOrden`** con su carril:
+  **INTERNO** (Digital/Offset → taller: en cola de diseño → en diseño → esperando arte
+  → en impresión → en acabado → lista) o **TERCERIZADO** (gran formato / proveedor /
+  personalizado → compras: por cotizar → comprado → recibido → entregado). Antes los
+  ítems tercerizados **no** se controlaban en producción; ahora sí.
+- **Dos gobiernos de estado de orden** conviven sin pisarse: las órdenes con etapas las
+  lleva `recomputarEstadoOrden` (por etapas, que además descuenta papel al terminar); las
+  100 % tercerizadas (sin etapas) las lleva `recomputarEstadoOrdenPorPiezas` (por estado
+  de las piezas). Sin esto último, una orden solo de compras nacía PENDIENTE y no salía
+  nunca del tablero.
+- **Estado de cobro** de la orden (`EstadoCobro`: No facturado → Facturado → Cobrado, con
+  fechas), gestionado por ADMIN/VENDEDOR. Es **solo seguimiento**, no una factura fiscal.
+- **Invariante TALLER-sin-precios extendido a piezas** 🟢: el tablero por pieza usa
+  `SELECT_PIEZA_TABLERO`, que —como `SELECT_PROD`— **jamás** selecciona una columna de
+  dinero, y el `snapshot` de cada pieza es `ItemProd` (sin precios). El rol TALLER puede
+  **mover piezas** (`requireUsuario`) pero sigue sin ver un solo número. Probado en
+  `seguridad.test.ts`.
+
+### Fase 3 — Proveedores y listas de precios (`lib/proveedores.ts`, `lib/proveedores-excel.ts`)
+- **Comparador por papel:** normaliza cada lista a **precio de resma** (`precioAResma`
+  desde resma/hoja/millar), marca el más barato y el **ahorro potencial** frente al precio
+  efectivo. Puro y testeable (`proveedores.test.ts`).
+- **Precio efectivo:** cada papel tiene un **proveedor preferido** (o el **predeterminado**
+  global) cuyo precio se copia a `Papel.precio`. Importar su lista o fijar preferido
+  actualiza el precio efectivo; **el motor de cálculo no cambia** (sigue leyendo `precio`).
+- **Importación Excel** (`exceljs`): plantilla pre-rellenada con el catálogo (columna
+  `Clave` para emparejar), carga de la lista de un proveedor y **vista previa (diff:
+  sube/baja/igual/nuevo/sin_papel)** antes de confirmar. La aplicación es atómica
+  (`$transaction`): filas inválidas (precio ≤ 0, unidad/hojas mal) se descartan sin
+  romper el catálogo.
+
+**Observaciones de modelado (no bugs):**
+- **I. Sobreprotección tercerizada, ahora visible en producción** 🟢 — el hallazgo **F**
+  (diferencial aplicado a líneas tercerizadas) no cambia con estas fases, pero ahora esas
+  piezas se ven en el tablero (carril tercerizado) y el **precio efectivo** del papel abre
+  la puerta a decidir el costo real por proveedor. Sigue siendo decisión de negocio.
+- **J. `Papel.precio` como dato derivado** 🟢 — el precio efectivo es una **copia** del
+  preferido, no una vista calculada: si se edita el papel a mano en Variables, puede
+  quedar desalineado de la lista del proveedor hasta la próxima importación o cambio de
+  preferido. Es a propósito (el motor no debe recalcular listas), pero conviene saberlo.

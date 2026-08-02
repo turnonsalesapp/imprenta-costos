@@ -25,6 +25,7 @@ Calcular el precio de cualquier trabajo de imprenta a partir de la estructura de
 | Hashing | **bcryptjs** (cost 10) | contraseñas |
 | Validación | **zod** | parcial (clientes, usuarios, salida IA) |
 | IA (opcional) | **@anthropic-ai/sdk** (Claude) | intérprete de solicitudes |
+| Excel | **exceljs** | plantilla e importación de listas de precios de proveedores (Fase 3) |
 | Tests | **vitest** | 35 pruebas |
 | Despliegue | Railway (`railway.json`) | build + migraciones + healthcheck |
 
@@ -92,11 +93,18 @@ Entidades principales (`prisma/schema.prisma`):
 | **Config** | variables del negocio | fila única `id="global"`: márgenes, tasas, IVA, membrete, `interpretarIA`, `interpretarModelo` |
 | **Tasa** | histórico | cada cambio de tasa queda registrado |
 | **Trabajo** | plantilla | receta de un trabajo repetido (no guarda precio) |
-| **Cotizacion** | documento | `tipo` PROPIA/PROVEEDOR, `estado`, `snapshot` congelado, `entrada`, `lineas`, columnas de dinero |
-| **Orden** | producción | 1:1 con cotización aprobada; **sin columnas de dinero**; `inventarioAplicado` |
-| **EtapaOrden** | taller | una etapa por acabado; estado y responsable |
+| **Cotizacion** | documento | `tipo` PROPIA/PROVEEDOR/…/MIXTA, `estado`, `snapshot` congelado, `entrada`, `lineas`, `items`, columnas de dinero |
+| **Orden** | producción | 1:1 con cotización aprobada; **sin columnas de dinero**; `inventarioAplicado`; seguimiento de cobro (`estadoCobro`, `fechaFactura`, `fechaCobro`) |
+| **EtapaOrden** | taller | una etapa por acabado; estado y responsable; `piezaId` (etapa de una pieza concreta) |
+| **PiezaOrden** | producción por pieza | cada ítem de la cotización con su `carril` (INTERNO/TERCERIZADO), `estado` propio y `snapshot` **sin precios**; las etapas internas cuelgan de la pieza (Fase 2) |
+| **Proveedor** | catálogo de costos | proveedor de papel; uno `predeterminado` global; guarda sus listas de precios (Fase 3) |
+| **PrecioProveedorPapel** | lista de precios | precio vigente de un papel por proveedor (`unidad` resma/hoja/millar), una fila por (papel, proveedor); base del comparador (Fase 3) |
+| **Prospecto** | CRM comercial | oportunidad/lead antes de cotizar (NUEVO→CONTACTADO→CONVERTIDO/DESCARTADO); enlace por id, sin FK dura (Fase 1) |
+| **Actividad** | CRM comercial | gestión agendada (reunión/llamada/seguimiento/nota) con `fecha` y `hecha` (Fase 1) |
 
-**Enums:** `Rol`, `EstadoCotizacion` (BORRADOR/ENVIADA/APROBADA/RECHAZADA/VENCIDA), `TipoCotizacion`, `EstadoOrden`, `EstadoEtapa`, `TipoMovimiento`.
+**Papel** gana `proveedorPreferidoId` (Fase 3): el `precio` de resma pasa a ser el **precio efectivo** (copia del proveedor preferido, o del predeterminado global) que usa el motor, sin cambiar su firma.
+
+**Enums:** `Rol`, `EstadoCotizacion` (BORRADOR/**PENDIENTE**/ENVIADA/APROBADA/RECHAZADA/VENCIDA), `TipoCotizacion`, `EstadoOrden`, `EstadoEtapa`, `TipoMovimiento`, `CarrilPieza` (INTERNO/TERCERIZADO), `EstadoPieza` (interno: EN_COLA/EN_DISENO/ESPERANDO_ARTE/EN_IMPRESION/EN_ACABADO/LISTA · tercerizado: POR_COTIZAR/COMPRADO/RECIBIDO/ENTREGADO), `EstadoCobro` (NO_FACTURADO/FACTURADO/COBRADO), `ProspectoEstado`, `ActividadTipo`.
 
 ---
 
@@ -134,8 +142,10 @@ El diferencial se aplica **dos veces** (al costo y a la utilidad) porque el tall
 | **Cotización propia** | `/cotizar`, `Calculadora.tsx`, `lib/cotizaciones.ts` | motor completo (papel + acabados), comparadores por cantidad y margen, sugeridor de tamaño, precio a mano |
 | **Cotización de proveedor** | `/cotizar-proveedor` | parte del costo de un tercero (total o unitario), características de lo ofertado |
 | **Intérprete IA** (opcional) | `PanelInterpretar.tsx`, `lib/interpretar.ts` | traduce texto libre del cliente en un borrador estructurado (Claude) |
-| **Cotizaciones** | `/cotizaciones`, `[id]`, `[id]/imprimir` | listado, detalle inmutable, PDF con membrete, export CSV |
-| **Órdenes / Taller** | `/taller`, `lib/ordenes.ts` | genera orden de cotización aprobada; tablero; etapas; al terminar descuenta inventario |
+| **Cotizaciones** | `/cotizaciones`, `[id]`, `[id]/imprimir` | listado (Lista o **Tablero Kanban** con arrastrar/soltar), detalle inmutable, PDF con membrete, export CSV |
+| **CRM comercial** | `/crm`, `lib/crm.ts` | tablero de prospectos/leads (arrastrar/soltar) y actividades agendadas; ADMIN/VENDEDOR (Fase 1) |
+| **Órdenes / Taller** | `/taller`, `lib/ordenes.ts` | **handoff automático** al aprobar; producción **por pieza** (carril interno/tercerizado, tablero con arrastrar/soltar) y vista de órdenes clásica; etapas; **estado de cobro**; al terminar descuenta inventario |
+| **Proveedores** | `/proveedores`, `lib/proveedores.ts`, `lib/proveedores-excel.ts` | alta, predeterminado, comparador por papel (normalizado a resma), proveedor preferido; **importación de listas desde Excel** con vista previa; solo ADMIN (Fase 3) |
 | **Inventario** | `/inventario`, `lib/inventario.ts` | stock en pliegos por categoría, entradas, ajustes, mínimos, movimientos |
 | **Clientes / Trabajos** | `/clientes`, `lib/trabajos.ts` | CRM básico y recetas repetibles |
 | **Variables** | `/variables`, `lib/variables.ts` | márgenes, tasas, IVA, membrete, papeles, acabados, IA |
@@ -148,7 +158,7 @@ El diferencial se aplica **dos veces** (al costo y a la utilidad) porque el tall
 
 - **Autenticación** en dos niveles: middleware Edge verifica la firma del JWT (barato, sin BD); `getUsuario()` comprueba contra la tabla `Sesion` que la sesión no esté revocada y el usuario siga activo (verdad de fondo).
 - **Autorización por rol**: `requireRol(...)` en cada página/acción; `requireUsuario()` en el layout del grupo `(app)`.
-- **Invariante crítico TALLER**: el rol TALLER **nunca** recibe un precio, costo o margen. Es estructural, no cosmético: el modelo `Orden` no tiene columnas de dinero y `SELECT_PROD` (`lib/ordenes.ts`) jamás selecciona una columna monetaria. La exportación CSV también verifica `puedeVerPrecios(rol)`.
+- **Invariante crítico TALLER**: el rol TALLER **nunca** recibe un precio, costo o margen. Es estructural, no cosmético: el modelo `Orden` no tiene columnas de dinero y ni `SELECT_PROD` ni `SELECT_PIEZA_TABLERO` (tablero de producción por pieza, `lib/ordenes.ts`) seleccionan jamás una columna monetaria; el `snapshot` de cada `PiezaOrden` que ve el taller tampoco lleva dinero. La exportación CSV también verifica `puedeVerPrecios(rol)`. `seguridad.test.ts` escanea ambas selecciones para probar el invariante sin BD.
 - **Inmutabilidad**: una cotización guarda un `snapshot` congelado de papeles, acabados y variables; solo es editable en estado BORRADOR (y re-congela al guardar).
 - **Secretos** fuera del repositorio (`.gitignore`, `.env.example` sin valores); en producción como variables/secrets de Railway.
 - **SQL parametrizado** por Prisma en todo el acceso a datos.
@@ -163,6 +173,9 @@ El diferencial se aplica **dos veces** (al costo y a la utilidad) porque el tall
 3. **Mapeo `clave`↔`cuid`**: el motor referencia papeles/acabados por `clave` estable; la BD por `id` (cuid). La traducción vive en `trabajos.ts` / `inventario.ts`.
 4. **Descuento de inventario idempotente**: solo la primera vez que una orden llega a TERMINADA (`Orden.inventarioAplicado`).
 5. **Formato es-VE**: miles con punto, decimales con coma; precios en USD con equivalente en Bs.
+6. **Handoff automático (best-effort)**: al pasar una cotización a APROBADA, `cambiarEstadoCotizacion` genera la orden con `generarOrden` si aún no existe; una carrera o una cotización 100 % tercerizada no rompe el cambio de estado (se registra el fallo, no se propaga). El botón "Generar orden" queda como respaldo manual.
+7. **Producción por pieza**: cada ítem se convierte en una `PiezaOrden` con su carril (interno→taller / tercerizado→compras). Las órdenes con etapas las gobierna `recomputarEstadoOrden` (por etapas, además descuenta papel); las 100 % tercerizadas, `recomputarEstadoOrdenPorPiezas` (por estado de las piezas).
+8. **Precio efectivo del papel**: `Papel.precio` (resma) es siempre copia del proveedor preferido del papel, o del predeterminado global si no tiene uno. Importar la lista de ese proveedor o fijar preferido lo actualiza; el motor de cálculo no cambia.
 
 ---
 
@@ -172,6 +185,12 @@ El diferencial se aplica **dos veces** (al costo y a la utilidad) porque el tall
   `npx prisma migrate diff --from-schema-datamodel <schema-anterior> --to-schema-datamodel prisma/schema.prisma --script`.
 - **Railway** aplica las migraciones en el `preDeployCommand: npx prisma migrate deploy` (ver `railway.json`) y valida `/api/health` antes de enrutar tráfico.
 - Cada push a la rama principal republica.
+- **Migraciones nuevas (Fases 1–3), 4 en total**, que aplica `prisma migrate deploy`:
+  `20260801130000_estado_pendiente` (estado PENDIENTE de cotización),
+  `20260802120000_crm_prospecto_actividad` (CRM: Prospecto y Actividad),
+  `20260802140000_produccion_por_pieza` (PiezaOrden, carriles y estado de cobro de la orden),
+  `20260802160000_proveedores_precios` (Proveedor, PrecioProveedorPapel y `Papel.proveedorPreferidoId`).
+- Fase 3 agrega la dependencia **`exceljs`** (plantilla e importación de listas de precios): al desplegar, recuerda instalar dependencias (`npm ci`) antes del build.
 
 ---
 

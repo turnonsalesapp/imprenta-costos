@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=1280,initial-scale=1">
+<title>Capacitación — Sistema de la imprenta</title>
+<style>
+  :root{--plancha:#E3E7E3;--hoja:#FCFCFB;--tinta:#171B19;--regla:#C4CBC5;--suave:#EFF2EF;--kraft:#767D76;--cian:#0B8FA8;--magenta:#C4177C;--amarillo:#C79400;--exito:#15794F}
+  *{box-sizing:border-box;margin:0}
+  html,body{width:1280px;height:720px;overflow:hidden}
+  body{background:var(--plancha);color:var(--tinta);font-family:Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+  .eyebrow{font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:var(--kraft)}
+  #stage{position:relative;width:1280px;height:720px}
+  .scene{position:absolute;inset:0;padding:72px 88px;display:flex;flex-direction:column;justify-content:center;opacity:0;transition:opacity .6s ease}
+  .scene.on{opacity:1}
+  h1{font-size:52px;font-weight:800;letter-spacing:-.02em;line-height:1.05;margin-top:10px}
+  h2{font-size:40px;font-weight:800;letter-spacing:-.01em;margin-top:8px}
+  p.cap{font-size:22px;line-height:1.5;color:var(--tinta);max-width:900px;margin-top:16px}
+  .cmyk{display:flex;width:120px;height:14px;overflow:hidden;border-radius:2px}
+  .cmyk i{flex:1}
+  .bg-c{background:var(--cian)}.bg-m{background:var(--magenta)}.bg-y{background:var(--amarillo)}.bg-k{background:var(--tinta)}
+  .bg-e{background:var(--exito)}
+  .row{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap}
+  .col{width:150px;border:1px solid var(--regla);border-radius:3px;background:var(--suave);overflow:hidden}
+  .col .h{padding:8px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+  .col .b{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:120px}
+  .card{border:1px solid var(--regla);border-radius:3px;background:var(--hoja);padding:8px}
+  .card .t{font-size:12px;font-weight:600}
+  .card .s{font-size:10px;color:var(--kraft);margin-top:2px}
+  .chip{display:inline-block;border-radius:3px;padding:2px 7px;font-size:11px;font-weight:700}
+  .tag{font-size:9px;font-weight:700;text-transform:uppercase;padding:2px 5px;border-radius:2px}
+  .progress{position:absolute;left:0;bottom:0;height:5px;background:var(--cian);width:0;transition:width .3s linear}
+  .counter{position:absolute;right:40px;bottom:22px;font-size:13px;color:var(--kraft)}
+  .brand{position:absolute;left:40px;bottom:20px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700}
+  .big{font-size:120px;line-height:1;font-weight:800;letter-spacing:-.03em}
+  .flow{display:flex;align-items:center;gap:14px;margin-top:34px;flex-wrap:wrap}
+  .step{border:1px solid var(--regla);background:var(--hoja);border-radius:3px;padding:12px 16px;font-size:18px;font-weight:700}
+  .arrow{color:var(--kraft);font-size:24px}
+  .kv{display:flex;gap:40px;margin-top:30px}
+  .kv .k{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--kraft)}
+  .kv .v{font-size:30px;font-weight:800;margin-top:4px}
+</style></head>
+<body>
+<div id="stage">
+  <!-- 1 Portada -->
+  <section class="scene">
+    <div class="cmyk"><i class="bg-c"></i><i class="bg-m"></i><i class="bg-y"></i><i class="bg-k"></i></div>
+    <div class="eyebrow" style="margin-top:26px">Capacitación del equipo</div>
+    <h1>El sistema de la imprenta,<br>de punta a punta</h1>
+    <p class="cap">Cotizar → Ganar → Producir por pieza → Cobrar. Con proveedores e inventario detrás. En 90 segundos.</p>
+  </section>
+
+  <!-- 2 Cotizar -->
+  <section class="scene">
+    <div class="eyebrow">Paso 1 · Cotizar</div>
+    <h2>Arma un trabajo y guárdalo</h2>
+    <p class="cap">Elige el tipo — digital, offset, gran formato, proveedor o personalizado — y el sistema calcula costo y precio. Una cotización puede llevar varios ítems.</p>
+    <div class="flow">
+      <span class="step">Digital</span><span class="step">Offset</span><span class="step">Gran formato</span>
+      <span class="step">Proveedor</span><span class="step">Personalizado</span>
+    </div>
+  </section>
+
+  <!-- 3 Cotizaciones tablero -->
+  <section class="scene">
+    <div class="eyebrow">Paso 2 · Seguimiento comercial</div>
+    <h2>Cotizaciones en Lista o Tablero</h2>
+    <p class="cap">Arrastra cada cotización entre columnas para cambiar su estado, o usa el selector de la tarjeta.</p>
+    <div class="row">
+      <div class="col"><div class="h" style="background:var(--suave);color:var(--kraft)">Borrador</div><div class="b"><div class="card"><div class="t">Volantes A5</div><div class="s">Panadería · $48</div></div></div></div>
+      <div class="col"><div class="h" style="background:#FFF9E6;color:#5C4A00">Pendiente</div><div class="b"><div class="card"><div class="t">Catálogo 16p</div><div class="s">Muebles · $980</div></div></div></div>
+      <div class="col"><div class="h" style="background:#E6F4F8;color:var(--cian)">Enviada</div><div class="b"><div class="card"><div class="t">Sellos x50</div><div class="s">Ferretería · $325</div></div></div></div>
+      <div class="col"><div class="h" style="background:#EDF9F1;color:var(--exito)">Ganadas</div><div class="b"><div class="card"><div class="t">Chapas x300</div><div class="s">La Sonora · $150</div></div></div></div>
+      <div class="col"><div class="h" style="background:#FDECED;color:#8A1C1C">Perdidas</div><div class="b"><div class="card"><div class="t">Afiches A3</div><div class="s">Cine Club · $60</div></div></div></div>
+    </div>
+  </section>
+
+  <!-- 4 CRM -->
+  <section class="scene">
+    <div class="eyebrow">Paso 3 · CRM</div>
+    <h2>Prospectos y reuniones</h2>
+    <p class="cap">Antes de cotizar, registra oportunidades y agenda reuniones, llamadas y seguimientos. Mueve el prospecto de Nuevo a Contactado, Convertido o Descartado.</p>
+    <div class="flow">
+      <span class="step">Nuevo</span><span class="arrow">→</span><span class="step">Contactado</span>
+      <span class="arrow">→</span><span class="step">Convertido</span><span class="arrow">/</span><span class="step">Descartado</span>
+    </div>
+  </section>
+
+  <!-- 5 Handoff -->
+  <section class="scene">
+    <div class="eyebrow">Paso 4 · Al ganar</div>
+    <h2>La orden se genera sola</h2>
+    <p class="cap">Marcas la cotización como Ganada y se convierte en Orden de Venta: su orden de producción se crea automáticamente. El mismo registro que avanza, sin recapturar nada.</p>
+    <div class="flow">
+      <span class="step">Cotización Ganada</span><span class="arrow">→</span>
+      <span class="step" style="border-color:var(--exito);color:var(--exito)">Orden de producción (automática)</span>
+    </div>
+  </section>
+
+  <!-- 6 Producción por pieza -->
+  <section class="scene">
+    <div class="eyebrow">Paso 5 · Producción por pieza</div>
+    <h2>El taller, pieza por pieza</h2>
+    <p class="cap">Cada pieza se sigue por separado. Internas por el taller; tercerizadas por compras. El taller nunca ve precios.</p>
+    <div class="row">
+      <div class="col"><div class="h" style="background:var(--suave);color:var(--kraft)">Cola diseño</div><div class="b"><div class="card"><span class="tag" style="background:#E6F4F8;color:#0B7A93">Digital</span><div class="t" style="margin-top:4px">Tríptico</div></div></div></div>
+      <div class="col"><div class="h" style="background:#E6F4F8;color:var(--cian)">Impresión</div><div class="b"><div class="card"><span class="tag" style="background:#E9F0FF;color:#2C4A8A">Offset</span><div class="t" style="margin-top:4px">Catálogo</div></div></div></div>
+      <div class="col"><div class="h" style="background:#EDF9F1;color:var(--exito)">Lista</div><div class="b"><div class="card"><span class="tag" style="background:#E6F4F8;color:#0B7A93">Digital</span><div class="t" style="margin-top:4px">Volantes</div></div></div></div>
+      <div class="col" style="margin-left:20px"><div class="h" style="background:#FFF4E0;color:#9A6A00">Compras · por cotizar</div><div class="b"><div class="card"><span class="tag" style="background:#FDECED;color:#B23A48">Gran formato</span><div class="t" style="margin-top:4px">Pendón 1×2</div></div></div></div>
+      <div class="col"><div class="h" style="background:#EDF9F1;color:var(--exito)">Recibido</div><div class="b"><div class="card"><span class="tag" style="background:#EDE6F7;color:#5B3E8F">Proveedor</span><div class="t" style="margin-top:4px">Sellos</div></div></div></div>
+    </div>
+  </section>
+
+  <!-- 7 Cobro -->
+  <section class="scene">
+    <div class="eyebrow">Paso 6 · Cobro</div>
+    <h2>Seguimiento de cobro</h2>
+    <p class="cap">En cada orden marcas el cobro con sus fechas. Es solo seguimiento (no una factura fiscal) y lo llevan administración y ventas.</p>
+    <div class="flow">
+      <span class="step">No facturado</span><span class="arrow">→</span>
+      <span class="step" style="border-color:var(--cian);color:var(--cian)">Facturado</span><span class="arrow">→</span>
+      <span class="step" style="border-color:var(--exito);color:var(--exito)">Cobrado</span>
+    </div>
+  </section>
+
+  <!-- 8 Proveedores -->
+  <section class="scene">
+    <div class="eyebrow">Paso 7 · Proveedores y precios</div>
+    <h2>Compara e importa desde Excel</h2>
+    <p class="cap">Descargas la plantilla con tu catálogo, la llenas con los precios del proveedor, la subes y confirmas la vista previa. El comparador marca el más barato por papel.</p>
+    <div class="kv">
+      <div><div class="k">Papelera A · Glasé</div><div class="v mono">$20,00</div></div>
+      <div><div class="k">Papelera B · Glasé</div><div class="v mono" style="color:var(--exito)">$18,40 ✓</div></div>
+      <div><div class="k">Ahorro</div><div class="v mono">$1,60</div></div>
+    </div>
+  </section>
+
+  <!-- 9 Inventario -->
+  <section class="scene">
+    <div class="eyebrow">Paso 8 · Inventario</div>
+    <h2>Papel bajo control</h2>
+    <p class="cap">El inventario descuenta el papel al terminar una orden y te avisa cuando un material baja de su mínimo. Ajustas stock y mínimos por categoría.</p>
+    <div class="flow">
+      <span class="step">Orden terminada</span><span class="arrow">→</span>
+      <span class="step">Descuento automático</span><span class="arrow">→</span>
+      <span class="step" style="border-color:#8A1C1C;color:#8A1C1C">Aviso de mínimo</span>
+    </div>
+  </section>
+
+  <!-- 10 Cierre -->
+  <section class="scene">
+    <div class="cmyk"><i class="bg-c"></i><i class="bg-m"></i><i class="bg-y"></i><i class="bg-k"></i></div>
+    <div class="eyebrow" style="margin-top:26px">Listo</div>
+    <h1>Un solo sistema,<br>todo el circuito</h1>
+    <p class="cap">Cotizar → Ganar → Producir por pieza → Cobrar. Reabre la visita guiada cuando quieras con el botón «?» del menú.</p>
+  </section>
+
+  <div class="progress" id="prog"></div>
+  <div class="brand"><span class="cmyk" style="width:44px;height:12px"><i class="bg-c"></i><i class="bg-m"></i><i class="bg-y"></i><i class="bg-k"></i></span> Imprenta</div>
+  <div class="counter" id="cnt"></div>
+</div>
+<script>
+  const escenas = Array.from(document.querySelectorAll('.scene'));
+  const prog = document.getElementById('prog');
+  const cnt = document.getElementById('cnt');
+  const DUR = 8000; // ms por escena
+  let i = 0;
+  function mostrar(n){
+    escenas.forEach((s,k)=>s.classList.toggle('on',k===n));
+    cnt.textContent = (n+1)+' / '+escenas.length;
+    prog.style.width = ((n+1)/escenas.length*100)+'%';
+  }
+  mostrar(0);
+  const timer = setInterval(()=>{
+    i++;
+    if(i>=escenas.length){ clearInterval(timer); window.__done = true; return; }
+    mostrar(i);
+  }, DUR);
+  window.__totalMs = DUR*escenas.length;
+</script>
+</body></html>
