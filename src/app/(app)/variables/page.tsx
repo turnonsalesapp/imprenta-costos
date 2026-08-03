@@ -25,6 +25,8 @@ import { CrearEquipoForm } from "./CrearEquipoForm";
 import { BotonTasas } from "./BotonTasas";
 import { MembreteForm } from "./MembreteForm";
 import { PageHeader, SectionTitle } from "@/app/_components/ui";
+import { Tour, BotonTour } from "@/app/_components/Tour";
+import { PASOS_VARIABLES } from "@/app/_components/tours";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +44,17 @@ export default async function VariablesPage() {
 
   return (
     <>
-      <PageHeader title="Variables" eyebrow="Del negocio · solo administración" />
+      <PageHeader title="Variables" eyebrow="Del negocio · solo administración">
+        <BotonTour
+          id="variables"
+          className="rounded-sm border border-regla px-3 py-1.5 text-sm font-medium text-kraft hover:border-tinta hover:text-tinta"
+        >
+          Ver tutorial
+        </BotonTour>
+      </PageHeader>
+
+      {/* Tutorial de esta pantalla (se abre solo la primera vez). */}
+      <Tour id="variables" autoAbrir pasos={PASOS_VARIABLES} />
 
       {/* Valores por defecto */}
       <section className="mt-8">

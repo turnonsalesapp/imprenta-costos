@@ -5,7 +5,7 @@ export function BotonGuia() {
   return (
     <button
       type="button"
-      onClick={() => window.dispatchEvent(new Event("abrir-guia"))}
+      onClick={() => window.dispatchEvent(new Event("abrir-tour:inicio"))}
       className="rounded-sm border border-regla px-2 py-1 text-xs font-bold text-kraft hover:border-tinta hover:text-tinta"
       aria-label="Abrir la visita guiada"
       title="Visita guiada"
