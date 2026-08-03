@@ -35,6 +35,9 @@ model Usuario {
   puedeCotizar  Boolean  @default(true)  // interruptor general para cotizar
   tiposCotizar  String[] @default([])    // tipos permitidos; vacío = todos
   puedeEliminar Boolean  @default(false) // puede eliminar cotizaciones en borrador
+  /// Ver la estructura de costos (costo, margen y desglose), no solo el precio.
+  /// Se define por usuario, independiente del rol. TALLER no ve precios igual.
+  verEstructura Boolean  @default(true)
   creadoEn     DateTime @default(now()) @db.Timestamptz(3)
 
   cotizaciones Cotizacion[]

@@ -25,6 +25,7 @@ export type Sesion = {
   puedeCotizar: boolean;
   tiposCotizar: string[];
   puedeEliminar: boolean;
+  verEstructura: boolean;
 };
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -70,6 +71,7 @@ export async function getUsuario(): Promise<Sesion | null> {
   return {
     id: u.id, email: u.email, nombre: u.nombre, rol: u.rol,
     puedeCotizar: u.puedeCotizar, tiposCotizar: u.tiposCotizar, puedeEliminar: u.puedeEliminar,
+    verEstructura: u.verEstructura,
   };
 }
 

@@ -13,6 +13,16 @@ export function puedeVerPrecios(rol: Rol): boolean {
   return rol !== "TALLER";
 }
 
+/**
+ * ¿Ve la ESTRUCTURA de costos (costo, margen y desglose), no solo el precio?
+ * Se define por usuario (`verEstructura`), independiente del rol. Requiere además
+ * ver precios (TALLER nunca). `verEstructura` ausente = true (comportamiento
+ * histórico). Todo lo que muestre costo/margen/desglose en el servidor pasa por aquí.
+ */
+export function puedeVerEstructura(u: { rol: Rol; verEstructura?: boolean }): boolean {
+  return puedeVerPrecios(u.rol) && u.verEstructura !== false;
+}
+
 export function esAdmin(rol: Rol): boolean {
   return rol === "ADMIN";
 }

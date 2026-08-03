@@ -6,6 +6,7 @@ import { CrearUsuarioForm } from "./CrearUsuarioForm";
 import { SelectorRol } from "./SelectorRol";
 import { SelectorInterpretar } from "./SelectorInterpretar";
 import { PermisosCotizar } from "./PermisosCotizar";
+import { SelectorEstructura } from "./SelectorEstructura";
 import { PageHeader } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ export default async function UsuariosPage() {
     orderBy: [{ activo: "desc" }, { creadoEn: "asc" }],
     select: {
       id: true, nombre: true, email: true, rol: true, activo: true, interpretarIA: true,
-      puedeCotizar: true, tiposCotizar: true, puedeEliminar: true,
+      puedeCotizar: true, tiposCotizar: true, puedeEliminar: true, verEstructura: true,
     },
   });
   const iaDisponible = interpretarDisponible();
@@ -83,6 +84,10 @@ export default async function UsuariosPage() {
                     puedeEliminar={u.puedeEliminar}
                   />
                 </div>
+                <div>
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-kraft">Costos</div>
+                  <SelectorEstructura id={u.id} rol={u.rol} verEstructura={u.verEstructura} />
+                </div>
                 {iaDisponible && (
                   <div>
                     <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-kraft">Interpretar IA</div>
@@ -118,6 +123,7 @@ export default async function UsuariosPage() {
               <th className="px-4 py-2 font-bold">Correo</th>
               <th className="px-4 py-2 font-bold">Rol</th>
               <th className="px-4 py-2 font-bold">Cotizar / eliminar</th>
+              <th className="px-4 py-2 font-bold">Costos</th>
               {iaDisponible && <th className="px-4 py-2 font-bold">Interpretar IA</th>}
               <th className="px-4 py-2 font-bold">Estado</th>
               <th className="px-4 py-2" />
@@ -148,6 +154,9 @@ export default async function UsuariosPage() {
                       tiposCotizar={u.tiposCotizar}
                       puedeEliminar={u.puedeEliminar}
                     />
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <SelectorEstructura id={u.id} rol={u.rol} verEstructura={u.verEstructura} />
                   </td>
                   {iaDisponible && (
                     <td className="px-4 py-2.5">

@@ -116,6 +116,22 @@ export async function cambiarPermisos(formData: FormData): Promise<void> {
   revalidatePath("/usuarios");
 }
 
+/** Define si un usuario ve la estructura de costos (no solo el precio). Cualquier
+ *  rol; se define por usuario. */
+export async function cambiarEstructura(formData: FormData): Promise<void> {
+  const admin = await requireRol("ADMIN");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const verEstructura = formData.get("ver") === "on";
+  await db.usuario.update({ where: { id }, data: { verEstructura } });
+  await registrarAuditoria({
+    actorId: admin.id, actorNombre: admin.nombre,
+    accion: "usuario.estructura", entidad: id,
+    detalle: `Ver estructura de costos: ${verEstructura ? "sí" : "no (solo precio)"}`,
+  });
+  revalidatePath("/usuarios");
+}
+
 export async function alternarActivo(formData: FormData): Promise<void> {
   const admin = await requireRol("ADMIN");
 
