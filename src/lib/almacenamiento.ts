@@ -104,10 +104,17 @@ export const almacenDrive: Almacen = {
   nombre: "drive",
   async guardar(f: ArchivoBinario): Promise<ResultadoGuardado> {
     // Se comprueba aquí (sin importar ./drive) para fallar claro si falta la
-    // config y para no cargar el módulo servidor cuando no aplica.
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON || !process.env.GDRIVE_FOLDER_ID) {
+    // config y para no cargar el módulo servidor cuando no aplica. Vale OAuth de
+    // usuario (recomendado) o cuenta de servicio; en ambos casos, la carpeta.
+    const tieneOAuth =
+      !!process.env.GOOGLE_OAUTH_CLIENT_ID &&
+      !!process.env.GOOGLE_OAUTH_CLIENT_SECRET &&
+      !!process.env.GOOGLE_OAUTH_REFRESH_TOKEN;
+    const tieneSA = !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    if (!process.env.GDRIVE_FOLDER_ID || (!tieneOAuth && !tieneSA)) {
       throw new Error(
-        "Almacén 'drive' no configurado: faltan GOOGLE_SERVICE_ACCOUNT_JSON y GDRIVE_FOLDER_ID.",
+        "Almacén 'drive' no configurado: falta GDRIVE_FOLDER_ID y las credenciales " +
+          "(OAuth: GOOGLE_OAUTH_CLIENT_ID/SECRET/REFRESH_TOKEN, o GOOGLE_SERVICE_ACCOUNT_JSON).",
       );
     }
     const { subirADrive } = await import("./drive");
