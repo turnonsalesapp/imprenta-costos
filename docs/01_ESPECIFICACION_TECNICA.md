@@ -212,12 +212,21 @@ de inicio se monta en `(app)/layout.tsx` (`autoAbrir`) y el de Variables en su p
   `20260803140000_comentarios_adjuntos` (modelos Comentario y Adjunto del hilo del trabajo).
 - Fase 3 agrega la dependencia **`exceljs`** (plantilla e importación de listas de precios): al desplegar, recuerda instalar dependencias (`npm ci`) antes del build.
 - **Variables de entorno nuevas (Fase 4)** para el almacenamiento de adjuntos:
-  `ALMACEN_ADJUNTOS` = `db` (por defecto, bytes en la BD) o `drive`; y, solo si es
-  `drive`, `GOOGLE_SERVICE_ACCOUNT_JSON` (JSON del service account) y `GDRIVE_FOLDER_ID`
-  (carpeta destino en una Unidad Compartida). El backend "drive" (`lib/drive.ts`)
-  sube con el service account (JWT firmado con `jose`) y sirve la descarga en
-  streaming desde el servidor por `/api/adjuntos/[id]`; se activa al poner esas
-  variables. Con `db` no hace falta configurar nada.
+  `ALMACEN_ADJUNTOS` = `db` (por defecto, bytes en la BD) o `drive`. Con `drive` se
+  define `GDRIVE_FOLDER_ID` (carpeta destino) y UNA de dos credenciales, ambas
+  soportadas por `lib/drive.ts` (obtiene el access token y hace subida
+  multipart + descarga en streaming por `/api/adjuntos/[id]`; sin dependencias
+  pesadas, usa `jose` + fetch):
+  - **OAuth de usuario (recomendado)** — `GOOGLE_OAUTH_CLIENT_ID`,
+    `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN`. Funciona con una
+    carpeta de "Mi unidad" y no necesita clave de service account (útil cuando la
+    organización aplica `iam.managed.disableServiceAccountKeyCreation`). El refresh
+    token se obtiene una vez (OAuth Playground con un cliente OAuth propio). Con la
+    pantalla de consentimiento **Interna** el refresh token no expira.
+  - **Cuenta de servicio** — `GOOGLE_SERVICE_ACCOUNT_JSON` (JWT firmado); requiere
+    poder crear claves y una **Unidad Compartida** donde el SA sea Administrador de
+    contenido (un SA no puede subir a "Mi unidad" por falta de cuota).
+  Con `db` no hace falta configurar nada. Probado de punta a punta con OAuth.
 
 ---
 
