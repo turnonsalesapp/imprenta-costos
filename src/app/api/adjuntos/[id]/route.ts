@@ -27,22 +27,30 @@ export async function GET(
     return new Response("No autorizado", { status: 403 });
   }
 
-  // Backend "drive": el archivo vive fuera; redirige a su URL.
+  // Los bytes según el backend: "db" desde la fila; "drive" en streaming desde
+  // Google Drive con la cuenta de servicio (así el usuario no necesita cuenta
+  // de Google para verlo).
+  let bytes: Buffer | null = null;
   if (a.almacen === "drive") {
-    if (!a.url) return new Response("Adjunto no disponible", { status: 404 });
-    return Response.redirect(a.url, 302);
+    if (!a.driveFileId) return new Response("Adjunto no disponible", { status: 404 });
+    try {
+      const { descargarDeDrive } = await import("@/lib/drive");
+      bytes = await descargarDeDrive(a.driveFileId);
+    } catch {
+      return new Response("No se pudo leer el archivo de Drive", { status: 502 });
+    }
+  } else {
+    bytes = a.datos ?? null;
   }
-
-  // Backend "db": responde los bytes guardados.
-  if (!a.datos) return new Response("Adjunto no disponible", { status: 404 });
+  if (!bytes) return new Response("Adjunto no disponible", { status: 404 });
 
   const disp = esInline(a.tipo) ? "inline" : "attachment";
   const nombre = a.nombre.replace(/"/g, "");
-  return new Response(new Uint8Array(a.datos), {
+  return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": a.tipo || "application/octet-stream",
       "Content-Disposition": `${disp}; filename="${nombre}"`,
-      "Content-Length": String(a.datos.length),
+      "Content-Length": String(bytes.length),
       "Cache-Control": "no-store",
     },
   });

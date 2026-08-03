@@ -83,6 +83,7 @@ export type AdjuntoDescarga = {
   tipo: string;
   almacen: NombreAlmacen;
   datos: Buffer | null;
+  driveFileId: string | null;
   url: string | null;
 };
 
@@ -92,7 +93,7 @@ export async function obtenerAdjunto(id: string): Promise<AdjuntoDescarga | null
     where: { id },
     select: {
       id: true, cotizacionId: true, nombre: true, tipo: true,
-      almacen: true, datos: true, url: true,
+      almacen: true, datos: true, driveFileId: true, url: true,
     },
   });
   if (!a) return null;
@@ -103,6 +104,7 @@ export async function obtenerAdjunto(id: string): Promise<AdjuntoDescarga | null
     tipo: a.tipo,
     almacen: a.almacen as NombreAlmacen,
     datos: a.datos ? Buffer.from(a.datos) : null,
+    driveFileId: a.driveFileId,
     url: a.url,
   };
 }

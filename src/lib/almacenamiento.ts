@@ -92,21 +92,27 @@ export const almacenDb: Almacen = {
 };
 
 /**
- * Backend "drive": subiría el archivo a Google Drive con una cuenta de servicio
- * y guardaría solo la referencia (driveFileId + url) en la base.
+ * Backend "drive": sube el archivo a Google Drive con una cuenta de servicio y
+ * guarda solo la referencia (driveFileId + url) en la base. La descarga se sirve
+ * en streaming desde el servidor (ver ruta /api/adjuntos/[id]).
  *
- * // TODO Drive: service account (GOOGLE_SERVICE_ACCOUNT_JSON + GDRIVE_FOLDER_ID).
- * Aún NO está implementado (no se agregan dependencias pesadas como googleapis
- * por ahora). Si se selecciona sin credenciales, lanza de forma explícita.
+ * Requiere GOOGLE_SERVICE_ACCOUNT_JSON y GDRIVE_FOLDER_ID. Si faltan, `subirADrive`
+ * lanza de forma explícita. La implementación vive en `./drive` (import diferido
+ * para no cargarla cuando el backend activo es "db").
  */
 export const almacenDrive: Almacen = {
   nombre: "drive",
-  async guardar(): Promise<ResultadoGuardado> {
-    // TODO Drive: subir con GOOGLE_SERVICE_ACCOUNT_JSON a la carpeta GDRIVE_FOLDER_ID
-    // y devolver { almacen: "drive", driveFileId, url }.
-    throw new Error(
-      "Almacén 'drive' no configurado: faltan GOOGLE_SERVICE_ACCOUNT_JSON y GDRIVE_FOLDER_ID.",
-    );
+  async guardar(f: ArchivoBinario): Promise<ResultadoGuardado> {
+    // Se comprueba aquí (sin importar ./drive) para fallar claro si falta la
+    // config y para no cargar el módulo servidor cuando no aplica.
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON || !process.env.GDRIVE_FOLDER_ID) {
+      throw new Error(
+        "Almacén 'drive' no configurado: faltan GOOGLE_SERVICE_ACCOUNT_JSON y GDRIVE_FOLDER_ID.",
+      );
+    }
+    const { subirADrive } = await import("./drive");
+    const r = await subirADrive(f);
+    return { almacen: "drive", driveFileId: r.id, url: r.webViewLink };
   },
 };
 
