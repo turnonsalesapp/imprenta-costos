@@ -9,34 +9,36 @@
   .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
   .eyebrow{font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:var(--kraft)}
   #stage{position:relative;width:1280px;height:720px}
-  .scene{position:absolute;inset:0;padding:72px 88px;display:flex;flex-direction:column;justify-content:center;opacity:0;transition:opacity .6s ease}
+  .scene{position:absolute;inset:0;padding:70px 88px;display:flex;flex-direction:column;justify-content:center;opacity:0;transition:opacity .6s ease}
   .scene.on{opacity:1}
   h1{font-size:52px;font-weight:800;letter-spacing:-.02em;line-height:1.05;margin-top:10px}
-  h2{font-size:40px;font-weight:800;letter-spacing:-.01em;margin-top:8px}
-  p.cap{font-size:22px;line-height:1.5;color:var(--tinta);max-width:900px;margin-top:16px}
+  h2{font-size:38px;font-weight:800;letter-spacing:-.01em;margin-top:8px}
+  p.cap{font-size:21px;line-height:1.5;color:var(--tinta);max-width:920px;margin-top:14px}
   .cmyk{display:flex;width:120px;height:14px;overflow:hidden;border-radius:2px}
   .cmyk i{flex:1}
   .bg-c{background:var(--cian)}.bg-m{background:var(--magenta)}.bg-y{background:var(--amarillo)}.bg-k{background:var(--tinta)}
-  .bg-e{background:var(--exito)}
-  .row{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap}
+  .row{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
   .col{width:150px;border:1px solid var(--regla);border-radius:3px;background:var(--suave);overflow:hidden}
   .col .h{padding:8px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
-  .col .b{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:120px}
+  .col .b{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:110px}
   .card{border:1px solid var(--regla);border-radius:3px;background:var(--hoja);padding:8px}
   .card .t{font-size:12px;font-weight:600}
   .card .s{font-size:10px;color:var(--kraft);margin-top:2px}
-  .chip{display:inline-block;border-radius:3px;padding:2px 7px;font-size:11px;font-weight:700}
   .tag{font-size:9px;font-weight:700;text-transform:uppercase;padding:2px 5px;border-radius:2px}
   .progress{position:absolute;left:0;bottom:0;height:5px;background:var(--cian);width:0;transition:width .3s linear}
   .counter{position:absolute;right:40px;bottom:22px;font-size:13px;color:var(--kraft)}
   .brand{position:absolute;left:40px;bottom:20px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700}
-  .big{font-size:120px;line-height:1;font-weight:800;letter-spacing:-.03em}
-  .flow{display:flex;align-items:center;gap:14px;margin-top:34px;flex-wrap:wrap}
-  .step{border:1px solid var(--regla);background:var(--hoja);border-radius:3px;padding:12px 16px;font-size:18px;font-weight:700}
-  .arrow{color:var(--kraft);font-size:24px}
-  .kv{display:flex;gap:40px;margin-top:30px}
+  .flow{display:flex;align-items:center;gap:12px;margin-top:30px;flex-wrap:wrap}
+  .step{border:1px solid var(--regla);background:var(--hoja);border-radius:3px;padding:11px 15px;font-size:17px;font-weight:700}
+  .arrow{color:var(--kraft);font-size:22px}
+  .kv{display:flex;gap:40px;margin-top:26px}
   .kv .k{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--kraft)}
-  .kv .v{font-size:30px;font-weight:800;margin-top:4px}
+  .kv .v{font-size:28px;font-weight:800;margin-top:4px}
+  .fields{display:flex;flex-direction:column;gap:10px;margin-top:26px;max-width:560px}
+  .fld{display:flex;justify-content:space-between;border:1px solid var(--regla);background:var(--hoja);border-radius:3px;padding:9px 12px;font-size:16px}
+  .fld b{color:var(--kraft);font-weight:700}
+  .pill{display:inline-block;border:1px solid var(--regla);border-radius:3px;padding:8px 12px;font-size:15px;font-weight:700;background:var(--hoja);margin:4px 6px 0 0}
+  .pill.sel{border-color:var(--cian);color:var(--cian);border-width:2px}
 </style></head>
 <body>
 <div id="stage">
@@ -45,57 +47,117 @@
     <div class="cmyk"><i class="bg-c"></i><i class="bg-m"></i><i class="bg-y"></i><i class="bg-k"></i></div>
     <div class="eyebrow" style="margin-top:26px">Capacitación del equipo</div>
     <h1>El sistema de la imprenta,<br>de punta a punta</h1>
-    <p class="cap">Cotizar → Ganar → Producir por pieza → Cobrar. Con proveedores e inventario detrás. En 90 segundos.</p>
+    <p class="cap">Cotizar cada tipo de trabajo → Ganar → Producir por pieza → Cobrar. Con proveedores, inventario y el hilo de cada trabajo.</p>
   </section>
 
-  <!-- 2 Cotizar -->
+  <!-- 2 Cotizar: elegir tipo -->
   <section class="scene">
     <div class="eyebrow">Paso 1 · Cotizar</div>
-    <h2>Arma un trabajo y guárdalo</h2>
-    <p class="cap">Elige el tipo — digital, offset, gran formato, proveedor o personalizado — y el sistema calcula costo y precio. Una cotización puede llevar varios ítems.</p>
-    <div class="flow">
-      <span class="step">Digital</span><span class="step">Offset</span><span class="step">Gran formato</span>
-      <span class="step">Proveedor</span><span class="step">Personalizado</span>
+    <h2>Elige el tipo de trabajo</h2>
+    <p class="cap">Cada trabajo se cotiza según su tipo. Una cotización puede combinar varios ítems de distintos tipos.</p>
+    <div>
+      <span class="pill sel">Digital</span><span class="pill">Offset</span>
+      <span class="pill">Gran formato</span><span class="pill">Proveedor</span><span class="pill">Personalizado</span>
     </div>
   </section>
 
-  <!-- 3 Cotizaciones tablero -->
+  <!-- 3 Digital -->
+  <section class="scene">
+    <div class="eyebrow">Cotizar · Digital</div>
+    <h2>Digital (producción propia)</h2>
+    <p class="cap">Tirajes cortos. Producto y medida, cantidad, papel y acabados. Arma el montaje en el pliego y sugiere el corte más barato.</p>
+    <div class="fields">
+      <div class="fld"><b>Producto / medida</b><span class="mono">Tarjeta · 9×5 cm</span></div>
+      <div class="fld"><b>Cantidad · papel</b><span class="mono">1.000 · Couché 300</span></div>
+      <div class="fld"><b>Acabados</b><span class="mono">Plastificado mate</span></div>
+    </div>
+  </section>
+
+  <!-- 4 Offset -->
+  <section class="scene">
+    <div class="eyebrow">Cotizar · Offset</div>
+    <h2>Offset (producción propia)</h2>
+    <p class="cap">Tiraje alto. Pliego y montaje, tintas y planchas, papel y millares. Reparte el costo fijo entre la cantidad y protege la utilidad con el margen mínimo.</p>
+    <div class="fields">
+      <div class="fld"><b>Pliego · montaje</b><span class="mono">70×100 · 8 en pliego</span></div>
+      <div class="fld"><b>Tintas · planchas</b><span class="mono">4/4 · 8 planchas</span></div>
+      <div class="fld"><b>Millares</b><span class="mono">5.000</span></div>
+    </div>
+  </section>
+
+  <!-- 5 Gran formato -->
+  <section class="scene">
+    <div class="eyebrow">Cotizar · Gran formato</div>
+    <h2>Gran formato</h2>
+    <p class="cap">Lonas, vinilos y rígidos. Material, ancho × alto y cantidad; se calcula por m². Agregas acabados como ojales o dobladillo.</p>
+    <div class="fields">
+      <div class="fld"><b>Material</b><span class="mono">Banner 13 oz</span></div>
+      <div class="fld"><b>Medida · cantidad</b><span class="mono">2,0 × 1,0 m · 3</span></div>
+      <div class="fld"><b>Acabados</b><span class="mono">Ojales + dobladillo</span></div>
+    </div>
+  </section>
+
+  <!-- 6 Proveedor -->
+  <section class="scene">
+    <div class="eyebrow">Cotizar · Proveedor</div>
+    <h2>Proveedor (tercerizado)</h2>
+    <p class="cap">Cuando el trabajo lo hace un tercero. Registras el proveedor y el costo que te cobra, y le aplicas tu margen. El cliente ve un solo precio.</p>
+    <div class="flow">
+      <span class="step">Proveedor + costo</span><span class="arrow">→</span>
+      <span class="step">+ margen</span><span class="arrow">→</span>
+      <span class="step" style="border-color:var(--exito);color:var(--exito)">Precio al cliente</span>
+    </div>
+  </section>
+
+  <!-- 7 Personalizado -->
+  <section class="scene">
+    <div class="eyebrow">Cotizar · Personalizado</div>
+    <h2>Personalizado (a medida)</h2>
+    <p class="cap">Para lo que no encaja en los demás. Escribes líneas de costo libres (materiales, mano de obra, extras) y el sistema suma y aplica el margen.</p>
+    <div class="fields">
+      <div class="fld"><b>Material especial</b><span class="mono">$ 120,00</span></div>
+      <div class="fld"><b>Mano de obra</b><span class="mono">$ 60,00</span></div>
+      <div class="fld"><b>+ margen → precio</b><span class="mono">$ 260,00</span></div>
+    </div>
+  </section>
+
+  <!-- 8 Cotizaciones tablero -->
   <section class="scene">
     <div class="eyebrow">Paso 2 · Seguimiento comercial</div>
     <h2>Cotizaciones en Lista o Tablero</h2>
     <p class="cap">Arrastra cada cotización entre columnas para cambiar su estado, o usa el selector de la tarjeta.</p>
     <div class="row">
-      <div class="col"><div class="h" style="background:var(--suave);color:var(--kraft)">Borrador</div><div class="b"><div class="card"><div class="t">Volantes A5</div><div class="s">Panadería · $48</div></div></div></div>
-      <div class="col"><div class="h" style="background:#FFF9E6;color:#5C4A00">Pendiente</div><div class="b"><div class="card"><div class="t">Catálogo 16p</div><div class="s">Muebles · $980</div></div></div></div>
-      <div class="col"><div class="h" style="background:#E6F4F8;color:var(--cian)">Enviada</div><div class="b"><div class="card"><div class="t">Sellos x50</div><div class="s">Ferretería · $325</div></div></div></div>
-      <div class="col"><div class="h" style="background:#EDF9F1;color:var(--exito)">Ganadas</div><div class="b"><div class="card"><div class="t">Chapas x300</div><div class="s">La Sonora · $150</div></div></div></div>
-      <div class="col"><div class="h" style="background:#FDECED;color:#8A1C1C">Perdidas</div><div class="b"><div class="card"><div class="t">Afiches A3</div><div class="s">Cine Club · $60</div></div></div></div>
+      <div class="col"><div class="h" style="background:var(--suave);color:var(--kraft)">Borrador</div><div class="b"><div class="card"><div class="t">Volantes A5</div><div class="s">Panadería</div></div></div></div>
+      <div class="col"><div class="h" style="background:#FFF9E6;color:#5C4A00">Pendiente</div><div class="b"><div class="card"><div class="t">Catálogo 16p</div><div class="s">Muebles</div></div></div></div>
+      <div class="col"><div class="h" style="background:#E6F4F8;color:var(--cian)">Enviada</div><div class="b"><div class="card"><div class="t">Sellos x50</div><div class="s">Ferretería</div></div></div></div>
+      <div class="col"><div class="h" style="background:#EDF9F1;color:var(--exito)">Ganadas</div><div class="b"><div class="card"><div class="t">Chapas x300</div><div class="s">La Sonora</div></div></div></div>
+      <div class="col"><div class="h" style="background:#FDECED;color:#8A1C1C">Perdidas</div><div class="b"><div class="card"><div class="t">Afiches A3</div><div class="s">Cine Club</div></div></div></div>
     </div>
   </section>
 
-  <!-- 4 CRM -->
+  <!-- 9 CRM -->
   <section class="scene">
     <div class="eyebrow">Paso 3 · CRM</div>
     <h2>Prospectos y reuniones</h2>
-    <p class="cap">Antes de cotizar, registra oportunidades y agenda reuniones, llamadas y seguimientos. Mueve el prospecto de Nuevo a Contactado, Convertido o Descartado.</p>
+    <p class="cap">Registra oportunidades y agenda reuniones, llamadas y seguimientos. Mueve el prospecto de Nuevo a Contactado, Convertido o Descartado.</p>
     <div class="flow">
       <span class="step">Nuevo</span><span class="arrow">→</span><span class="step">Contactado</span>
       <span class="arrow">→</span><span class="step">Convertido</span><span class="arrow">/</span><span class="step">Descartado</span>
     </div>
   </section>
 
-  <!-- 5 Handoff -->
+  <!-- 10 Handoff -->
   <section class="scene">
     <div class="eyebrow">Paso 4 · Al ganar</div>
     <h2>La orden se genera sola</h2>
-    <p class="cap">Marcas la cotización como Ganada y se convierte en Orden de Venta: su orden de producción se crea automáticamente. El mismo registro que avanza, sin recapturar nada.</p>
+    <p class="cap">Marcas la cotización como Ganada y se convierte en Orden de Venta: su orden de producción se crea automáticamente. El mismo registro que avanza.</p>
     <div class="flow">
       <span class="step">Cotización Ganada</span><span class="arrow">→</span>
       <span class="step" style="border-color:var(--exito);color:var(--exito)">Orden de producción (automática)</span>
     </div>
   </section>
 
-  <!-- 6 Producción por pieza -->
+  <!-- 11 Producción por pieza -->
   <section class="scene">
     <div class="eyebrow">Paso 5 · Producción por pieza</div>
     <h2>El taller, pieza por pieza</h2>
@@ -109,7 +171,7 @@
     </div>
   </section>
 
-  <!-- 7 Cobro -->
+  <!-- 12 Cobro -->
   <section class="scene">
     <div class="eyebrow">Paso 6 · Cobro</div>
     <h2>Seguimiento de cobro</h2>
@@ -121,11 +183,22 @@
     </div>
   </section>
 
-  <!-- 8 Proveedores -->
+  <!-- 13 Comentarios y adjuntos -->
   <section class="scene">
-    <div class="eyebrow">Paso 7 · Proveedores y precios</div>
+    <div class="eyebrow">Paso 7 · Comentarios y adjuntos</div>
+    <h2>El hilo de cada trabajo</h2>
+    <p class="cap">En la cotización y en la orden puedes dejar comentarios y adjuntar archivos: imágenes de referencia, la cotización del proveedor, PDFs. El taller también participa, sin ver precios.</p>
+    <div class="row">
+      <div class="col" style="width:300px"><div class="h" style="background:#E6F4F8;color:var(--cian)">Comentarios</div><div class="b"><div class="card"><div class="t">Ana · el arte va en Pantone 485</div></div><div class="card"><div class="t">Taller · listo para impresión</div></div></div></div>
+      <div class="col" style="width:300px"><div class="h" style="background:#EDF9F1;color:var(--exito)">Adjuntos</div><div class="b" style="flex-direction:row;flex-wrap:wrap;gap:8px"><span class="tag" style="background:var(--suave);color:var(--kraft)">referencia.jpg</span><span class="tag" style="background:var(--suave);color:var(--kraft)">proveedor.pdf</span><span class="tag" style="background:var(--suave);color:var(--kraft)">logo.png</span></div></div>
+    </div>
+  </section>
+
+  <!-- 14 Proveedores -->
+  <section class="scene">
+    <div class="eyebrow">Paso 8 · Proveedores y precios</div>
     <h2>Compara e importa desde Excel</h2>
-    <p class="cap">Descargas la plantilla con tu catálogo, la llenas con los precios del proveedor, la subes y confirmas la vista previa. El comparador marca el más barato por papel.</p>
+    <p class="cap">Descargas la plantilla con tu catálogo, la llenas con los precios del proveedor, la subes y confirmas. El comparador marca el más barato por papel.</p>
     <div class="kv">
       <div><div class="k">Papelera A · Glasé</div><div class="v mono">$20,00</div></div>
       <div><div class="k">Papelera B · Glasé</div><div class="v mono" style="color:var(--exito)">$18,40 ✓</div></div>
@@ -133,9 +206,9 @@
     </div>
   </section>
 
-  <!-- 9 Inventario -->
+  <!-- 15 Inventario -->
   <section class="scene">
-    <div class="eyebrow">Paso 8 · Inventario</div>
+    <div class="eyebrow">Paso 9 · Inventario</div>
     <h2>Papel bajo control</h2>
     <p class="cap">El inventario descuenta el papel al terminar una orden y te avisa cuando un material baja de su mínimo. Ajustas stock y mínimos por categoría.</p>
     <div class="flow">
@@ -145,12 +218,12 @@
     </div>
   </section>
 
-  <!-- 10 Cierre -->
+  <!-- 16 Cierre -->
   <section class="scene">
     <div class="cmyk"><i class="bg-c"></i><i class="bg-m"></i><i class="bg-y"></i><i class="bg-k"></i></div>
     <div class="eyebrow" style="margin-top:26px">Listo</div>
     <h1>Un solo sistema,<br>todo el circuito</h1>
-    <p class="cap">Cotizar → Ganar → Producir por pieza → Cobrar. Reabre la visita guiada cuando quieras con el botón «?» del menú.</p>
+    <p class="cap">Cotizar por tipo → Ganar → Producir por pieza → Cobrar, con proveedores, inventario y el hilo de cada trabajo. Reabre la guía con el botón «?» del menú.</p>
   </section>
 
   <div class="progress" id="prog"></div>
@@ -161,7 +234,7 @@
   const escenas = Array.from(document.querySelectorAll('.scene'));
   const prog = document.getElementById('prog');
   const cnt = document.getElementById('cnt');
-  const DUR = 8000; // ms por escena
+  const DUR = 7000; // ms por escena
   let i = 0;
   function mostrar(n){
     escenas.forEach((s,k)=>s.classList.toggle('on',k===n));

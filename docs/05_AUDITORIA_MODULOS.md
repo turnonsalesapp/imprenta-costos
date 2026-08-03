@@ -287,6 +287,31 @@ sistema y extienden el invariante TALLER-sin-precios.
   (`$transaction`): filas inválidas (precio ≤ 0, unidad/hojas mal) se descartan sin
   romper el catálogo.
 
+### Fase 4 — Estructura de costos por usuario y hilo del trabajo (`lib/roles.ts`, `lib/comentarios.ts`, `lib/adjuntos.ts`, `lib/almacenamiento.ts`)
+
+- **Permiso `verEstructura` (servidor manda).** Un permiso por usuario, aparte del
+  rol, decide si se ve la **estructura de costos** (costo, margen, diferencial,
+  desglose) o **solo el precio de venta**. `puedeVerEstructura(u)` exige además ver
+  precios (TALLER nunca; ausente = `true`). El invariante es **estructural en el
+  servidor**, no cosmético: el detalle de cotización, el resumen/dashboard
+  (`lib/resumen.ts` devuelve `margen`/`pliegoMasBarato` en `null`) y la exportación
+  CSV (columnas de costo condicionadas) omiten el costo cuando es `false`; la prop
+  `verEstructura` de las calculadoras es solo para ocultarlo en la UI. Se distingue
+  de `puedeVerPrecios`: el TALLER **no ve nada de dinero**; un vendedor sin
+  estructura **sí ve el precio**, solo se le oculta costo y margen.
+- **Hilo del trabajo sin precios** 🟢 — `Comentario` y `Adjunto` se anclan a la
+  **cotización** y **no** tienen columnas de dinero, así que el hilo es seguro para
+  el TALLER, que lo comparte vía la orden (`puedeVerTrabajo`: TALLER solo si la
+  cotización ya generó orden). Extiende el invariante TALLER-sin-precios más allá de
+  `Orden`/`PiezaOrden`: el trabajo ahora tiene comentarios y artes, y ninguno filtra
+  dinero. Borrar exige autor o ADMIN (`puedeBorrarDelHilo`, pura y testeable). La
+  descarga pasa por `/api/adjuntos/[id]` con sesión + `puedeVerTrabajo` y `no-store`.
+- **Almacenamiento de adjuntos** — validación pura (≤ 8 MB, tipos permitidos)
+  reutilizada por acción y ruta; backend `db` (bytea) por defecto y `drive`
+  (Google Drive con service account, `lib/drive.ts`) que se activa con las variables
+  de entorno; valor desconocido cae a `db`. Sin dependencias pesadas: usa `jose` +
+  fetch, no googleapis.
+
 **Observaciones de modelado (no bugs):**
 - **I. Sobreprotección tercerizada, ahora visible en producción** 🟢 — el hallazgo **F**
   (diferencial aplicado a líneas tercerizadas) no cambia con estas fases, pero ahora esas
@@ -296,3 +321,9 @@ sistema y extienden el invariante TALLER-sin-precios.
   preferido, no una vista calculada: si se edita el papel a mano en Variables, puede
   quedar desalineado de la lista del proveedor hasta la próxima importación o cambio de
   preferido. Es a propósito (el motor no debe recalcular listas), pero conviene saberlo.
+- **K. Backend "drive" de adjuntos: implementado, pendiente de credenciales** 🟢 —
+  `ALMACEN_ADJUNTOS=drive` sube al Drive con el service account (`lib/drive.ts`) y sirve
+  la descarga en streaming; falta probarlo con credenciales reales
+  (`GOOGLE_SERVICE_ACCOUNT_JSON` + `GDRIVE_FOLDER_ID` en una Unidad Compartida). Por
+  defecto el almacén es `db` (bytes en la fila); para volúmenes altos conviene "drive"
+  para no inflar la BD.

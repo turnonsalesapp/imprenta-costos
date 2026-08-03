@@ -12,3 +12,4 @@ next-env.d.ts
 coverage/
 tsconfig.tsbuildinfo
 capacitacion/video/
+capacitacion/*.webm

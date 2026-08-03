@@ -84,7 +84,7 @@ Entidades principales (`prisma/schema.prisma`):
 
 | Modelo | Rol | Puntos clave |
 |---|---|---|
-| **Usuario** | acceso | `rol` (ADMIN/VENDEDOR/TALLER), `passwordHash`, `interpretarIA` (override IA por usuario) |
+| **Usuario** | acceso | `rol` (ADMIN/VENDEDOR/TALLER), `passwordHash`, `interpretarIA` (override IA por usuario), permisos de cotización (`puedeCotizar`, `tiposCotizar`, `puedeEliminar`), `verEstructura` (ve costo/margen/desglose, no solo el precio; default `true`) |
 | **Sesion** | sesión | token único; permite revocación inmediata |
 | **Cliente** | CRM básico | nombre, RIF, contacto; `activo` |
 | **Papel** | catálogo/inventario | `clave` estable (la usa el motor), `precio` Decimal, `medida`, `categoria`, `stock`, `stockMin` |
@@ -101,6 +101,8 @@ Entidades principales (`prisma/schema.prisma`):
 | **PrecioProveedorPapel** | lista de precios | precio vigente de un papel por proveedor (`unidad` resma/hoja/millar), una fila por (papel, proveedor); base del comparador (Fase 3) |
 | **Prospecto** | CRM comercial | oportunidad/lead antes de cotizar (NUEVO→CONTACTADO→CONVERTIDO/DESCARTADO); enlace por id, sin FK dura (Fase 1) |
 | **Actividad** | CRM comercial | gestión agendada (reunión/llamada/seguimiento/nota) con `fecha` y `hecha` (Fase 1) |
+| **Comentario** | hilo del trabajo | comentario anclado a la **cotización** (`cotizacionId`, `onDelete: Cascade`); `autorId?` + `autorNombre` congelado, `texto`, `creadoEn`. **Sin dinero** (Fase 4) |
+| **Adjunto** | hilo del trabajo | archivo anclado a la cotización; `nombre`, `tipo` (MIME), `tamano`, `almacen` ("db"/"drive"), `datos` (bytea si "db"), `driveFileId`/`url` (si "drive"). **Sin dinero** (Fase 4) |
 
 **Papel** gana `proveedorPreferidoId` (Fase 3): el `precio` de resma pasa a ser el **precio efectivo** (copia del proveedor preferido, o del predeterminado global) que usa el motor, sin cambiar su firma.
 
@@ -150,7 +152,20 @@ El diferencial se aplica **dos veces** (al costo y a la utilidad) porque el tall
 | **Clientes / Trabajos** | `/clientes`, `lib/trabajos.ts` | CRM básico y recetas repetibles |
 | **Variables** | `/variables`, `lib/variables.ts` | márgenes, tasas, IVA, membrete, papeles, acabados, IA |
 | **Tasas** | `lib/tasas.ts`, `/api/tasas/*` | fuente externa (dolarapi), refresco por cron, histórico |
-| **Usuarios** | `/usuarios` | alta, rol, activación, override de IA |
+| **Usuarios** | `/usuarios` | alta, rol, activación, override de IA, permisos de cotización y `verEstructura` (`SelectorEstructura`) |
+| **Hilo del trabajo** | `_hilo/*`, `lib/comentarios.ts`, `lib/adjuntos.ts`, `lib/almacenamiento.ts`, `/api/adjuntos/[id]` | comentarios y adjuntos anclados a la cotización, visibles desde la cotización (ADMIN/VENDEDOR) y la orden (TALLER); **sin dinero**; almacenamiento configurable db/drive (Fase 4) |
+| **Tutoriales (visita guiada)** | `_components/Tour.tsx`, `tours.ts`, `mockups/index.tsx` | motor de tour reutilizable; tour de inicio (auto tras login, botón «?») y de Variables ("Ver tutorial") (Fase 4) |
+
+**Motor de Tour** (`_components/Tour.tsx`): componente cliente que recorre una lista
+de pasos (`PasoTour`: `eyebrow`, `titulo`, `cuerpo`, `mockup?`, `href?`), cada uno
+con una ilustración opcional resuelta por clave contra `MOCKUPS` (`mockups/index.tsx`,
+SVG inline en la estética CMYK de la app). Cada tour tiene un `id`: se abre solo la
+primera vez si `autoAbrir` y no hay flag en `localStorage` (`imprenta.tour.<id>`), y
+se reabre por evento `abrir-tour:<id>` (lo disparan `BotonGuia` con «?» → `inicio`, y
+`BotonTour` en Variables → `variables`). "No volver a mostrar" y cerrar marcan el flag;
+reabrir por evento ignora el flag. El contenido de los dos tours vive en `tours.ts`
+(`PASOS_INICIO` con el paso a paso por tipo de cotización; `PASOS_VARIABLES`). El tour
+de inicio se monta en `(app)/layout.tsx` (`autoAbrir`) y el de Variables en su página.
 
 ---
 
@@ -159,6 +174,9 @@ El diferencial se aplica **dos veces** (al costo y a la utilidad) porque el tall
 - **Autenticación** en dos niveles: middleware Edge verifica la firma del JWT (barato, sin BD); `getUsuario()` comprueba contra la tabla `Sesion` que la sesión no esté revocada y el usuario siga activo (verdad de fondo).
 - **Autorización por rol**: `requireRol(...)` en cada página/acción; `requireUsuario()` en el layout del grupo `(app)`.
 - **Invariante crítico TALLER**: el rol TALLER **nunca** recibe un precio, costo o margen. Es estructural, no cosmético: el modelo `Orden` no tiene columnas de dinero y ni `SELECT_PROD` ni `SELECT_PIEZA_TABLERO` (tablero de producción por pieza, `lib/ordenes.ts`) seleccionan jamás una columna monetaria; el `snapshot` de cada `PiezaOrden` que ve el taller tampoco lleva dinero. La exportación CSV también verifica `puedeVerPrecios(rol)`. `seguridad.test.ts` escanea ambas selecciones para probar el invariante sin BD.
+- **Estructura de costos por usuario** (`puedeVerEstructura` en `lib/roles.ts`): `verEstructura` es un permiso por usuario, independiente del rol; exige además ver precios (TALLER nunca la pasa; ausente = `true`, comportamiento histórico). Se aplica **en el servidor**, no solo en la UI: el detalle de cotización (`cotizaciones/[id]/page.tsx`), el resumen/dashboard (`lib/resumen.ts`) y la exportación CSV (`/api/cotizaciones/export`) omiten costo, margen, diferencial y desglose cuando es `false`; las calculadoras reciben la prop `verEstructura` solo para ocultarlos en pantalla. Un usuario sin estructura **sí** ve el precio de venta (a diferencia del TALLER, que no ve nada de dinero).
+- **Hilo del trabajo (comentarios/adjuntos), sin precios**: `Comentario` y `Adjunto` se anclan a la cotización y **no** tienen columnas de dinero; el TALLER accede al hilo solo vía la orden (`puedeVerTrabajo` en `lib/comentarios.ts`: TALLER solo si la cotización ya tiene orden). Borrar un elemento requiere ser su autor o ADMIN (`puedeBorrarDelHilo` en `lib/roles.ts`, pura y testeable). La descarga de un adjunto pasa por **`/api/adjuntos/[id]`**: exige sesión (`getUsuario`) y `puedeVerTrabajo`; sin caché (`no-store`); imágenes/PDF en línea, el resto como `attachment`; backend "drive" redirige a la `url` remota.
+- **Adaptador de almacenamiento de adjuntos** (`lib/almacenamiento.ts`): validación pura de tamaño (≤ **8 MB**, `MAX_BYTES`) y tipo (`TIPOS_PERMITIDOS`: imágenes, PDF, ofimática) reutilizada por la acción y la ruta; dos backends intercambiables elegidos por `ALMACEN_ADJUNTOS` (`elegirAlmacen`): **"db"** (bytea en `Adjunto.datos`, por defecto) y **"drive"** (Google Drive con service account vía `lib/drive.ts`; se activa con `GOOGLE_SERVICE_ACCOUNT_JSON` + `GDRIVE_FOLDER_ID`, y lanza claro si faltan; un valor desconocido cae a "db").
 - **Inmutabilidad**: una cotización guarda un `snapshot` congelado de papeles, acabados y variables; solo es editable en estado BORRADOR (y re-congela al guardar).
 - **Secretos** fuera del repositorio (`.gitignore`, `.env.example` sin valores); en producción como variables/secrets de Railway.
 - **SQL parametrizado** por Prisma en todo el acceso a datos.
@@ -185,12 +203,21 @@ El diferencial se aplica **dos veces** (al costo y a la utilidad) porque el tall
   `npx prisma migrate diff --from-schema-datamodel <schema-anterior> --to-schema-datamodel prisma/schema.prisma --script`.
 - **Railway** aplica las migraciones en el `preDeployCommand: npx prisma migrate deploy` (ver `railway.json`) y valida `/api/health` antes de enrutar tráfico.
 - Cada push a la rama principal republica.
-- **Migraciones nuevas (Fases 1–3), 4 en total**, que aplica `prisma migrate deploy`:
+- **Migraciones nuevas (Fases 1–4), 6 en total**, que aplica `prisma migrate deploy`:
   `20260801130000_estado_pendiente` (estado PENDIENTE de cotización),
   `20260802120000_crm_prospecto_actividad` (CRM: Prospecto y Actividad),
   `20260802140000_produccion_por_pieza` (PiezaOrden, carriles y estado de cobro de la orden),
-  `20260802160000_proveedores_precios` (Proveedor, PrecioProveedorPapel y `Papel.proveedorPreferidoId`).
+  `20260802160000_proveedores_precios` (Proveedor, PrecioProveedorPapel y `Papel.proveedorPreferidoId`),
+  `20260803120000_ver_estructura` (`Usuario.verEstructura`, permiso de ver estructura de costos),
+  `20260803140000_comentarios_adjuntos` (modelos Comentario y Adjunto del hilo del trabajo).
 - Fase 3 agrega la dependencia **`exceljs`** (plantilla e importación de listas de precios): al desplegar, recuerda instalar dependencias (`npm ci`) antes del build.
+- **Variables de entorno nuevas (Fase 4)** para el almacenamiento de adjuntos:
+  `ALMACEN_ADJUNTOS` = `db` (por defecto, bytes en la BD) o `drive`; y, solo si es
+  `drive`, `GOOGLE_SERVICE_ACCOUNT_JSON` (JSON del service account) y `GDRIVE_FOLDER_ID`
+  (carpeta destino en una Unidad Compartida). El backend "drive" (`lib/drive.ts`)
+  sube con el service account (JWT firmado con `jose`) y sirve la descarga en
+  streaming desde el servidor por `/api/adjuntos/[id]`; se activa al poner esas
+  variables. Con `db` no hace falta configurar nada.
 
 ---
 

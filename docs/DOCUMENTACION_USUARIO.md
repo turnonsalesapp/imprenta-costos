@@ -37,7 +37,10 @@ organizado por tarea; busca lo que necesitas hacer y sigue el flujo.
 21. [Auditoría](#21-auditoría)
 22. [CRM: prospectos y actividades](#22-crm)
 23. [Proveedores y listas de precios de papel](#23-proveedores)
-24. [Glosario rápido](#24-glosario)
+24. [Tutoriales dentro del sistema (visita guiada)](#24-tutoriales)
+25. [Quién ve el costo y quién solo el precio (permisos por usuario)](#25-estructura)
+26. [Comentarios y adjuntos del trabajo](#26-hilo)
+27. [Glosario rápido](#27-glosario)
 
 ---
 
@@ -86,6 +89,14 @@ siempre puede todo (estos ajustes no le aplican) y el TALLER no cotiza. La
 protección es real en el servidor: aunque alguien fuerce la interfaz, guardar un
 tipo no permitido o eliminar sin permiso es rechazado. Los cambios de permiso
 surten efecto de inmediato, sin volver a iniciar sesión.
+
+**Ver la estructura de costos (por usuario).** Aparte de lo anterior, el ADMIN
+decide para cada vendedor si **ve la estructura de costos** (costo, margen,
+diferencial y desglose) o **solo el precio de venta**. Es independiente del rol y
+del tipo de trabajo. Un vendedor con esto apagado **cotiza y ve el precio** que le
+cobra al cliente, pero **no** ve cuánto cuesta ni cuánto se gana. Ojo, no es lo
+mismo que el TALLER: el TALLER **no ve ningún dinero**; este vendedor sí ve el
+**precio**, solo se le esconde el **costo**. Detalle en [§25](#25-estructura).
 
 ---
 
@@ -655,7 +666,125 @@ comparador.
 
 ---
 
-## 24. Glosario
+## 24. Tutoriales
+
+El sistema trae **tutoriales interactivos** (una "visita guiada"): una ventanita
+con pasos, ilustraciones y navegación *Anterior / Siguiente*, dentro de la propia
+pantalla. No hay que instalar ni leer nada aparte.
+
+### 24.1 Tutorial de inicio
+
+Se abre **solo la primera vez** que entras, justo después del login. Recorre el
+**circuito completo del taller** y, en el centro, trae el **paso a paso de cómo
+cotizar cada tipo de trabajo**, uno por uno, con una ilustración de cada pantalla:
+
+- **Digital** — producción propia para tirajes cortos: producto, medida, cantidad,
+  papel, acabados; el montaje y el corte más barato salen solos.
+- **Offset** — producción propia para tiraje alto: pliego, montaje, tintas,
+  planchas, papel y millares; reparte el costo fijo entre la cantidad.
+- **Gran formato** — lonas, vinilos y rígidos por m²; material, ancho × alto,
+  cantidad y acabados (ojales, laminado).
+- **Proveedor** — trabajo tercerizado: el costo que te cobra el tercero y tu margen.
+- **Personalizado** — a medida: líneas de costo libres que el sistema suma y a las
+  que aplica el margen.
+
+Después sigue con el resto del circuito: cotizaciones en Lista o Tablero, el CRM,
+la **orden que se genera sola** al ganar, la **producción por pieza** en el Taller,
+el **seguimiento de cobro**, los **proveedores** y el **inventario**. Cada paso con
+un enlace para ir directo a esa pantalla.
+
+Lo reabres cuando quieras con el botón **«?»** del menú.
+
+### 24.2 Tutorial de Variables (solo ADMIN)
+
+En la pantalla **Variables** hay un botón **"Ver tutorial"** que explica, paso a
+paso: los **valores por defecto** (margen, margen mínimo, IVA, diferencial), la
+**tasa de cambio** y su histórico, el **membrete** de la cotización, los
+**papeles**, los **acabados** (y cómo se cobran), **gran formato y POP** y los
+**equipos** (prensas). Se abre solo la primera vez que entras a Variables y se
+reabre con "Ver tutorial".
+
+### 24.3 En ambos
+
+- **"No volver a mostrar":** un enlace para que el tutorial no se abra solo otra
+  vez. Aun así, **siempre** puedes reabrirlo (con «?» o con "Ver tutorial").
+- Te mueves con **Anterior / Siguiente**, con los **puntos de progreso** o cierras
+  con la **✕**.
+
+---
+
+## 25. Estructura
+
+Aparte del rol, el ADMIN afina en **Usuarios** ([§20](#20-usuarios)) dos permisos
+por usuario. Este es el de **ver la estructura de costos**.
+
+Con la casilla **"Ve estructura de costos"** el ADMIN decide si un vendedor ve,
+además del **precio de venta**, la **estructura** que hay detrás:
+
+- **Encendida (por defecto):** ve todo — costo, **margen**, **diferencial** y el
+  **desglose** de costos, en el cotizador y en el detalle de la cotización.
+- **Apagada:** el vendedor **cotiza igual** y **ve el precio de venta** que le cobra
+  al cliente (y su equivalente en Bs), pero **no** ve el costo, ni el margen, ni el
+  diferencial, ni el desglose. Los comparadores le muestran el precio, no la
+  ganancia.
+
+**Diferencia con el TALLER.** No confundir con el rol TALLER, que **no ve ningún
+dinero** (ni precio ni costo). Un vendedor con la estructura apagada **sí ve el
+precio**; solo se le oculta cuánto cuesta y cuánto se gana. Es el nivel intermedio
+pensado para vendedores de mostrador o externos.
+
+**Es de verdad, no solo esconder botones.** La protección vive en el **servidor**,
+no en la interfaz. A un usuario sin estructura no le llega el costo:
+
+- en el **detalle** de cualquier cotización (no aparecen costo, margen ni
+  diferencial),
+- en el **panel de Inicio** (el resumen no trae margen ni datos de costo),
+- en el **CSV** que exporte (el archivo sale sin las columnas de costo y margen),
+- y en las **calculadoras** (se ocultan costo, ganancia y desglose).
+
+> Recuerda que **qué tipos** puede cotizar cada vendedor y si puede **eliminar** se
+> configuran en la misma pantalla de Usuarios; ver [§20](#20-usuarios).
+
+---
+
+## 26. Hilo
+
+Cada trabajo tiene un **hilo** —al estilo de una tarjeta de Trello— para dejar
+**comentarios** y subir **adjuntos**. Aparece en el detalle de la **cotización**
+(lo ven ADMIN y VENDEDOR) y en el detalle de la **orden** en el **Taller** (lo ve
+el TALLER): es **el mismo hilo**, porque es el mismo trabajo.
+
+### 26.1 Comentarios e información
+
+Notas del trabajo, instrucciones para producción, acuerdos con el cliente. Escribes
+en la caja de abajo y pulsas **Comentar**; los comentarios quedan en orden, con el
+nombre de quien lo escribió y la fecha. Puedes borrar **tus** comentarios; el ADMIN
+puede borrar cualquiera.
+
+### 26.2 Adjuntos
+
+Sube **artes, imágenes de referencia, la cotización del proveedor o un PDF** con el
+botón **Subir archivo**:
+
+- **Tamaño:** hasta **8 MB** por archivo.
+- **Tipos permitidos:** imágenes (PNG, JPG, WEBP, GIF), **PDF** y ofimática (Word,
+  Excel, PowerPoint, texto, CSV). Otros tipos se rechazan.
+- Las **imágenes** se muestran como miniatura y las imágenes y **PDF** se abren en
+  línea; el resto se descarga. **Toda descarga exige sesión.**
+
+Igual que con los comentarios, cada quien borra **sus** adjuntos y el ADMIN
+cualquiera.
+
+### 26.3 El hilo no tiene precios (seguro para el TALLER)
+
+Por diseño, el hilo **no contiene ningún dato de dinero**. Por eso el rol TALLER
+puede leer y escribir comentarios y ver los artes sin que aparezca ni un precio. El
+TALLER llega al hilo **por la orden**; lo ve una vez que la cotización ya generó su
+orden de producción.
+
+---
+
+## 27. Glosario
 
 | Término | Qué significa |
 |---|---|
@@ -687,6 +816,12 @@ comparador.
 | **Proveedor preferido** | Proveedor elegido para costear un papel concreto; su precio es el que usa el motor. |
 | **Precio efectivo** | El precio de resma con que el sistema cotiza un papel (copia del preferido o del predeterminado). |
 | **Mixta** | Cotización con ítems de varios tipos a la vez. |
+| **Ver estructura de costos** | Permiso por usuario para ver costo, margen, diferencial y desglose, no solo el precio de venta. |
+| **Precio vs. costo** | El precio es lo que paga el cliente; el costo es lo que te cuesta a ti. Un vendedor puede ver el precio sin ver el costo. |
+| **Hilo del trabajo** | Comentarios y adjuntos anclados a la cotización, visibles también en la orden. No lleva precios. |
+| **Adjunto** | Archivo del hilo (arte, referencia, cotización del proveedor, PDF). Máx. 8 MB. |
+| **Comentario** | Nota de texto del hilo del trabajo, con autor y fecha. |
+| **Visita guiada** | Tutorial interactivo por pasos; el de inicio se reabre con «?» y el de Variables con "Ver tutorial". |
 
 ---
 

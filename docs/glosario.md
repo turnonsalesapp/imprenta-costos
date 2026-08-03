@@ -17,6 +17,8 @@ Una línea por término. Un mismo concepto se llama igual en código, base de da
 - **Utilidad protegida** — la ganancia también protegida contra el diferencial: `utilidad × diferencial`.
 - **Margen** — % de rentabilidad **sobre el precio de venta** (no sobre el costo).
 - **Precio a mano** — precio unitario fijado manualmente que manda sobre el calculado.
+- **Precio vs. costo** — el **precio** es lo que paga el cliente (precio de venta); el **costo** es lo que le cuesta al taller. Un usuario puede ver el precio sin ver el costo (ver *ver estructura de costos*).
+- **Ver estructura de costos** — permiso por usuario (`Usuario.verEstructura`, helper `puedeVerEstructura`): ver costo, margen, diferencial y desglose, no solo el precio de venta. Independiente del rol; se aplica en el servidor (detalle, resumen, CSV) y en la UI. Distinto de `puedeVerPrecios`: el TALLER no ve **nada** de dinero; sin estructura sí se ve el **precio**.
 
 ## Cotización / producción
 - **Snapshot** — copia congelada de papeles, acabados y variables que guarda cada cotización. Hace la cotización **inmutable**.
@@ -39,6 +41,15 @@ Una línea por término. Un mismo concepto se llama igual en código, base de da
 - **Precio efectivo** — el precio de resma con el que el motor cotiza un papel (`Papel.precio`): copia del precio del proveedor preferido (o del predeterminado). Se actualiza al importar su lista o al fijar preferido.
 - **Precio por resma (normalizado)** — precio de una lista llevado a resma completa para comparar proveedores, sea que venga por resma, por hoja o por millar (`precioAResma`).
 - **Lista de precios** — precios de papel de un proveedor (`PrecioProveedorPapel`, una fila por papel+proveedor). Se cargan varias y se comparan; se importan desde Excel (.xlsx) con vista previa (diff: sube/baja/igual/nuevo/sin_papel).
+
+## Hilo del trabajo (comentarios y adjuntos)
+- **Hilo del trabajo** — comentarios y adjuntos anclados a la **cotización** (`cotizacionId`) y compartidos con la orden que ve el TALLER. Estilo tablero/Trello. **No contiene dinero**: seguro para el TALLER (`puedeVerTrabajo`: TALLER solo si la cotización ya tiene orden).
+- **Comentario** — nota de texto del hilo, con autor (`autorNombre` congelado) y fecha. Modelo `Comentario`. Borra su autor o un ADMIN (`puedeBorrarDelHilo`).
+- **Adjunto** — archivo del hilo (arte, referencia, cotización del proveedor, PDF). Modelo `Adjunto`; máx. **8 MB**, tipos permitidos (imágenes/PDF/ofimática). Se descarga por `/api/adjuntos/[id]` (con sesión y permiso). Almacén `db` (bytea) o `drive`.
+- **Service account** — cuenta de servicio de Google (credencial de máquina, no de persona) con la que el backend `drive` subiría los adjuntos a Google Drive (`GOOGLE_SERVICE_ACCOUNT_JSON` + `GDRIVE_FOLDER_ID`). Reservado, aún no implementado.
+
+## Tutoriales
+- **Visita guiada / tour** — tutorial interactivo por pasos con ilustraciones (`Tour.tsx`, contenido en `tours.ts`, dibujos en `mockups/index.tsx`). El de **inicio** se abre tras el login la primera vez y se reabre con «?»; el de **Variables** con "Ver tutorial". Flag por-tour en `localStorage`; "No volver a mostrar" no impide reabrirlo.
 
 ## Roles y seguridad
 - **ADMIN / VENDEDOR / TALLER** — roles del sistema. TALLER **nunca** ve precios.
