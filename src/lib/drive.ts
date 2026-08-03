@@ -66,7 +66,22 @@ async function tokenOAuth(): Promise<string> {
       grant_type: "refresh_token",
     }),
   });
-  if (!res.ok) throw new Error(`Drive (OAuth): no se pudo refrescar el token (${res.status}).`);
+  if (!res.ok) {
+    // El cuerpo trae `error` (invalid_client = secreto/ID mal; invalid_grant =
+    // refresh token revocado/expirado/no coincide con el secreto).
+    let detalle = "";
+    try {
+      const e = (await res.json()) as { error?: string; error_description?: string };
+      detalle = [e.error, e.error_description].filter(Boolean).join(": ");
+    } catch { /* sin cuerpo JSON */ }
+    const pista =
+      detalle.includes("invalid_client")
+        ? " — el CLIENT_ID/SECRET del deploy no coinciden con los usados al generar el token."
+        : detalle.includes("invalid_grant")
+        ? " — el REFRESH_TOKEN no es válido (revocado, expirado o generado con otro secreto). Genera uno nuevo."
+        : "";
+    throw new Error(`Drive (OAuth): no se pudo refrescar el token (${res.status} ${detalle})${pista}`);
+  }
   const data = (await res.json()) as { access_token: string; expires_in: number };
   tokenCache = { token: data.access_token, expira: Date.now() + (data.expires_in - 60) * 1000 };
   return data.access_token;

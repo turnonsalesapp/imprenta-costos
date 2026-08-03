@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { FileText, Trash2, Download, Paperclip } from "lucide-react";
+import { FileText, Trash2, Download, Paperclip, AlertTriangle, RefreshCw, X } from "lucide-react";
 import {
   agregarComentarioAction, eliminarComentarioAction,
   subirAdjuntoAction, eliminarAdjuntoAction,
@@ -155,16 +155,22 @@ function Adjuntos({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ultimo, setUltimo] = useState<File | null>(null); // para reintentar
   const [pendiente, iniciar] = useTransition();
 
   function subir(file: File) {
+    setUltimo(file);
     const fd = new FormData();
     fd.set("cotizacionId", cotizacionId);
     fd.set("archivo", file);
     iniciar(async () => {
       const r = await subirAdjuntoAction(fd);
-      if (r.error) setError(r.error);
-      else setError(null);
+      if (r.error) {
+        setError(r.error); // se conserva `ultimo` para reintentar
+      } else {
+        setError(null);
+        setUltimo(null);
+      }
       if (inputRef.current) inputRef.current.value = "";
     });
   }
@@ -191,7 +197,37 @@ function Adjuntos({
         </label>
       </div>
 
-      {error && <p className="px-4 pt-3 text-xs text-[#8A1C1C]">{error}</p>}
+      {/* Aviso de error visible, con reintentar (conserva el último archivo). */}
+      {error && (
+        <div className="mx-3 mt-3 flex items-start gap-2 rounded-sm border border-[#E7B8B8] bg-[#FDECED] px-3 py-2">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-[#8A1C1C]" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-[#8A1C1C]">No se pudo subir el archivo</p>
+            <p className="mt-0.5 break-words text-xs text-[#8A1C1C]">{error}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {ultimo && (
+              <button
+                type="button"
+                onClick={() => ultimo && subir(ultimo)}
+                disabled={pendiente}
+                className="inline-flex items-center gap-1 rounded-sm border border-[#8A1C1C] px-2 py-1 text-[11px] font-bold text-[#8A1C1C] hover:bg-[#8A1C1C] hover:text-hoja disabled:opacity-40"
+              >
+                <RefreshCw size={12} />
+                {pendiente ? "Reintentando…" : "Reintentar"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => { setError(null); setUltimo(null); }}
+              aria-label="Descartar aviso"
+              className="rounded-sm p-1 text-[#8A1C1C] hover:bg-[#F6D9DA]"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {adjuntos.length === 0 ? (
         <p className="px-4 py-6 text-center text-sm text-kraft">
