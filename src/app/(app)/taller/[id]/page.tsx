@@ -11,6 +11,7 @@ import { BotonImprimir } from "./BotonImprimir";
 import { SelectorPieza } from "./SelectorPieza";
 import { SelectorCobro } from "./SelectorCobro";
 import { SectionTitle } from "@/app/_components/ui";
+import { Hilo } from "@/app/(app)/_hilo/Hilo";
 import type { TipoCotizacion } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -242,6 +243,13 @@ export default async function OrdenPage({
           />
         </div>
       ) : null}
+
+      {/* Hilo del trabajo: comentarios + adjuntos (mismo hilo de la cotización,
+          vía cotizacionId). Sin precios: participan todos los roles, TALLER
+          incluido. No se imprime con la hoja de orden. */}
+      <div className="no-print">
+        <Hilo cotizacionId={o.cotizacionId} usuario={{ id: usuario.id, rol: usuario.rol }} />
+      </div>
     </>
   );
 }

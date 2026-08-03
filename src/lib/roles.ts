@@ -94,3 +94,17 @@ export function puedeCotizar(u: PermisosUsuario): boolean {
 export function puedeEliminarCotizaciones(u: PermisosUsuario): boolean {
   return u.rol === "ADMIN" || (u.rol !== "TALLER" && u.puedeEliminar);
 }
+
+/* ─────────────────── hilo del trabajo (comentarios/adjuntos) ─────────────────── */
+
+/**
+ * ¿Puede borrar un elemento del hilo (comentario o adjunto)? Solo su autor o un
+ * ADMIN. Pura, sin base ni sesión, para poder probarla y reusarla. `autorId`
+ * null (autor desconocido/borrado) solo lo puede borrar ADMIN.
+ */
+export function puedeBorrarDelHilo(
+  u: { id: string; rol: Rol },
+  autorId: string | null,
+): boolean {
+  return u.rol === "ADMIN" || (autorId != null && autorId === u.id);
+}

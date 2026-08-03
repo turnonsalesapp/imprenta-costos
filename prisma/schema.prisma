@@ -394,9 +394,54 @@ model Cotizacion {
   usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   orden   Orden?
 
+  // Hilo del trabajo (comentarios + adjuntos). Se ancla a la COTIZACIÓN; la orden
+  // muestra el mismo hilo vía su cotizacionId. NO contiene dinero: por diseño es
+  // seguro para el rol TALLER (participa por la orden sin ver precios).
+  comentarios Comentario[]
+  adjuntos    Adjunto[]
+
   @@index([clienteId])
   @@index([estado])
   @@index([creadaEn])
+}
+
+// ─────────────────── hilo del trabajo: comentarios + adjuntos ───────────────────
+
+/// Comentario en el hilo de un trabajo. Anclado a la cotización, lo comparten la
+/// cotización (ADMIN/VENDEDOR) y la orden (TALLER). Texto libre, SIN precios.
+model Comentario {
+  id           String   @id @default(dbgenerated("gen_random_uuid()"))
+  cotizacionId String
+  autorId      String? // usuario que lo escribió (null si se borra el usuario)
+  autorNombre  String // nombre congelado, para que sobreviva
+  texto        String
+  creadoEn     DateTime @default(now()) @db.Timestamptz(3)
+
+  cotizacion Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+
+  @@index([cotizacionId])
+}
+
+/// Adjunto del hilo de un trabajo (artes, referencias, pruebas). Anclado a la
+/// cotización; almacén "db" guarda los bytes en `datos`, "drive" referencia el
+/// archivo remoto. NO contiene dinero: seguro para el rol TALLER.
+model Adjunto {
+  id           String   @id @default(dbgenerated("gen_random_uuid()"))
+  cotizacionId String
+  autorId      String?
+  autorNombre  String
+  nombre       String
+  tipo         String // mime type
+  tamano       Int // bytes
+  almacen      String   @default("db") // "db" | "drive"
+  datos        Bytes? // bytea cuando almacen = "db"
+  driveFileId  String?
+  url          String?
+  creadoEn     DateTime @default(now()) @db.Timestamptz(3)
+
+  cotizacion Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+
+  @@index([cotizacionId])
 }
 
 // ─────────────────────────── orden de producción ───────────────────────────

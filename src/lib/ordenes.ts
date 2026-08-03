@@ -215,7 +215,7 @@ export const SELECT_PROD = {
   items: true, // proyección SIN precios (columna propia de Orden)
   cotizacion: {
     select: {
-      numero: true, clienteNombre: true, titulo: true, descripcion: true, cantidad: true,
+      id: true, numero: true, clienteNombre: true, titulo: true, descripcion: true, cantidad: true,
       papelNombre: true, tamano: true, ancho: true, alto: true, capacidad: true,
       pliegos: true,
     },
@@ -252,6 +252,7 @@ export type PiezaVista = {
 export type OrdenProd = {
   id: string;
   numero: number;
+  cotizacionId: string;
   cotizacionNumero: number;
   estado: EstadoOrden;
   fechaEntrega: Date | null;
@@ -282,6 +283,7 @@ function aVista(o: FilaProd): OrdenProd {
   return {
     id: o.id,
     numero: o.numero,
+    cotizacionId: o.cotizacion.id,
     cotizacionNumero: o.cotizacion.numero,
     estado: o.estado,
     fechaEntrega: o.fechaEntrega,

@@ -10,6 +10,7 @@ import { fmtNum, usd } from "@/lib/calculo";
 import { EstadoBadge } from "../EstadoBadge";
 import { CargarCotizadorBtn } from "./CargarCotizadorBtn";
 import { PageHeader } from "@/app/_components/ui";
+import { Hilo } from "@/app/(app)/_hilo/Hilo";
 
 export const dynamic = "force-dynamic";
 
@@ -315,6 +316,9 @@ export default async function DetalleCotizacion({
           </p>
         </div>
       </div>
+
+      {/* Hilo del trabajo: comentarios + adjuntos (compartido con la orden). */}
+      <Hilo cotizacionId={c.id} usuario={{ id: usuario.id, rol: usuario.rol }} />
     </>
   );
 }
