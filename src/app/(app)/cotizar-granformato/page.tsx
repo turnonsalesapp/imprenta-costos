@@ -5,6 +5,7 @@ import { listarClientesSimple } from "@/lib/clientes";
 import { cargarGranFormatoEnForm } from "@/lib/cotizaciones";
 import { listarMaterialesGF } from "@/lib/materiales-gf";
 import { listarProductosGF } from "@/lib/productos-gf";
+import { puedeVerEstructura } from "@/lib/roles";
 import { nuevoFormGranFormato, type FormGranFormato } from "@/lib/cotizacion-form";
 import { PageHeader } from "@/app/_components/ui";
 import { CalculadoraGranFormato } from "./CalculadoraGranFormato";
@@ -21,7 +22,7 @@ export default async function CotizarGranFormatoPage({
 }: {
   searchParams: Promise<{ desde?: string; editar?: string }>;
 }) {
-  await requireRol("ADMIN", "VENDEDOR");
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
   const [cfg, clientes, dc, materiales, productos] = await Promise.all([
     cargarConfig(), listarClientesSimple(), obtenerConfig(), listarMaterialesGF(), listarProductosGF(),
   ]);
@@ -67,6 +68,7 @@ export default async function CotizarGranFormatoPage({
             formInicial={formInicial}
             banner={banners[modo]}
             margenMin={dc.margenMin}
+            verEstructura={puedeVerEstructura(usuario)}
           />
         )}
       </div>

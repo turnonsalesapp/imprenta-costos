@@ -14,5 +14,5 @@ export async function GET() {
   if (!usuario) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
-  return NextResponse.json(await cargarResumen(usuario.rol));
+  return NextResponse.json(await cargarResumen(usuario));
 }

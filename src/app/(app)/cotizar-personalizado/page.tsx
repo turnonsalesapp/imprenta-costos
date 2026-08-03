@@ -4,6 +4,7 @@ import { obtenerConfig } from "@/lib/variables";
 import { listarClientesSimple } from "@/lib/clientes";
 import { cargarPersonalizadoEnForm } from "@/lib/cotizaciones";
 import { listarProductosPop } from "@/lib/productos-pop";
+import { puedeVerEstructura } from "@/lib/roles";
 import { nuevoFormPersonalizado, type FormPersonalizado } from "@/lib/cotizacion-form";
 import { PageHeader } from "@/app/_components/ui";
 import { CalculadoraPersonalizado } from "./CalculadoraPersonalizado";
@@ -21,7 +22,7 @@ export default async function CotizarPersonalizadoPage({
 }: {
   searchParams: Promise<{ desde?: string; editar?: string }>;
 }) {
-  await requireRol("ADMIN", "VENDEDOR");
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
   const [cfg, clientes, dc, productos] = await Promise.all([
     cargarConfig(), listarClientesSimple(), obtenerConfig(), listarProductosPop(),
   ]);
@@ -64,6 +65,7 @@ export default async function CotizarPersonalizadoPage({
             formInicial={formInicial}
             banner={banners[modo]}
             margenMin={dc.margenMin}
+            verEstructura={puedeVerEstructura(usuario)}
           />
         )}
       </div>

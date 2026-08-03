@@ -25,7 +25,7 @@ function sugerirRollo(anchos: number[], anchoCm: number): number {
 }
 
 export function CalculadoraGranFormato({
-  cfg, clientes, materiales, productos, ojeteCosto, ojeteCm, formInicial, banner, margenMin, embed,
+  cfg, clientes, materiales, productos, ojeteCosto, ojeteCm, formInicial, banner, margenMin, verEstructura = true, embed,
 }: {
   cfg: Config;
   clientes: ClienteSimple[];
@@ -36,6 +36,8 @@ export function CalculadoraGranFormato({
   formInicial: FormGranFormato;
   banner?: string;
   margenMin?: number;
+  // verEstructura: cálculo en cliente; ocultación UI (costo/margen/desglose).
+  verEstructura?: boolean;
   embed?: EmbedCotizador;
 }) {
   const [form, setForm] = useState<FormGranFormato>(() => formInicial);
@@ -404,6 +406,7 @@ export function CalculadoraGranFormato({
             difAuto={r.difAuto} binProm={r.binProm} difActual={r.dif}
             set={(k, v) => setForm((f) => ({ ...f, [k]: v }))}
             toggleManual={() => setForm((f) => ({ ...f, difManual: !f.difManual, dif: f.difManual ? "" : r.difAuto.toFixed(4) }))}
+            verEstructura={verEstructura}
           />
 
           <section className="card">
@@ -416,17 +419,17 @@ export function CalculadoraGranFormato({
                 <>
                   <div className="tw" style={{ marginTop: 12 }}>
                     <table>
-                      <thead><tr><th className="ta-r">Cantidad</th><th className="ta-r">Costo unit.</th><th className="ta-r">Precio unit.</th><th className="ta-r">Venta total</th><th className="ta-r">Ganancia</th><th /></tr></thead>
+                      <thead><tr><th className="ta-r">Cantidad</th>{verEstructura && <th className="ta-r">Costo unit.</th>}<th className="ta-r">Precio unit.</th><th className="ta-r">Venta total</th>{verEstructura && <th className="ta-r">Ganancia</th>}<th /></tr></thead>
                       <tbody>
                         {pts.map((p) => {
                           const on = r.cant > 0 && p.cant === r.cant;
                           return (
                             <tr key={p.cant} className="rw" style={on ? { background: "#FDF0F7", boxShadow: "inset 3px 0 0 #C4177C" } : undefined}>
                               <td className="ta-r mono"><b>{fmtNum(p.cant, 0)}</b></td>
-                              <td className="ta-r mono" style={{ color: "#767D76" }}>{usd(p.costoUnit, 4)}</td>
+                              {verEstructura && <td className="ta-r mono" style={{ color: "#767D76" }}>{usd(p.costoUnit, 4)}</td>}
                               <td className="ta-r mono"><b>{usd(p.precioUnit, 4)}</b></td>
                               <td className="ta-r mono">{usd(p.ventaTotal)}</td>
-                              <td className="ta-r mono" style={{ color: "#15794F" }}>{usd(p.gananciaTotal)}</td>
+                              {verEstructura && <td className="ta-r mono" style={{ color: "#15794F" }}>{usd(p.gananciaTotal)}</td>}
                               <td className="ta-r">
                                 <span style={{ display: "inline-flex", gap: 4 }}>
                                   {!on ? <button type="button" className="btn g sm" onClick={() => up("cantidad", p.cant)}>Usar</button> : <span style={{ fontSize: 10, color: "#767D76" }}>actual</span>}
@@ -449,6 +452,8 @@ export function CalculadoraGranFormato({
             </div>
           </section>
 
+          {/* Comparador por margen: es estructura de costos → solo si la ve. */}
+          {verEstructura && (
           <section className="card">
             <div className="ch"><b>Comparador por margen</b><span className="mt">mismo costo, distinta rentabilidad</span></div>
             <div className="cb">
@@ -478,30 +483,36 @@ export function CalculadoraGranFormato({
               ) : <div className="hint" style={{ marginTop: 10 }}>{esProducto ? "Elige un producto para comparar." : "Elige material y medida para comparar."}</div>}
             </div>
           </section>
+          )}
         </div>
 
         {/* Ticket */}
         <div className="tick">
           <div className="tk">
             <div className="tkh"><b>Desglose</b><span className="mono">{esProducto ? `${fmtNum(r.cant, 0)} u` : `${fmtNum(r.areaFactM2, 2)} m² · ${fmtNum(r.cant, 0)} u`}</span></div>
-            <div style={{ padding: "9px 0 3px" }}>
-              {r.lineas.length === 0 ? <div className="li" style={{ color: "#767D76" }}>{esProducto ? "Elige un producto." : "Elige material y medida."}</div> : null}
-              {r.lineas.map((l) => (
-                <div className="li" key={l.k}>
-                  <span style={{ flex: 1, minWidth: 0 }}>{l.label}<span className="d mono">{l.detalle}</span></span>
-                  <span className="a mono">{usd(l.monto)}</span>
+            {/* verEstructura: cálculo en cliente; ocultación UI (costo/desglose/utilidad). */}
+            {verEstructura && (
+              <>
+                <div style={{ padding: "9px 0 3px" }}>
+                  {r.lineas.length === 0 ? <div className="li" style={{ color: "#767D76" }}>{esProducto ? "Elige un producto." : "Elige material y medida."}</div> : null}
+                  {r.lineas.map((l) => (
+                    <div className="li" key={l.k}>
+                      <span style={{ flex: 1, minWidth: 0 }}>{l.label}<span className="d mono">{l.detalle}</span></span>
+                      <span className="a mono">{usd(l.monto)}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div className="sep" />
-            <div className="tot big"><span>Costo total</span><span className="a mono">{usd(r.costoTotal)}</span></div>
-            {esProducto
-              ? <div className="tot"><span>Costo por unidad</span><span className="a mono">{usd(r.costoUnit, 4)}</span></div>
-              : <div className="tot"><span>Costo por m²</span><span className="a mono">{r.areaFactM2 > 0 ? usd(r.costoTotal / r.areaFactM2, 2) : "—"}</span></div>}
-            <div className="sep" />
-            <div className="tot" style={{ color: "#767D76" }}><span>Costo protegido ×{fmtNum(r.dif, 3)}</span><span className="a mono">{usd(r.costoProt, 4)}</span></div>
-            <div className="tot" style={{ color: "#767D76" }}><span>Utilidad protegida</span><span className="a mono">{usd(r.utilProt, 4)}</span></div>
-            <div style={{ height: 10 }} />
+                <div className="sep" />
+                <div className="tot big"><span>Costo total</span><span className="a mono">{usd(r.costoTotal)}</span></div>
+                {esProducto
+                  ? <div className="tot"><span>Costo por unidad</span><span className="a mono">{usd(r.costoUnit, 4)}</span></div>
+                  : <div className="tot"><span>Costo por m²</span><span className="a mono">{r.areaFactM2 > 0 ? usd(r.costoTotal / r.areaFactM2, 2) : "—"}</span></div>}
+                <div className="sep" />
+                <div className="tot" style={{ color: "#767D76" }}><span>Costo protegido ×{fmtNum(r.dif, 3)}</span><span className="a mono">{usd(r.costoProt, 4)}</span></div>
+                <div className="tot" style={{ color: "#767D76" }}><span>Utilidad protegida</span><span className="a mono">{usd(r.utilProt, 4)}</span></div>
+                <div style={{ height: 10 }} />
+              </>
+            )}
             <div className="price">
               <div className="lb">Precio unitario de venta{r.manual ? <span style={{ color: "#C4177C", fontSize: 9.5, marginLeft: 6 }}>A MANO</span> : null}</div>
               <div className="v mono">{usd(r.precioUnit, 4)}</div>
@@ -511,14 +522,14 @@ export function CalculadoraGranFormato({
               </div>
               <div className="sub mono">
                 <span>Bs {fmtNum(r.precioBs, 2)}</span>
-                <span>Ganancia <b>{usd(r.gananciaTotal)}</b></span>
+                {verEstructura ? <span>Ganancia <b>{usd(r.gananciaTotal)}</b></span> : <span />}
               </div>
             </div>
             <PrecioManual valor={form.precioManual} onChange={(v) => up("precioManual", v)} activo={manualOn} onToggle={alternarManual} sugerido={rBase.precioUnit} />
           </div>
           <div className="tear" />
 
-          {margenMin != null && r.cant > 0 && n(form.margen) < margenMin ? (
+          {verEstructura && margenMin != null && r.cant > 0 && n(form.margen) < margenMin ? (
             <div className="warn" style={{ marginTop: 10 }}>
               El margen ({fmtNum(n(form.margen), 0)}%) está por debajo del mínimo ({fmtNum(margenMin, 0)}%).
             </div>

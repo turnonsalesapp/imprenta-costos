@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function Inicio() {
   const usuario = await requireUsuario();
-  const resumen = await cargarResumen(usuario.rol);
+  const resumen = await cargarResumen(usuario);
 
   return (
     <>
@@ -73,8 +73,13 @@ export default async function Inicio() {
             <SectionTitle acento="bg-magenta">Precios del día</SectionTitle>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <KPI k="Tasa BCV" v={fmtNum(resumen.precios.tasaBCV, 2)} />
-              <KPI k="Margen por defecto" v={`${fmtNum(resumen.precios.margen, 0)}%`} />
-              <KPI k="Pliego más barato" v={usd(resumen.precios.pliegoMasBarato, 4)} />
+              {/* Margen y costo por pliego son estructura de costos: solo si la ve. */}
+              {resumen.precios.margen != null && (
+                <KPI k="Margen por defecto" v={`${fmtNum(resumen.precios.margen, 0)}%`} />
+              )}
+              {resumen.precios.pliegoMasBarato != null && (
+                <KPI k="Pliego más barato" v={usd(resumen.precios.pliegoMasBarato, 4)} />
+              )}
             </div>
           </section>
         </>

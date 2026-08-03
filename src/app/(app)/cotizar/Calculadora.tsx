@@ -24,6 +24,7 @@ export function Calculadora({
   banner,
   margenMin,
   interpretarHabilitado = false,
+  verEstructura = true,
   embed,
 }: {
   cfg: Config;
@@ -32,6 +33,8 @@ export function Calculadora({
   banner?: string;
   margenMin?: number;
   interpretarHabilitado?: boolean;
+  // verEstructura: cálculo en cliente; ocultación UI (costo/margen/desglose).
+  verEstructura?: boolean;
   embed?: EmbedCotizador;
 }) {
   // Una cotización tiene uno o varios ÍTEMS. Se edita el ítem activo; los demás
@@ -427,6 +430,7 @@ export function Calculadora({
             difAuto={r.difAuto} binProm={r.binProm} difActual={r.dif}
             set={(k, v) => setForm((f) => ({ ...f, [k]: v }))}
             toggleManual={() => setForm((f) => ({ ...f, difManual: !f.difManual, dif: f.difManual ? "" : r.difAuto.toFixed(4) }))}
+            verEstructura={verEstructura}
           />
 
           <section className="card">
@@ -456,11 +460,11 @@ export function Calculadora({
                         <tr>
                           <th className="ta-r">Cantidad</th>
                           <th className="ta-r">Cortes</th>
-                          <th className="ta-r">Costo total</th>
-                          <th className="ta-r">Costo unit.</th>
+                          {verEstructura && <th className="ta-r">Costo total</th>}
+                          {verEstructura && <th className="ta-r">Costo unit.</th>}
                           <th className="ta-r">Precio unit.</th>
                           <th className="ta-r">Venta total</th>
-                          <th className="ta-r">Ganancia</th>
+                          {verEstructura && <th className="ta-r">Ganancia</th>}
                           <th className="ta-r">vs. {fmtNum(pts[0].cant, 0)}</th>
                         </tr>
                       </thead>
@@ -476,11 +480,11 @@ export function Calculadora({
                                 {on ? <span style={{ color: "#C4177C", fontSize: 9.5, marginLeft: 5 }}>ACTUAL</span> : null}
                               </td>
                               <td className="ta-r mono" style={{ color: "#767D76" }}>{fmtNum(p.pliegos, 1)}</td>
-                              <td className="ta-r mono" style={{ color: "#767D76" }}>{usd(p.costoTotal)}</td>
-                              <td className="ta-r mono">{usd(p.costoUnit, 4)}</td>
+                              {verEstructura && <td className="ta-r mono" style={{ color: "#767D76" }}>{usd(p.costoTotal)}</td>}
+                              {verEstructura && <td className="ta-r mono">{usd(p.costoUnit, 4)}</td>}
                               <td className="ta-r mono"><b>{usd(p.precioUnit, 4)}</b></td>
                               <td className="ta-r mono">{usd(p.ventaTotal)}</td>
-                              <td className="ta-r mono" style={{ color: "#15794F" }}>{usd(p.gananciaTotal)}</td>
+                              {verEstructura && <td className="ta-r mono" style={{ color: "#15794F" }}>{usd(p.gananciaTotal)}</td>}
                               <td className="ta-r mono" style={{ color: dif < 0 ? "#15794F" : dif > 0 ? "#B33" : "#767D76" }}>
                                 {dif === 0 ? "—" : (dif > 0 ? "+" : "") + fmtNum(dif, 1) + "%"}
                               </td>
@@ -538,7 +542,7 @@ export function Calculadora({
             </div>
           </section>
 
-          {ptsMargen.length >= 1 && r.precioUnit > 0 ? (
+          {verEstructura && ptsMargen.length >= 1 && r.precioUnit > 0 ? (
             <section className="card">
               <div className="ch">
                 <b>Comparador por margen</b>
@@ -602,7 +606,7 @@ export function Calculadora({
                       <tr>
                         <th>Tamaño</th>
                         <th className="ta-r">Pzs por corte</th>
-                        <th className="ta-r">Costo total</th>
+                        {verEstructura && <th className="ta-r">Costo total</th>}
                         <th className="ta-r">Precio unit.</th>
                         <th />
                       </tr>
@@ -619,7 +623,7 @@ export function Calculadora({
                               {mejor ? <span style={{ color: "#15794F", fontSize: 9.5, marginLeft: 5 }}>MÁS BARATO</span> : null}
                             </td>
                             <td className="ta-r mono">{o.entra ? fmtNum(o.cap, 0) : "—"}</td>
-                            <td className="ta-r mono" style={{ color: "#767D76" }}>{o.entra ? usd(o.costoTotal) : "no entra"}</td>
+                            {verEstructura && <td className="ta-r mono" style={{ color: "#767D76" }}>{o.entra ? usd(o.costoTotal) : "no entra"}</td>}
                             <td className="ta-r mono"><b>{o.entra ? usd(o.precioUnit, 4) : "—"}</b></td>
                             <td className="ta-r">
                               {o.entra && !actual ? (
@@ -646,48 +650,54 @@ export function Calculadora({
               <b>Desglose</b>
               <span className="mono">{fmtNum(r.pliegos, 2)} cortes · {fmtNum(r.piezas, 0)} pzs</span>
             </div>
-            <div className="bar">
-              {r.lineas.map((l, i) => (
-                <i key={l.k} style={{
-                  width: (r.costoTotal > 0 ? (l.monto / r.costoTotal) * 100 : 0) + "%",
-                  background: TINTAS[i % TINTAS.length],
-                }} />
-              ))}
-            </div>
-
-            <div style={{ padding: "9px 0 3px" }}>
-              {r.lineas.length === 0 ? (
-                <div className="li" style={{ color: "#767D76" }}>Elige papel, cantidad y acabados para ver el costo.</div>
-              ) : null}
-              {r.lineas.map((l, i) => (
-                <div className="li" key={l.k}>
-                  <span className="dot" style={{ background: TINTAS[i % TINTAS.length] }} />
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    {l.label}
-                    <span className="d mono">{l.detalle}</span>
-                  </span>
-                  <span className="a mono">{usd(l.monto)}</span>
+            {/* verEstructura: cálculo en cliente; ocultación UI del desglose,
+                costo y utilidad. El precio de venta siempre se muestra. */}
+            {verEstructura && (
+              <>
+                <div className="bar">
+                  {r.lineas.map((l, i) => (
+                    <i key={l.k} style={{
+                      width: (r.costoTotal > 0 ? (l.monto / r.costoTotal) * 100 : 0) + "%",
+                      background: TINTAS[i % TINTAS.length],
+                    }} />
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            <div className="sep" />
-            <div className="tot big"><span>Costo total</span><span className="a mono">{usd(r.costoTotal)}</span></div>
-            <div className="tot"><span>Costo unitario</span><span className="a mono">{usd(r.costoUnit, 4)}</span></div>
-            <div className="sep" />
-            <div className="tot" style={{ color: "#767D76" }}>
-              <span>Costo protegido ×{fmtNum(r.dif, 3)}</span><span className="a mono">{usd(r.costoProt, 4)}</span>
-            </div>
-            <div className="tot" style={{ color: "#767D76" }}>
-              <span>Utilidad protegida</span><span className="a mono">{usd(r.utilProt, 4)}</span>
-            </div>
-            {n(form.comision) > 0 && !r.manual ? (
-              <div className="tot" style={{ color: "#767D76" }}>
-                <span>Comisión {fmtNum(n(form.comision), 0)}%</span>
-                <span className="a mono">{usd(r.precioUnit - r.precioSinCom, 4)}</span>
-              </div>
-            ) : null}
-            <div style={{ height: 10 }} />
+                <div style={{ padding: "9px 0 3px" }}>
+                  {r.lineas.length === 0 ? (
+                    <div className="li" style={{ color: "#767D76" }}>Elige papel, cantidad y acabados para ver el costo.</div>
+                  ) : null}
+                  {r.lineas.map((l, i) => (
+                    <div className="li" key={l.k}>
+                      <span className="dot" style={{ background: TINTAS[i % TINTAS.length] }} />
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        {l.label}
+                        <span className="d mono">{l.detalle}</span>
+                      </span>
+                      <span className="a mono">{usd(l.monto)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="sep" />
+                <div className="tot big"><span>Costo total</span><span className="a mono">{usd(r.costoTotal)}</span></div>
+                <div className="tot"><span>Costo unitario</span><span className="a mono">{usd(r.costoUnit, 4)}</span></div>
+                <div className="sep" />
+                <div className="tot" style={{ color: "#767D76" }}>
+                  <span>Costo protegido ×{fmtNum(r.dif, 3)}</span><span className="a mono">{usd(r.costoProt, 4)}</span>
+                </div>
+                <div className="tot" style={{ color: "#767D76" }}>
+                  <span>Utilidad protegida</span><span className="a mono">{usd(r.utilProt, 4)}</span>
+                </div>
+                {n(form.comision) > 0 && !r.manual ? (
+                  <div className="tot" style={{ color: "#767D76" }}>
+                    <span>Comisión {fmtNum(n(form.comision), 0)}%</span>
+                    <span className="a mono">{usd(r.precioUnit - r.precioSinCom, 4)}</span>
+                  </div>
+                ) : null}
+                <div style={{ height: 10 }} />
+              </>
+            )}
 
             <div className="price">
               <div className="lb">
@@ -697,7 +707,7 @@ export function Calculadora({
               <div className="v mono">{usd(r.precioUnit, 4)}</div>
               <div className="sub mono">
                 <span>Venta total <b>{usd(r.ventaTotal)}</b></span>
-                <span>Ganancia <b>{usd(r.gananciaTotal)}</b></span>
+                {verEstructura && <span>Ganancia <b>{usd(r.gananciaTotal)}</b></span>}
               </div>
               <div className="sub mono">
                 <span>Bs {fmtNum(r.precioBs, 2)}</span>
@@ -747,7 +757,7 @@ export function Calculadora({
             </section>
           ) : null}
 
-          {margenMin != null && r.cant > 0 && n(form.margen) < margenMin ? (
+          {verEstructura && margenMin != null && r.cant > 0 && n(form.margen) < margenMin ? (
             <div className="warn" style={{ marginTop: 10 }}>
               El margen ({fmtNum(n(form.margen), 0)}%) está por debajo del mínimo del taller
               ({fmtNum(margenMin, 0)}%). Revisa antes de enviar.

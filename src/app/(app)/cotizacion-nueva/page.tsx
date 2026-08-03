@@ -9,7 +9,7 @@ import { listarProductosPop } from "@/lib/productos-pop";
 import { interpretarActivo } from "@/lib/interpretar";
 import { cargarTrabajoEnForm } from "@/lib/trabajos";
 import { nuevoForm } from "@/lib/cotizacion-form";
-import { tiposQuePuedeCotizar } from "@/lib/roles";
+import { tiposQuePuedeCotizar, puedeVerEstructura } from "@/lib/roles";
 import { PageHeader } from "@/app/_components/ui";
 import { Cotizador } from "./Cotizador";
 
@@ -69,6 +69,7 @@ export default async function CotizacionNuevaPage({
           ojeteCm={dc.gfOjeteCm}
           margenMin={dc.margenMin}
           interpretarHabilitado={interpretarHabilitado}
+          verEstructura={puedeVerEstructura(usuario)}
           tiposPermitidos={tiposPermitidos}
           abrirInicial={abrirInicial}
         />

@@ -2,7 +2,7 @@ import "server-only";
 import type { Rol } from "@prisma/client";
 import { db } from "./db";
 import { cargarConfig } from "./config";
-import { puedeVerPrecios } from "./roles";
+import { puedeVerPrecios, puedeVerEstructura } from "./roles";
 
 /**
  * Datos del panel de inicio, ARMADOS SEGÚN EL ROL en el servidor.
@@ -19,15 +19,18 @@ export type ResumenTaller = {
 
 export type ResumenConPrecios = {
   rol: "ADMIN" | "VENDEDOR";
+  /** Si además de precios ve la estructura de costos (margen, costo por pliego). */
+  verEstructura: boolean;
   papeles: number;
   acabados: number;
   cotizaciones: number;
   ordenes: OrdenesPorEstado;
   precios: {
     tasaBCV: number;
-    margen: number;
-    /** USD por pliego del papel más económico. */
-    pliegoMasBarato: number;
+    /** Margen por defecto: es estructura de costos → null si no la ve. */
+    margen: number | null;
+    /** USD por pliego del papel más económico: es un costo → null si no lo ve. */
+    pliegoMasBarato: number | null;
   };
 };
 
@@ -48,11 +51,15 @@ async function contarOrdenes(): Promise<OrdenesPorEstado> {
   return { pendientes, enProceso, terminadas };
 }
 
-export async function cargarResumen(rol: Rol): Promise<Resumen> {
+export async function cargarResumen(u: { rol: Rol; verEstructura?: boolean }): Promise<Resumen> {
   // TALLER: solo producción. Nada de precios sale de aquí.
-  if (!puedeVerPrecios(rol)) {
+  if (!puedeVerPrecios(u.rol)) {
     return { rol: "TALLER", ordenes: await contarOrdenes() };
   }
+
+  // ¿Ve la estructura de costos (margen, costo por pliego)? Si no, se omiten en
+  // el servidor: los campos viajan en null, no como número oculto en el cliente.
+  const verEstructura = puedeVerEstructura(u);
 
   const [papeles, acabados, cotizaciones, ordenes, cfg] = await Promise.all([
     db.papel.count(),
@@ -67,11 +74,16 @@ export async function cargarResumen(rol: Rol): Promise<Resumen> {
     : 0;
 
   return {
-    rol: rol as "ADMIN" | "VENDEDOR",
+    rol: u.rol as "ADMIN" | "VENDEDOR",
+    verEstructura,
     papeles,
     acabados,
     cotizaciones,
     ordenes,
-    precios: { tasaBCV: cfg.tasaBCV, margen: cfg.margen, pliegoMasBarato },
+    precios: {
+      tasaBCV: cfg.tasaBCV,
+      margen: verEstructura ? cfg.margen : null,
+      pliegoMasBarato: verEstructura ? pliegoMasBarato : null,
+    },
   };
 }

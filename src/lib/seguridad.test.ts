@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { SELECT_PROD, SELECT_PIEZA_TABLERO, proyeccionProd, carrilDe } from "./ordenes";
-import { puedeVerPrecios } from "./roles";
+import { puedeVerPrecios, puedeVerEstructura } from "./roles";
 
 /**
  * Invariante crítico del sistema: el rol TALLER nunca recibe un precio, costo o
@@ -49,6 +49,26 @@ describe("invariante TALLER-sin-precios", () => {
     expect(puedeVerPrecios("TALLER")).toBe(false);
     expect(puedeVerPrecios("ADMIN")).toBe(true);
     expect(puedeVerPrecios("VENDEDOR")).toBe(true);
+  });
+
+  it("verEstructura: TALLER nunca ve la estructura de costos", () => {
+    // Aunque no exista la marca por usuario, el rol TALLER queda descartado
+    // porque ni siquiera ve precios.
+    expect(puedeVerEstructura({ rol: "TALLER" })).toBe(false);
+    expect(puedeVerEstructura({ rol: "TALLER", verEstructura: true })).toBe(false);
+  });
+
+  it("verEstructura: la marca por usuario apaga la estructura aun con precios", () => {
+    // ADMIN con verEstructura=false ve precios pero NO la estructura de costos.
+    expect(puedeVerEstructura({ rol: "ADMIN", verEstructura: false })).toBe(false);
+    // VENDEDOR según su marca por usuario.
+    expect(puedeVerEstructura({ rol: "VENDEDOR", verEstructura: true })).toBe(true);
+    expect(puedeVerEstructura({ rol: "VENDEDOR", verEstructura: false })).toBe(false);
+  });
+
+  it("verEstructura: ausente = true (comportamiento histórico) para quien ve precios", () => {
+    expect(puedeVerEstructura({ rol: "ADMIN" })).toBe(true);
+    expect(puedeVerEstructura({ rol: "VENDEDOR" })).toBe(true);
   });
 
   it("el tablero de producción por pieza tampoco selecciona dinero", () => {

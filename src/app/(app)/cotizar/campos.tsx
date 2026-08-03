@@ -47,7 +47,7 @@ export function T({
  */
 export function TarjetaTasas({
   tasaBCV, binCompra, binVenta, margen, comision, ml, difManual, dif,
-  difAuto, binProm, difActual, set, toggleManual,
+  difAuto, binProm, difActual, set, toggleManual, verEstructura = true,
 }: {
   tasaBCV: string | number; binCompra: string | number; binVenta: string | number;
   margen: string | number; comision: string | number; ml: string | number;
@@ -55,32 +55,43 @@ export function TarjetaTasas({
   difAuto: number; binProm: number; difActual: number;
   set: (campo: "tasaBCV" | "binCompra" | "binVenta" | "margen" | "comision" | "ml" | "dif", v: string) => void;
   toggleManual: () => void;
+  // verEstructura: cálculo en cliente; ocultación UI del diferencial y del margen.
+  // Sin estructura solo se muestran las tasas; el precio usa el margen por defecto
+  // (o el precio a mano). El diferencial y el margen/utilidad quedan ocultos.
+  verEstructura?: boolean;
 }) {
   return (
     <section className="card">
-      <div className="ch"><b>Tasas y utilidad</b><span className="mt mono">diferencial {fmtNum(difActual, 4)}</span></div>
+      <div className="ch">
+        <b>{verEstructura ? "Tasas y utilidad" : "Tasas de cambio"}</b>
+        {verEstructura && <span className="mt mono">diferencial {fmtNum(difActual, 4)}</span>}
+      </div>
       <div className="cb">
         <div className="rowg c3">
           <T l="Tasa BCV" v={tasaBCV} set={(v) => set("tasaBCV", v)} num />
           <T l="Binance compra" v={binCompra} set={(v) => set("binCompra", v)} num />
           <T l="Binance venta" v={binVenta} set={(v) => set("binVenta", v)} num />
         </div>
-        <div className="hint mono" style={{ marginTop: 6 }}>
-          Promedio {fmtNum(binProm, 2)} ÷ BCV {fmtNum(n(tasaBCV), 2)} = {fmtNum(difAuto, 4)}
-          <button type="button" className="lnk" onClick={toggleManual}>
-            {difManual ? "volver a automático" : "fijar manualmente"}
-          </button>
-        </div>
-        {difManual ? (
+        {verEstructura && (
+          <div className="hint mono" style={{ marginTop: 6 }}>
+            Promedio {fmtNum(binProm, 2)} ÷ BCV {fmtNum(n(tasaBCV), 2)} = {fmtNum(difAuto, 4)}
+            <button type="button" className="lnk" onClick={toggleManual}>
+              {difManual ? "volver a automático" : "fijar manualmente"}
+            </button>
+          </div>
+        )}
+        {verEstructura && difManual ? (
           <div style={{ marginTop: 8, maxWidth: 170 }}>
             <T l="Diferencial fijo" v={dif} set={(v) => set("dif", v)} num />
           </div>
         ) : null}
-        <div className="rowg c3" style={{ marginTop: 12 }}>
-          <T l="Margen (%)" v={margen} set={(v) => set("margen", v)} num />
-          <T l="Comisión vendedor (%)" v={comision} set={(v) => set("comision", v)} num />
-          <T l="Recargo MercadoLibre (%)" v={ml} set={(v) => set("ml", v)} num />
-        </div>
+        {verEstructura && (
+          <div className="rowg c3" style={{ marginTop: 12 }}>
+            <T l="Margen (%)" v={margen} set={(v) => set("margen", v)} num />
+            <T l="Comisión vendedor (%)" v={comision} set={(v) => set("comision", v)} num />
+            <T l="Recargo MercadoLibre (%)" v={ml} set={(v) => set("ml", v)} num />
+          </div>
+        )}
       </div>
     </section>
   );

@@ -5,6 +5,7 @@ import { listarClientesSimple } from "@/lib/clientes";
 import { cargarTrabajoEnForm } from "@/lib/trabajos";
 import { cargarCotizacionEnForm } from "@/lib/cotizaciones";
 import { interpretarActivo } from "@/lib/interpretar";
+import { puedeVerEstructura } from "@/lib/roles";
 import { nuevoForm, type FormCotizacion } from "@/lib/cotizacion-form";
 import { PageHeader } from "@/app/_components/ui";
 import { Calculadora } from "./Calculadora";
@@ -68,6 +69,7 @@ export default async function CotizarPage({
           banner={banners[modo]}
           margenMin={dc.margenMin}
           interpretarHabilitado={interpretarHabilitado}
+          verEstructura={puedeVerEstructura(usuario)}
         />
       </div>
     </>

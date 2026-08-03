@@ -38,6 +38,8 @@ export type DatosCotizador = {
   ojeteCm: number;
   margenMin?: number;
   interpretarHabilitado: boolean;
+  /** ¿Ve la estructura de costos? Se propaga a cada calculadora embebida. */
+  verEstructura: boolean;
   /** Tipos de ítem que este usuario puede cotizar (permisos). */
   tiposPermitidos: TipoCotizacion[];
   /** Abre un editor ya prellenado al entrar (recotizar desde plantilla). */
@@ -136,23 +138,23 @@ export function Cotizador(d: DatosCotizador) {
         </div>
         {abierto.tipo === "PROPIA" && (
           <Calculadora cfg={d.cfg} clientes={d.clientes} itemsIniciales={[form as FormCotizacion]}
-            margenMin={d.margenMin} interpretarHabilitado={d.interpretarHabilitado} embed={embed} />
+            margenMin={d.margenMin} interpretarHabilitado={d.interpretarHabilitado} verEstructura={d.verEstructura} embed={embed} />
         )}
         {abierto.tipo === "OFFSET" && (
           <CalculadoraOffset cfg={d.cfg} clientes={d.clientes} equipos={d.equipos} offDefaults={d.offDefaults}
-            formInicial={form as FormOffset} margenMin={d.margenMin} embed={embed} />
+            formInicial={form as FormOffset} margenMin={d.margenMin} verEstructura={d.verEstructura} embed={embed} />
         )}
         {abierto.tipo === "PROVEEDOR" && (
           <CalculadoraProveedor cfg={d.cfg} clientes={d.clientes}
-            formInicial={form as FormProveedor} margenMin={d.margenMin} embed={embed} />
+            formInicial={form as FormProveedor} margenMin={d.margenMin} verEstructura={d.verEstructura} embed={embed} />
         )}
         {abierto.tipo === "GRAN_FORMATO" && (
           <CalculadoraGranFormato cfg={d.cfg} clientes={d.clientes} materiales={d.materialesGF} productos={d.productosGF}
-            ojeteCosto={d.ojeteCosto} ojeteCm={d.ojeteCm} formInicial={form as FormGranFormato} margenMin={d.margenMin} embed={embed} />
+            ojeteCosto={d.ojeteCosto} ojeteCm={d.ojeteCm} formInicial={form as FormGranFormato} margenMin={d.margenMin} verEstructura={d.verEstructura} embed={embed} />
         )}
         {abierto.tipo === "PERSONALIZADO" && (
           <CalculadoraPersonalizado cfg={d.cfg} clientes={d.clientes} productos={d.productosPop}
-            formInicial={form as FormPersonalizado} margenMin={d.margenMin} embed={embed} />
+            formInicial={form as FormPersonalizado} margenMin={d.margenMin} verEstructura={d.verEstructura} embed={embed} />
         )}
       </div>
     );

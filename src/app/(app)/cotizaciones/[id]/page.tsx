@@ -4,7 +4,7 @@ import { requireRol } from "@/lib/auth";
 import { obtenerCotizacion, cargarCotizacionEnDraft, ESTADOS, ETIQUETA_ESTADO, esOrdenVenta } from "@/lib/cotizaciones";
 import { cambiarEstadoAction, eliminarCotizacionAction } from "@/app/actions/cotizaciones";
 import { generarOrdenAction } from "@/app/actions/ordenes";
-import { tiposQuePuedeCotizar, puedeEliminarCotizaciones } from "@/lib/roles";
+import { tiposQuePuedeCotizar, puedeEliminarCotizaciones, puedeVerEstructura } from "@/lib/roles";
 import { BotonEliminar } from "@/app/_components/BotonEliminar";
 import { fmtNum, usd } from "@/lib/calculo";
 import { EstadoBadge } from "../EstadoBadge";
@@ -25,6 +25,10 @@ export default async function DetalleCotizacion({
   const c = await obtenerCotizacion(id);
   if (!c) notFound();
 
+  // Estructura de costos (costo, costo unit, margen, diferencial, desglose): solo
+  // si el usuario la ve. Si no, se muestra únicamente el precio de venta y datos.
+  const verEstructura = puedeVerEstructura(usuario);
+
   const puedeBorrar = puedeEliminarCotizaciones(usuario) && c.estado === "BORRADOR" && !c.orden;
   const permitidos = tiposQuePuedeCotizar(usuario);
   // Puede reeditar/copiar solo si puede cotizar todos los tipos que contiene.
@@ -32,6 +36,9 @@ export default async function DetalleCotizacion({
   const esMixta = c.tipo === "MIXTA";
   const tercerizado = c.tipo === "PROVEEDOR" || c.tipo === "GRAN_FORMATO" || c.tipo === "PERSONALIZADO";
   const multi = c.items.length > 1;
+  // Columna izquierda (desglose): con estructura siempre; sin ella, solo en multi
+  // para listar la venta por ítem (precio). En single sin estructura, se oculta.
+  const mostrarColIzq = verEstructura || multi;
   // Ítems producibles en el taller (digital/offset). Los tercerizados no van a producción.
   const itemsProducibles = c.items.filter((it) => (it.tipo ?? c.tipo) === "PROPIA" || (it.tipo ?? c.tipo) === "OFFSET");
   const generaOrden = !tercerizado && itemsProducibles.length > 0;
@@ -88,41 +95,51 @@ export default async function DetalleCotizacion({
         {c.autor ? " · " + c.autor : ""}
       </p>
 
-      <div className="mt-8 grid gap-5 lg:grid-cols-[1fr_320px]">
-        {/* Desglose congelado, por ítem */}
+      <div className={mostrarColIzq ? "mt-8 grid gap-5 lg:grid-cols-[1fr_320px]" : "mt-8 max-w-md"}>
+        {/* Desglose congelado, por ítem. Solo se muestra si el usuario ve la
+            estructura de costos; en modo multi se conserva para listar la venta
+            por ítem (precio), ocultando igualmente el desglose y el costo. */}
+        {mostrarColIzq && (
         <div className="space-y-4">
           {c.items.map((it, ii) => (
             <section key={ii} className="rounded-sm border border-regla bg-hoja">
               <div className="flex items-baseline gap-2 border-b border-regla bg-suave px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-kraft">
-                <span>{multi ? it.titulo : "Desglose de costos"}</span>
+                <span>{multi ? it.titulo : verEstructura ? "Desglose de costos" : "Ítem"}</span>
                 {multi && <span className="ml-auto font-mono normal-case">{fmtNum(it.cantidad, 0)} u</span>}
               </div>
               {multi && it.descripcion && (
                 <p className="border-b border-suave px-4 py-2 text-[12px] text-kraft">{it.descripcion}</p>
               )}
-              <div className="divide-y divide-suave">
-                {it.lineas.map((l, i) => (
-                  <div key={l.k} className="flex items-baseline gap-3 px-4 py-2.5 text-sm">
-                    <span className="h-2 w-2 shrink-0 rounded-[1px]" style={{ background: TINTAS[i % TINTAS.length] }} />
-                    <span className="min-w-0 flex-1">
-                      {l.label}
-                      <span className="block font-mono text-[11px] text-kraft">{l.detalle}</span>
-                    </span>
-                    <span className="ml-auto font-mono">{usd(l.monto)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-baseline border-t border-regla px-4 py-2.5 text-sm font-bold">
-                <span>Costo total</span>
-                <span className="ml-auto font-mono">{usd(it.costoTotal)}</span>
-              </div>
-              <div className="flex items-baseline px-4 pb-3 text-sm text-kraft">
-                <span>{multi ? "Venta del ítem" : "Costo unitario"}</span>
-                <span className="ml-auto font-mono">{multi ? usd(it.ventaTotal) : usd(it.costoUnit, 4)}</span>
-              </div>
+              {verEstructura && (
+                <div className="divide-y divide-suave">
+                  {it.lineas.map((l, i) => (
+                    <div key={l.k} className="flex items-baseline gap-3 px-4 py-2.5 text-sm">
+                      <span className="h-2 w-2 shrink-0 rounded-[1px]" style={{ background: TINTAS[i % TINTAS.length] }} />
+                      <span className="min-w-0 flex-1">
+                        {l.label}
+                        <span className="block font-mono text-[11px] text-kraft">{l.detalle}</span>
+                      </span>
+                      <span className="ml-auto font-mono">{usd(l.monto)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {verEstructura && (
+                <div className="flex items-baseline border-t border-regla px-4 py-2.5 text-sm font-bold">
+                  <span>Costo total</span>
+                  <span className="ml-auto font-mono">{usd(it.costoTotal)}</span>
+                </div>
+              )}
+              {(multi || verEstructura) && (
+                <div className="flex items-baseline px-4 pb-3 pt-2.5 text-sm text-kraft">
+                  <span>{multi ? "Venta del ítem" : "Costo unitario"}</span>
+                  <span className="ml-auto font-mono">{multi ? usd(it.ventaTotal) : usd(it.costoUnit, 4)}</span>
+                </div>
+              )}
             </section>
           ))}
         </div>
+        )}
 
         {/* Precio y condiciones */}
         <div className="space-y-4">
@@ -160,9 +177,9 @@ export default async function DetalleCotizacion({
                   {c.proveedorNombre && <Cond k="Proveedor" v={c.proveedorNombre} />}
                   {c.proveedorRef && <Cond k="Referencia" v={c.proveedorRef} />}
                   <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} u`} />
-                  <Cond k="Costo del proveedor" v={usd(c.costoTotal)} />
-                  <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
-                  <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
+                  {verEstructura && <Cond k="Costo del proveedor" v={usd(c.costoTotal)} />}
+                  {verEstructura && <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />}
+                  {verEstructura && <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />}
                   <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
                   {c.proveedorNotas && <Cond k="Notas" v={c.proveedorNotas} />}
                 </>
@@ -173,8 +190,8 @@ export default async function DetalleCotizacion({
                     <Cond k="Medida" v={`${fmtNum(c.ancho, 0)}×${fmtNum(c.alto, 0)} cm`} />
                     <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} u`} />
                     <Cond k="Cobro" v={c.tamano} />
-                    <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
-                    <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
+                    {verEstructura && <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />}
+                    {verEstructura && <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />}
                     <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
                   </>
                 ) : (
@@ -182,9 +199,9 @@ export default async function DetalleCotizacion({
                     <Cond k="Producto" v={c.papelNombre} />
                     {c.tamano && <Cond k="Medida" v={c.tamano} />}
                     <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} u`} />
-                    <Cond k="Costo por unidad" v={usd(c.costoUnit, 4)} />
-                    <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
-                    <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
+                    {verEstructura && <Cond k="Costo por unidad" v={usd(c.costoUnit, 4)} />}
+                    {verEstructura && <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />}
+                    {verEstructura && <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />}
                     <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
                   </>
                 )
@@ -193,9 +210,9 @@ export default async function DetalleCotizacion({
                   <Cond k="Producto" v={c.papelNombre} />
                   {c.tamano && <Cond k="Cobro" v={c.tamano} />}
                   <Cond k="Cantidad" v={`${fmtNum(c.cantidad, 0)} u`} />
-                  <Cond k="Costo por unidad" v={usd(c.costoUnit, 4)} />
-                  <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
-                  <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
+                  {verEstructura && <Cond k="Costo por unidad" v={usd(c.costoUnit, 4)} />}
+                  {verEstructura && <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />}
+                  {verEstructura && <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />}
                   <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
                 </>
               ) : c.tipo === "OFFSET" ? (
@@ -206,8 +223,8 @@ export default async function DetalleCotizacion({
                   <Cond k="Piezas por pliego" v={fmtNum(c.capacidad, 0)} />
                   <Cond k="Pliegos" v={fmtNum(c.pliegos, 0)} />
                   <Cond k="Planchas / cara" v={c.tamano} />
-                  <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
-                  <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
+                  {verEstructura && <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />}
+                  {verEstructura && <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />}
                   <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
                 </>
               ) : multi ? (
@@ -225,8 +242,8 @@ export default async function DetalleCotizacion({
                   <Cond k="Tamaño de corte" v={c.items[0].tamano} />
                   <Cond k="Piezas por corte" v={fmtNum(c.items[0].capacidad, 0)} />
                   <Cond k="Cortes (con merma)" v={fmtNum(c.items[0].pliegos, 2)} />
-                  <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />
-                  <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />
+                  {verEstructura && <Cond k="Margen" v={`${fmtNum(c.margen, 0)}%`} />}
+                  {verEstructura && <Cond k="Diferencial" v={fmtNum(c.diferencial, 4)} />}
                   <Cond k="Tasa BCV" v={fmtNum(c.tasaBCV, 2)} />
                 </>
               )}

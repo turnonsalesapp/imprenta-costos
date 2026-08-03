@@ -3,6 +3,7 @@ import { cargarConfig } from "@/lib/config";
 import { obtenerConfig } from "@/lib/variables";
 import { listarClientesSimple } from "@/lib/clientes";
 import { cargarProveedorEnForm } from "@/lib/cotizaciones";
+import { puedeVerEstructura } from "@/lib/roles";
 import { nuevoFormProveedor, type FormProveedor } from "@/lib/cotizacion-form";
 import { PageHeader } from "@/app/_components/ui";
 import { CalculadoraProveedor } from "./CalculadoraProveedor";
@@ -19,7 +20,7 @@ export default async function CotizarProveedorPage({
 }: {
   searchParams: Promise<{ desde?: string; editar?: string }>;
 }) {
-  await requireRol("ADMIN", "VENDEDOR");
+  const usuario = await requireRol("ADMIN", "VENDEDOR");
   const [cfg, clientes, dc] = await Promise.all([
     cargarConfig(), listarClientesSimple(), obtenerConfig(),
   ]);
@@ -56,6 +57,7 @@ export default async function CotizarProveedorPage({
           formInicial={formInicial}
           banner={banners[modo]}
           margenMin={dc.margenMin}
+          verEstructura={puedeVerEstructura(usuario)}
         />
       </div>
     </>
