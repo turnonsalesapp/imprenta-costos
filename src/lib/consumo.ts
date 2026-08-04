@@ -4,7 +4,7 @@ import { TAMANOS } from "./calculo";
 
 /**
  * Consumo de papel por mes, para planificar las compras. Cuenta las
- * cotizaciones APROBADAS (los trabajos que sí se hacen).
+ * cotizaciones GANADAS (los trabajos que sí se hacen).
  *
  * `pliegos` guardado en la cotización son CORTES (con merma). Los pliegos
  * COMPLETOS que se gastan = cortes × la fracción del tamaño (un corte de 1/4
@@ -24,7 +24,7 @@ function frac(tamano: string): number {
 
 export async function consumoPapelPorMes(): Promise<FilaConsumo[]> {
   const cots = await db.cotizacion.findMany({
-    where: { estado: "APROBADA" },
+    where: { estado: "GANADA" },
     select: { creadaEn: true, papelNombre: true, tamano: true, pliegos: true },
   });
 

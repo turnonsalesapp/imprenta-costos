@@ -321,11 +321,12 @@ model Trabajo {
 // ──────────────────────────────── cotización ────────────────────────────────
 
 enum EstadoCotizacion {
-  BORRADOR
-  PENDIENTE   // pendiente de aprobación interna, antes de enviarla al cliente
-  ENVIADA
-  APROBADA
-  RECHAZADA
+  BORRADOR    // "Cotización": borrador en elaboración
+  PENDIENTE   // pendiente de aprobación interna
+  APROBADA    // aprobada internamente, lista para enviar al cliente
+  ENVIADA     // enviada al cliente
+  GANADA      // el cliente aceptó → dispara la Orden de Producción
+  RECHAZADA   // "Perdida"
   VENCIDA
 }
 

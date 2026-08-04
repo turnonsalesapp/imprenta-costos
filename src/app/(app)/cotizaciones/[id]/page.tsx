@@ -289,11 +289,11 @@ export default async function DetalleCotizacion({
               >
                 Ver trabajo N° {c.orden.numero} →
               </Link>
-            ) : c.estado === "APROBADA" ? (
+            ) : c.estado === "GANADA" ? (
               <>
                 <p className="mb-2 text-[11px] text-kraft">
-                  Aprobada: es una <b>Orden de Venta</b>. Genera el trabajo de producción para el taller.
-                  {esMixta ? ` Solo los ${itemsProducibles.length} ítem(s) de producción propia van al taller.` : ""}
+                  Ganada: es una <b>Orden de Venta</b>. Genera el trabajo de producción — las piezas
+                  propias van al taller y las tercerizadas a compras.
                 </p>
                 <form action={generarOrdenAction}>
                   <input type="hidden" name="cotizacionId" value={c.id} />
@@ -304,7 +304,8 @@ export default async function DetalleCotizacion({
               </>
             ) : (
               <p className="text-[11px] text-kraft">
-                Aprueba la cotización (arriba) para convertirla en <b>Orden de Venta</b> y generar su trabajo de producción.
+                Marca la cotización como <b>Ganada</b> (arriba) para convertirla en <b>Orden de Venta</b>
+                {" "}y generar su trabajo de producción.
               </p>
             )}
           </section>

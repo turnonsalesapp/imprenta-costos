@@ -130,8 +130,8 @@ export async function generarOrden(cotizacionId: string): Promise<ResultadoOrden
   });
   if (!cot) return { ok: false, error: "La cotización no existe." };
   if (cot.orden) return { ok: false, error: "Esta cotización ya tiene una orden." };
-  if (cot.estado !== "APROBADA") {
-    return { ok: false, error: "Solo se genera orden de una cotización aprobada." };
+  if (cot.estado !== "GANADA") {
+    return { ok: false, error: "Solo se genera orden de una cotización ganada." };
   }
 
   // Ítems fuente: los guardados o, en cotizaciones viejas, uno sintetizado de la cabecera.
@@ -157,8 +157,10 @@ export async function generarOrden(cotizacionId: string): Promise<ResultadoOrden
     };
   });
 
-  const internas = fuente.filter((it) => carrilDe(it.tipo ?? cot.tipo) === "INTERNO");
-  const itemsProd = proyeccionProd(internas.length ? internas : fuente);
+  // Hoja de producción con el trabajo COMPLETO: internas (taller) y tercerizadas
+  // (compras). Antes solo incluía las internas y los ítems tercerizados no
+  // "pasaban" a la hoja; ahora la orden refleja todas las piezas del trabajo.
+  const itemsProd = proyeccionProd(fuente);
 
   // Todo o nada: la orden, sus piezas y las etapas se crean en una transacción,
   // para que nunca quede una orden con piezas pero sin sus etapas de acabado.

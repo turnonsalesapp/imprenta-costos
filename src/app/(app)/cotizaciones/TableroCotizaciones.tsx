@@ -29,20 +29,22 @@ export type FilaTablero = {
 const COLUMNAS: {
   label: string; estado: EstadoCotizacion; incluye: EstadoCotizacion[]; head: string;
 }[] = [
-  { label: "Borrador", estado: "BORRADOR", incluye: ["BORRADOR"], head: "bg-suave text-kraft" },
+  { label: "Cotización", estado: "BORRADOR", incluye: ["BORRADOR"], head: "bg-suave text-kraft" },
   { label: "Pendiente de aprobación", estado: "PENDIENTE", incluye: ["PENDIENTE"], head: "bg-[#FFF9E6] text-[#5C4A00]" },
-  { label: "Enviada al cliente", estado: "ENVIADA", incluye: ["ENVIADA"], head: "bg-[#E6F4F8] text-cian" },
-  { label: "Ganadas", estado: "APROBADA", incluye: ["APROBADA"], head: "bg-[#EDF9F1] text-exito" },
+  { label: "Aprobadas", estado: "APROBADA", incluye: ["APROBADA"], head: "bg-[#EDE9FB] text-[#5B3E8F]" },
+  { label: "Enviadas al cliente", estado: "ENVIADA", incluye: ["ENVIADA"], head: "bg-[#E6F4F8] text-cian" },
+  { label: "Ganadas", estado: "GANADA", incluye: ["GANADA"], head: "bg-[#EDF9F1] text-exito" },
   { label: "Perdidas", estado: "RECHAZADA", incluye: ["RECHAZADA", "VENCIDA"], head: "bg-[#FDECED] text-[#8A1C1C]" },
 ];
 
 // Opciones del selector de cada tarjeta (todas las metas posibles).
 const OPCIONES: { estado: EstadoCotizacion; label: string }[] = [
-  { estado: "BORRADOR", label: "Borrador" },
+  { estado: "BORRADOR", label: "Cotización" },
   { estado: "PENDIENTE", label: "Pendiente de aprobación" },
+  { estado: "APROBADA", label: "Aprobada (interna)" },
   { estado: "ENVIADA", label: "Enviada al cliente" },
-  { estado: "APROBADA", label: "Ganada (Aprobada)" },
-  { estado: "RECHAZADA", label: "Perdida (Rechazada)" },
+  { estado: "GANADA", label: "Ganada" },
+  { estado: "RECHAZADA", label: "Perdida" },
   { estado: "VENCIDA", label: "Vencida" },
 ];
 

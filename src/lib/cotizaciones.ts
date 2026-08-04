@@ -29,32 +29,38 @@ import { crearTrabajoDesdeForm } from "./trabajos";
 
 const num = (v: unknown): number => (v == null ? 0 : Number(v));
 
+// Pipeline comercial (orden del Kanban): Oportunidad (columna 0, viene del CRM) →
+// Cotización → Pendiente de aprobación → Aprobada (interna) → Enviada al cliente →
+// Ganada / Perdida. La Orden de Producción se dispara en GANADA.
 export const ESTADOS: EstadoCotizacion[] = [
   "BORRADOR",
   "PENDIENTE",
-  "ENVIADA",
   "APROBADA",
+  "ENVIADA",
+  "GANADA",
   "RECHAZADA",
   "VENCIDA",
 ];
 
 export const ETIQUETA_ESTADO: Record<EstadoCotizacion, string> = {
-  BORRADOR: "Borrador",
+  BORRADOR: "Cotización",
   PENDIENTE: "Pendiente de aprobación",
-  ENVIADA: "Enviada",
   APROBADA: "Aprobada",
-  RECHAZADA: "Rechazada",
+  ENVIADA: "Enviada al cliente",
+  GANADA: "Ganada",
+  RECHAZADA: "Perdida",
   VENCIDA: "Vencida",
 };
 
 /**
- * Una cotización APROBADA es, de hecho, una ORDEN DE VENTA: el cliente aceptó y
- * el trabajo queda comprometido. Es la misma cotización (mismo número), solo que
- * a partir de aquí se presenta como Orden de Venta y de ella se genera el
- * trabajo de producción para el taller. No es una tabla aparte.
+ * Una cotización GANADA es, de hecho, una ORDEN DE VENTA: el cliente aceptó y el
+ * trabajo queda comprometido. Es la misma cotización (mismo número), solo que a
+ * partir de aquí se presenta como Orden de Venta y de ella se genera el trabajo
+ * de producción. No es una tabla aparte. (APROBADA es la aprobación interna
+ * previa a enviarla al cliente; no dispara producción.)
  */
 export function esOrdenVenta(estado: EstadoCotizacion): boolean {
-  return estado === "APROBADA";
+  return estado === "GANADA";
 }
 
 /** Cómo se llama el documento según su estado (Cotización u Orden de Venta). */
@@ -1420,12 +1426,11 @@ export async function cambiarEstadoCotizacion(
 ): Promise<void> {
   await db.cotizacion.update({ where: { id }, data: { estado } });
 
-  // Handoff automático: al ganar (APROBADA = Orden de Venta), la orden de
+  // Handoff automático: al GANAR (el cliente aceptó = Orden de Venta), la orden de
   // producción se genera sola, sin recapturar nada. Antes había que pulsar
   // "Generar orden" a mano (equivalía a mover la tarjeta a Producción en Trello).
-  // Best-effort: si la cotización es 100% tercerizada (sin ítems de taller) o ya
-  // tiene orden, generarOrden devuelve error y no pasa nada — no rompe el cambio.
-  if (estado === "APROBADA") {
+  // Best-effort: si ya tiene orden, generarOrden devuelve error y no pasa nada.
+  if (estado === "GANADA") {
     const yaTiene = await db.orden.findUnique({
       where: { cotizacionId: id },
       select: { id: true },
