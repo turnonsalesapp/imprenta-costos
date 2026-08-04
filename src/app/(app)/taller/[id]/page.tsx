@@ -40,7 +40,7 @@ export default async function OrdenPage({
   return (
     <>
       <div className="no-print flex items-center justify-between gap-4">
-        <Link href="/taller" className="text-sm text-kraft hover:text-tinta">← Taller</Link>
+        <Link href="/taller" className="text-sm text-kraft hover:text-tinta">← Producción</Link>
         <div className="flex items-center gap-2">
           <OrdenBadge estado={o.estado} />
           <BotonImprimir />

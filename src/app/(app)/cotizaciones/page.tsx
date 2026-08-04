@@ -4,6 +4,7 @@ import { requireRol } from "@/lib/auth";
 import {
   listarCotizaciones, ESTADOS, ETIQUETA_ESTADO,
 } from "@/lib/cotizaciones";
+import { listarProspectos } from "@/lib/crm";
 import { fmtNum, usd } from "@/lib/calculo";
 import { tiposQuePuedeCotizar, puedeCotizar, puedeEliminarCotizaciones } from "@/lib/roles";
 import { EstadoBadge } from "./EstadoBadge";
@@ -33,6 +34,20 @@ export default async function CotizacionesPage({
   // El tablero muestra todas las columnas (todos los estados); el filtro por
   // estado solo aplica a la Lista. La búsqueda `q` aplica a ambas vistas.
   const filas = await listarCotizaciones({ q, estado: esTablero ? "" : estado });
+
+  // Oportunidades (prospectos activos del CRM) para la columna 0 del tablero.
+  // Solo NUEVO y CONTACTADO; los CONVERTIDO/DESCARTADO no se muestran.
+  const oportunidades = esTablero
+    ? (await listarProspectos())
+        .filter((p) => p.estado === "NUEVO" || p.estado === "CONTACTADO")
+        .map((p) => ({
+          id: p.id,
+          nombre: p.nombre,
+          clienteNombre: p.clienteNombre,
+          contacto: p.contacto,
+          detalle: p.detalle,
+        }))
+    : [];
 
   // Preserva filtros en el enlace de exportar.
   const params = new URLSearchParams();
@@ -114,7 +129,7 @@ export default async function CotizacionesPage({
       </form>
 
       {esTablero ? (
-        filas.length === 0 ? (
+        filas.length === 0 && oportunidades.length === 0 ? (
           <EmptyState title={q ? "Ningún resultado" : "Todavía no hay cotizaciones"}>
             {q ? "Prueba con otro término." : "Calcula un trabajo y guárdalo para empezar tu histórico."}
           </EmptyState>
@@ -125,6 +140,7 @@ export default async function CotizacionesPage({
               clienteNombre: c.clienteNombre, estado: c.estado, ventaTotal: c.ventaTotal,
               tipos: c.tipos,
             }))}
+            oportunidadesIniciales={oportunidades}
           />
         )
       ) : filas.length === 0 ? (

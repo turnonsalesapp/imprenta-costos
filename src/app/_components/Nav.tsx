@@ -16,13 +16,13 @@ import { BotonGuia } from "./BotonGuia";
 export function Nav({ usuario }: { usuario: Sesion }) {
   const enlaces: Enlace[] = [
     { href: "/", label: "Inicio" },
-    { href: "/taller", label: "Taller" },
+    { href: "/taller", label: "Producción" },
   ];
   if (puedeVerPrecios(usuario.rol)) {
     if (puedeCotizar(usuario)) enlaces.push({ href: "/cotizacion-nueva", label: "Cotizar" });
     enlaces.push(
       { href: "/cotizaciones", label: "Cotizaciones" },
-      { href: "/crm", label: "CRM" },
+      { href: "/crm", label: "Oportunidades" },
       { href: "/clientes", label: "Clientes" },
     );
   }

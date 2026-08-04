@@ -90,12 +90,12 @@ export const PASOS_INICIO: PasoTour[] = [
   },
   {
     eyebrow: "Paso 5 · Producción por pieza",
-    titulo: "El taller, pieza por pieza",
+    titulo: "Producción, pieza por pieza",
     cuerpo:
-      "En el Taller, el Tablero sigue cada pieza por separado: las internas por el taller (diseño → impresión → acabado → lista) y las tercerizadas por compras (por cotizar → comprado → recibido → entregado). El taller nunca ve precios.",
+      "En Producción, el Tablero sigue cada pieza por separado: las internas por el taller (diseño → impresión → acabado → lista) y las tercerizadas por compras (por cotizar → comprado → recibido → entregado). El taller nunca ve precios.",
     mockup: "taller-piezas",
     href: "/taller",
-    hrefLabel: "Ir al Taller",
+    hrefLabel: "Ir a Producción",
   },
   {
     eyebrow: "Paso 6 · Cobro",

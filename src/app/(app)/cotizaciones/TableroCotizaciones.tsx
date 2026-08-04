@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { EstadoCotizacion, TipoCotizacion } from "@prisma/client";
 import { usd } from "@/lib/calculo";
 import { moverEstadoAction } from "@/app/actions/cotizaciones";
+import { moverProspectoAction } from "@/app/actions/crm";
 import { TipoBadges } from "./TipoBadges";
 
 /**
@@ -22,6 +23,16 @@ export type FilaTablero = {
   estado: EstadoCotizacion;
   ventaTotal: number;
   tipos: TipoCotizacion[];
+};
+
+/** Oportunidad = prospecto activo del CRM (estados NUEVO/CONTACTADO). Vive en la
+ *  primera columna del tablero; sigue siendo un Prospecto hasta que se cotiza. */
+export type FilaOportunidad = {
+  id: string;
+  nombre: string;
+  clienteNombre: string | null;
+  contacto: string | null;
+  detalle: string | null;
 };
 
 // Cada columna hereda el color del badge de su estado (mismo lenguaje visual que
@@ -48,8 +59,15 @@ const OPCIONES: { estado: EstadoCotizacion; label: string }[] = [
   { estado: "VENCIDA", label: "Vencida" },
 ];
 
-export function TableroCotizaciones({ filasIniciales }: { filasIniciales: FilaTablero[] }) {
+export function TableroCotizaciones({
+  filasIniciales,
+  oportunidadesIniciales = [],
+}: {
+  filasIniciales: FilaTablero[];
+  oportunidadesIniciales?: FilaOportunidad[];
+}) {
   const [filas, setFilas] = useState<FilaTablero[]>(filasIniciales);
+  const [oportunidades, setOportunidades] = useState<FilaOportunidad[]>(oportunidadesIniciales);
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   const [sobre, setSobre] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +85,18 @@ export function TableroCotizaciones({ filasIniciales }: { filasIniciales: FilaTa
     });
   }
 
+  // Descartar una oportunidad: mueve el prospecto a DESCARTADO en el CRM (no la
+  // convierte en cotización). Se retira de la columna de forma optimista.
+  function descartar(id: string) {
+    const prev = oportunidades;
+    setOportunidades((os) => os.filter((o) => o.id !== id));
+    setError(null);
+    startTransition(async () => {
+      const res = await moverProspectoAction(id, "DESCARTADO");
+      if (res?.error) { setOportunidades(prev); setError(res.error); }
+    });
+  }
+
   return (
     <div className="mt-4">
       {error && (
@@ -76,6 +106,54 @@ export function TableroCotizaciones({ filasIniciales }: { filasIniciales: FilaTa
       )}
 
       <div className="flex gap-3 overflow-x-auto pb-2">
+        {/* Columna 0 — Oportunidades (prospectos activos del CRM). No participa en
+            el arrastre de estados: solo lista y ofrece convertir o descartar. */}
+        <section className="flex min-w-[188px] flex-1 flex-col overflow-hidden rounded-sm border border-regla bg-suave/60">
+          <div className="flex items-center gap-2 bg-[#E6F4F8] px-3 py-2 text-cian">
+            <span className="text-[10px] font-bold uppercase tracking-widest">Oportunidades</span>
+            <span className="ml-auto font-mono text-[11px] opacity-70">{oportunidades.length}</span>
+          </div>
+
+          <div className="flex min-h-[56px] flex-1 flex-col gap-2 p-2">
+            {oportunidades.map((o) => (
+              <article
+                key={o.id}
+                className="rounded-sm border border-regla bg-hoja p-2.5"
+              >
+                <div className="text-sm font-medium leading-snug">{o.nombre}</div>
+                {o.clienteNombre && (
+                  <div className="mt-0.5 truncate text-[11px] text-kraft">{o.clienteNombre}</div>
+                )}
+                {o.contacto && (
+                  <div className="mt-0.5 truncate font-mono text-[11px] text-kraft">{o.contacto}</div>
+                )}
+                {o.detalle && (
+                  <p className="mt-1 text-[11px] leading-relaxed text-kraft">{o.detalle}</p>
+                )}
+
+                <div className="mt-2 flex items-center justify-between gap-2 border-t border-suave pt-2">
+                  <Link
+                    href="/cotizacion-nueva"
+                    className="text-[11px] font-medium text-cian hover:underline"
+                  >
+                    Convertir a cotización
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => descartar(o.id)}
+                    className="rounded-sm px-1.5 py-1 text-[11px] font-medium text-kraft hover:text-[#8A1C1C]"
+                  >
+                    Descartar
+                  </button>
+                </div>
+              </article>
+            ))}
+            {oportunidades.length === 0 && (
+              <div className="px-1 py-5 text-center text-[11px] text-kraft">Sin oportunidades</div>
+            )}
+          </div>
+        </section>
+
         {COLUMNAS.map((col) => {
           const cards = filas.filter((f) => col.incluye.includes(f.estado));
           const activa = sobre === col.label;

@@ -41,7 +41,7 @@ export default async function TallerPage({
     return (
       <>
         <PageHeader
-          title="Taller"
+          title="Producción"
           eyebrow={`${piezas.length} ${piezas.length === 1 ? "pieza en producción" : "piezas en producción"}`}
         >
           {toggle}
@@ -82,7 +82,7 @@ export default async function TallerPage({
   return (
     <>
       <PageHeader
-        title="Taller"
+        title="Producción"
         eyebrow={`${ordenes.length} ${ordenes.length === 1 ? "trabajo activo" : "trabajos activos"}`}
       >
         {toggle}

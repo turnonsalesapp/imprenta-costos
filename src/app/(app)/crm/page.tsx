@@ -57,7 +57,7 @@ export default async function CrmPage() {
 
   return (
     <>
-      <PageHeader title="CRM" eyebrow="Prospectos y actividades" />
+      <PageHeader title="Oportunidades" eyebrow="Prospectos y actividades" />
 
       {/* Nuevo prospecto */}
       <section className="mt-8">
