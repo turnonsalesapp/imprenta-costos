@@ -52,21 +52,24 @@ export default async function TallerPage({
             Las piezas aparecen aquí al generarse una orden desde una cotización aprobada.
           </EmptyState>
         ) : (
-          <TableroProduccion
-            filasIniciales={piezas.map((p) => ({
-              id: p.id,
-              carril: p.carril,
-              tipo: p.tipo,
-              titulo: p.titulo,
-              cantidad: p.cantidad,
-              estado: p.estado,
-              proveedorNombre: p.proveedorNombre,
-              ordenId: p.ordenId,
-              ordenNumero: p.ordenNumero,
-              cliente: p.cliente,
-              fechaEntrega: p.fechaEntrega ? p.fechaEntrega.toISOString() : null,
-            }))}
-          />
+          // Ancho completo (rompe el max-w del layout) para ver todos los carriles.
+          <div className="mx-[calc(50%-50vw)] w-screen px-4 sm:px-6">
+            <TableroProduccion
+              filasIniciales={piezas.map((p) => ({
+                id: p.id,
+                carril: p.carril,
+                tipo: p.tipo,
+                titulo: p.titulo,
+                cantidad: p.cantidad,
+                estado: p.estado,
+                proveedorNombre: p.proveedorNombre,
+                ordenId: p.ordenId,
+                ordenNumero: p.ordenNumero,
+                cliente: p.cliente,
+                fechaEntrega: p.fechaEntrega ? p.fechaEntrega.toISOString() : null,
+              }))}
+            />
+          </div>
         )}
       </>
     );
