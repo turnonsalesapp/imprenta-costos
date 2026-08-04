@@ -47,6 +47,7 @@ export default async function CotizacionesPage({
           clienteNombre: p.clienteNombre,
           contacto: p.contacto,
           detalle: limpiarDetalle(p.detalle),
+          estado: p.estado,
         }))
     : [];
 

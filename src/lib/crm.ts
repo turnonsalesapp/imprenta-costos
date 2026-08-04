@@ -73,6 +73,37 @@ export async function moverProspecto(id: string, estado: ProspectoEstado): Promi
   await db.prospecto.update({ where: { id }, data: { estado } });
 }
 
+/**
+ * Edita los datos de una oportunidad (prospecto): nombre, cliente, contacto,
+ * detalle y estado. Valida que el nombre no vaya vacío y que el estado sea uno
+ * de los válidos. Los campos de texto vacíos se guardan como null.
+ */
+export async function actualizarProspecto(
+  id: string,
+  data: {
+    nombre: string;
+    clienteNombre?: string | null;
+    contacto?: string | null;
+    detalle?: string | null;
+    estado: ProspectoEstado;
+  },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const nombre = data.nombre?.trim();
+  if (!nombre) return { ok: false, error: "El nombre de la oportunidad es obligatorio." };
+  if (!PROSPECTO_ESTADOS.includes(data.estado)) return { ok: false, error: "Estado inválido." };
+  await db.prospecto.update({
+    where: { id },
+    data: {
+      nombre,
+      clienteNombre: data.clienteNombre?.trim() || null,
+      contacto: data.contacto?.trim() || null,
+      detalle: data.detalle?.trim() || null,
+      estado: data.estado,
+    },
+  });
+  return { ok: true };
+}
+
 export async function eliminarProspecto(id: string): Promise<void> {
   await db.prospecto.delete({ where: { id } });
 }

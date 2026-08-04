@@ -4,9 +4,18 @@ import { revalidatePath } from "next/cache";
 import type { ProspectoEstado, ActividadTipo } from "@prisma/client";
 import { requireRol } from "@/lib/auth";
 import {
-  crearProspecto, moverProspecto, eliminarProspecto, PROSPECTO_ESTADOS,
+  crearProspecto, moverProspecto, actualizarProspecto, eliminarProspecto, PROSPECTO_ESTADOS,
   crearActividad, marcarActividad, ACTIVIDAD_TIPOS,
 } from "@/lib/crm";
+
+/** Datos editables de una oportunidad desde el tablero (args tipados). */
+export type ActualizarProspectoInput = {
+  nombre: string;
+  clienteNombre: string | null;
+  contacto: string | null;
+  detalle: string | null;
+  estado: ProspectoEstado;
+};
 
 /** Crea un prospecto/oportunidad (ADMIN/VENDEDOR). */
 export async function crearProspectoAction(formData: FormData): Promise<{ error: string | null }> {
@@ -30,6 +39,19 @@ export async function moverProspectoAction(
   await requireRol("ADMIN", "VENDEDOR");
   if (!id || !PROSPECTO_ESTADOS.includes(estado)) return { error: "Estado inválido." };
   await moverProspecto(id, estado);
+  revalidatePath("/crm");
+  return { error: null };
+}
+
+/** Edita una oportunidad (prospecto) desde el tablero de cotizaciones. */
+export async function actualizarProspectoAction(
+  id: string, data: ActualizarProspectoInput,
+): Promise<{ error: string | null }> {
+  await requireRol("ADMIN", "VENDEDOR");
+  if (!id) return { error: "Oportunidad inválida." };
+  const r = await actualizarProspecto(id, data);
+  if (!r.ok) return { error: r.error };
+  revalidatePath("/cotizaciones");
   revalidatePath("/crm");
   return { error: null };
 }

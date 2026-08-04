@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import type { EstadoCotizacion, TipoCotizacion } from "@prisma/client";
+import type { EstadoCotizacion, TipoCotizacion, ProspectoEstado } from "@prisma/client";
 import { usd } from "@/lib/calculo";
 import { moverEstadoAction } from "@/app/actions/cotizaciones";
 import { moverProspectoAction } from "@/app/actions/crm";
 import { TipoBadges } from "./TipoBadges";
+import { TarjetaPreview, type PreviewSel } from "./TarjetaPreview";
 
 /**
  * Tablero Kanban de cotizaciones. Cada columna es un estado; se cambia el estado
@@ -33,6 +34,7 @@ export type FilaOportunidad = {
   clienteNombre: string | null;
   contacto: string | null;
   detalle: string | null;
+  estado: ProspectoEstado;
 };
 
 // Cada columna hereda el color del badge de su estado (mismo lenguaje visual que
@@ -71,7 +73,15 @@ export function TableroCotizaciones({
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   const [sobre, setSobre] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<PreviewSel | null>(null);
   const [, startTransition] = useTransition();
+
+  // Refleja en la tarjeta los cambios guardados en la oportunidad desde la vista
+  // previa (estado local, sin recargar). Si pasó a un estado no activo, se retira.
+  function oportunidadActualizada(op: FilaOportunidad) {
+    setOportunidades((os) => os.map((o) => (o.id === op.id ? op : o)));
+    setPreview({ tipo: "oportunidad", op });
+  }
 
   function mover(id: string, estado: EstadoCotizacion) {
     const actual = filas.find((f) => f.id === id);
@@ -90,6 +100,7 @@ export function TableroCotizaciones({
   function descartar(id: string) {
     const prev = oportunidades;
     setOportunidades((os) => os.filter((o) => o.id !== id));
+    setPreview(null);
     setError(null);
     startTransition(async () => {
       const res = await moverProspectoAction(id, "DESCARTADO");
@@ -118,34 +129,48 @@ export function TableroCotizaciones({
             {oportunidades.map((o) => (
               <article
                 key={o.id}
-                className="rounded-sm border border-regla bg-hoja p-2.5"
+                className="rounded-sm border border-regla bg-hoja"
               >
                 <div
-                  title={o.nombre}
-                  className="line-clamp-2 break-words text-sm font-medium leading-snug"
+                  role="button"
+                  tabIndex={0}
+                  title="Ver / editar oportunidad"
+                  onClick={() => setPreview({ tipo: "oportunidad", op: o })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setPreview({ tipo: "oportunidad", op: o });
+                    }
+                  }}
+                  className="cursor-pointer rounded-t-sm p-2.5 transition-colors hover:bg-suave/50"
                 >
-                  {o.nombre}
+                  <div
+                    className="line-clamp-2 break-words text-sm font-medium leading-snug"
+                  >
+                    {o.nombre}
+                  </div>
+                  {o.clienteNombre && (
+                    <div className="mt-0.5 truncate text-[11px] text-kraft">{o.clienteNombre}</div>
+                  )}
+                  {o.contacto && (
+                    <div className="mt-0.5 truncate font-mono text-[11px] text-kraft">{o.contacto}</div>
+                  )}
+                  {o.detalle && (
+                    <p className="mt-1 truncate text-[11px] text-kraft">{o.detalle}</p>
+                  )}
                 </div>
-                {o.clienteNombre && (
-                  <div className="mt-0.5 truncate text-[11px] text-kraft">{o.clienteNombre}</div>
-                )}
-                {o.contacto && (
-                  <div className="mt-0.5 truncate font-mono text-[11px] text-kraft">{o.contacto}</div>
-                )}
-                {o.detalle && (
-                  <p title={o.detalle} className="mt-1 truncate text-[11px] text-kraft">{o.detalle}</p>
-                )}
 
-                <div className="mt-2 flex items-center justify-between gap-2 border-t border-suave pt-2">
+                <div className="flex items-center justify-between gap-2 border-t border-suave px-2.5 pb-2 pt-2">
                   <Link
                     href="/cotizacion-nueva"
+                    onClick={(e) => e.stopPropagation()}
                     className="text-[11px] font-medium text-cian hover:underline"
                   >
                     Convertir a cotización
                   </Link>
                   <button
                     type="button"
-                    onClick={() => descartar(o.id)}
+                    onClick={(e) => { e.stopPropagation(); descartar(o.id); }}
                     className="rounded-sm px-1.5 py-1 text-[11px] font-medium text-kraft hover:text-[#8A1C1C]"
                   >
                     Descartar
@@ -187,37 +212,51 @@ export function TableroCotizaciones({
                     draggable
                     onDragStart={() => setArrastrando(c.id)}
                     onDragEnd={() => { setArrastrando(null); setSobre(null); }}
-                    className={`cursor-grab rounded-sm border border-regla bg-hoja p-2.5 active:cursor-grabbing ${arrastrando === c.id ? "opacity-50" : ""}`}
+                    className={`cursor-grab rounded-sm border border-regla bg-hoja active:cursor-grabbing ${arrastrando === c.id ? "opacity-50" : ""}`}
                   >
-                    {c.tipos.length > 0 && (
-                      <div className="-ml-1.5 flex flex-wrap items-center gap-y-1">
-                        <TipoBadges tipos={c.tipos} />
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      title="Ver vista previa"
+                      onClick={() => setPreview({ tipo: "cotizacion", fila: c })}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setPreview({ tipo: "cotizacion", fila: c });
+                        }
+                      }}
+                      className="cursor-pointer rounded-t-sm p-2.5 transition-colors hover:bg-suave/50"
+                    >
+                      {c.tipos.length > 0 && (
+                        <div className="-ml-1.5 flex flex-wrap items-center gap-y-1">
+                          <TipoBadges tipos={c.tipos} />
+                        </div>
+                      )}
+                      <div className="mt-1 flex items-start justify-between gap-2">
+                        <span
+                          className="line-clamp-2 min-w-0 break-words text-sm font-medium leading-snug"
+                        >
+                          {c.titulo}
+                        </span>
+                        <span className="shrink-0 font-mono text-[11px] text-kraft">N° {c.numero}</span>
                       </div>
-                    )}
-                    <div className="mt-1 flex items-start justify-between gap-2">
-                      <Link
-                        href={`/cotizaciones/${c.id}`}
-                        title={c.titulo}
-                        className="line-clamp-2 min-w-0 break-words text-sm font-medium leading-snug hover:text-cian"
-                      >
-                        {c.titulo}
-                      </Link>
-                      <span className="shrink-0 font-mono text-[11px] text-kraft">N° {c.numero}</span>
-                    </div>
-                    {c.clienteNombre && (
-                      <div className="mt-0.5 truncate text-[11px] text-kraft">{c.clienteNombre}</div>
-                    )}
-
-                    <div className="mt-2 border-t border-suave pt-2">
-                      <div className="flex items-center justify-between gap-2">
+                      {c.clienteNombre && (
+                        <div className="mt-0.5 truncate text-[11px] text-kraft">{c.clienteNombre}</div>
+                      )}
+                      <div className="mt-2 flex items-center justify-between gap-2 border-t border-suave pt-2">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-kraft">Total</span>
                         <span className="font-mono text-sm font-bold">{usd(c.ventaTotal)}</span>
                       </div>
+                    </div>
+
+                    <div className="px-2.5 pb-2.5">
                       <select
                         value={c.estado}
                         onChange={(e) => mover(c.id, e.target.value as EstadoCotizacion)}
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
                         aria-label="Cambiar estado"
-                        className="mt-1.5 w-full rounded-sm border border-regla bg-hoja px-1.5 py-1 text-[11px] text-kraft outline-none focus:border-cian"
+                        className="w-full rounded-sm border border-regla bg-hoja px-1.5 py-1 text-[11px] text-kraft outline-none focus:border-cian"
                       >
                         {OPCIONES.map((o) => (
                           <option key={o.estado} value={o.estado}>{o.label}</option>
@@ -237,7 +276,17 @@ export function TableroCotizaciones({
 
       <p className="mt-3 text-xs text-kraft">
         Arrastra una tarjeta a otra columna para cambiar su estado, o usa el selector de la tarjeta.
+        Haz clic en el cuerpo de una tarjeta para ver su vista previa.
       </p>
+
+      {preview && (
+        <TarjetaPreview
+          sel={preview}
+          onClose={() => setPreview(null)}
+          onGuardado={oportunidadActualizada}
+          onDescartar={descartar}
+        />
+      )}
     </div>
   );
 }
