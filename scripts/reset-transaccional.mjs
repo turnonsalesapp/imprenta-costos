@@ -51,7 +51,12 @@ async function main() {
   }
 
   console.log("\nBorrando…");
-  // Cotizacion cascada: Orden → Etapa/Pieza, y Comentario/Adjunto de la cotización.
+  // Órdenes de producción primero (explícito), luego sus piezas/etapas caen; y al
+  // borrar cotizaciones también caen sus comentarios/adjuntos. El orden es seguro
+  // por las cascadas, pero se borran las órdenes aparte para reportarlas claro.
+  const rEtapas = await db.etapaOrden.deleteMany();
+  const rPiezas = await db.piezaOrden.deleteMany();
+  const rOrd = await db.orden.deleteMany();
   const rCot = await db.cotizacion.deleteMany();
   const rPros = await db.prospecto.deleteMany();
   const rAct = await db.actividad.deleteMany();
@@ -59,7 +64,8 @@ async function main() {
   if (INCLUIR_TRABAJOS) rTra = await db.trabajo.deleteMany();
   if (INCLUIR_CLIENTES) rCli = await db.cliente.deleteMany();
 
-  console.log(`✅ Borrado: ${rCot.count} cotizaciones (+ cascada), ${rPros.count} oportunidades, ${rAct.count} actividades`
+  console.log(`✅ Borrado: ${rOrd.count} órdenes de producción (${rPiezas.count} piezas, ${rEtapas.count} etapas), `
+    + `${rCot.count} cotizaciones, ${rPros.count} oportunidades, ${rAct.count} actividades`
     + (INCLUIR_TRABAJOS ? `, ${rTra.count} trabajos` : "")
     + (INCLUIR_CLIENTES ? `, ${rCli.count} clientes` : "") + ".");
   console.log("Nota: el inventario (stock y movimientos) NO se tocó.");
