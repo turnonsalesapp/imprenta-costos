@@ -34,6 +34,7 @@ export function Nav({ usuario }: { usuario: Sesion }) {
       { href: "/consumo", label: "Consumo" },
       { href: "/usuarios", label: "Usuarios" },
       { href: "/auditoria", label: "Auditoría" },
+      { href: "/migracion", label: "Migración" },
     );
   }
 
