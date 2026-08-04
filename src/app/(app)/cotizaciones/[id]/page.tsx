@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRol } from "@/lib/auth";
 import { obtenerCotizacion, cargarCotizacionEnDraft, ESTADOS, ETIQUETA_ESTADO, esOrdenVenta } from "@/lib/cotizaciones";
-import { cambiarEstadoAction, eliminarCotizacionAction } from "@/app/actions/cotizaciones";
+import { cambiarEstadoAction, eliminarCotizacionAction, guardarRefCotizacionAction } from "@/app/actions/cotizaciones";
 import { generarOrdenAction } from "@/app/actions/ordenes";
 import { tiposQuePuedeCotizar, puedeEliminarCotizaciones, puedeVerEstructura } from "@/lib/roles";
 import { BotonEliminar } from "@/app/_components/BotonEliminar";
@@ -57,7 +57,7 @@ export default async function DetalleCotizacion({
             {ov ? "Orden de Venta" : "Cotización"}
             {ov && (
               <span className="rounded-sm bg-[#EDF9F1] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-exito">
-                Aprobada
+                Ganada
               </span>
             )}
           </span>
@@ -95,6 +95,22 @@ export default async function DetalleCotizacion({
         {c.creadaEn.toLocaleDateString("es-VE")}
         {c.autor ? " · " + c.autor : ""}
       </p>
+
+      {/* Referencia a la cotización del sistema paralelo/externo. */}
+      <form action={guardarRefCotizacionAction} className="mt-3 flex flex-wrap items-center gap-2">
+        <input type="hidden" name="id" value={c.id} />
+        <label htmlFor="refCot" className="text-[10px] font-bold uppercase tracking-widest text-kraft">
+          Cotización (ref. externa)
+        </label>
+        <input
+          id="refCot" name="ref" defaultValue={c.refCotizacion ?? ""}
+          placeholder="p. ej. AP-2025-00815"
+          className="w-52 rounded-sm border border-regla bg-white px-2 py-1 font-mono text-sm outline-none focus:border-cian"
+        />
+        <button type="submit" className="rounded-sm border border-regla px-2.5 py-1 text-xs font-medium text-kraft hover:border-tinta hover:text-tinta">
+          Guardar
+        </button>
+      </form>
 
       <div className={mostrarColIzq ? "mt-8 grid gap-5 lg:grid-cols-[1fr_320px]" : "mt-8 max-w-md"}>
         {/* Desglose congelado, por ítem. Solo se muestra si el usuario ve la

@@ -18,6 +18,7 @@ import {
   crearCotizacionMixta,
   actualizarCotizacionMixta,
   cambiarEstadoCotizacion,
+  guardarRefCotizacion,
   eliminarCotizacion,
   cargarCotizacionEnDraft,
   ESTADOS,
@@ -181,6 +182,15 @@ export async function moverEstadoAction(
   revalidatePath("/cotizaciones");
   revalidatePath("/taller"); // el handoff pudo generar la orden
   return { error: null };
+}
+
+/** Guarda la referencia a la cotización del sistema paralelo/externo. */
+export async function guardarRefCotizacionAction(formData: FormData): Promise<void> {
+  await requireRol("ADMIN", "VENDEDOR");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await guardarRefCotizacion(id, String(formData.get("ref") ?? ""));
+  revalidatePath(`/cotizaciones/${id}`);
 }
 
 /** Elimina una cotización (quien tenga permiso; solo borrador sin orden). */

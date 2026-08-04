@@ -1310,6 +1310,7 @@ export type CotizacionDetalle = {
   tipo: TipoCotizacion;
   clienteId: string | null;
   clienteNombre: string | null;
+  refCotizacion: string | null;
   proveedorNombre: string | null;
   proveedorRef: string | null;
   proveedorNotas: string | null;
@@ -1358,7 +1359,7 @@ export async function obtenerCotizacion(id: string): Promise<CotizacionDetalle |
     where: { id },
     select: {
       id: true, numero: true, creadaEn: true, estado: true, tipo: true,
-      clienteId: true, clienteNombre: true, proveedorNombre: true, proveedorRef: true,
+      clienteId: true, clienteNombre: true, refCotizacion: true, proveedorNombre: true, proveedorRef: true,
       proveedorNotas: true, titulo: true, descripcion: true, cantidad: true, ancho: true,
       alto: true, tamano: true, papelNombre: true, capacidad: true, lineas: true, items: true,
       pliegos: true, costoTotal: true, costoUnit: true, diferencial: true, margen: true,
@@ -1393,6 +1394,7 @@ export async function obtenerCotizacion(id: string): Promise<CotizacionDetalle |
     tipo: c.tipo,
     clienteId: c.clienteId,
     clienteNombre: c.clienteNombre,
+    refCotizacion: c.refCotizacion,
     proveedorNombre: c.proveedorNombre,
     proveedorRef: c.proveedorRef,
     proveedorNotas: c.proveedorNotas,
@@ -1418,6 +1420,14 @@ export async function obtenerCotizacion(id: string): Promise<CotizacionDetalle |
     precioBs: num(c.precioBs),
     orden: c.orden,
   };
+}
+
+/** Guarda la referencia a la cotización del sistema paralelo/externo. */
+export async function guardarRefCotizacion(id: string, ref: string): Promise<void> {
+  await db.cotizacion.update({
+    where: { id },
+    data: { refCotizacion: ref.trim() || null },
+  });
 }
 
 export async function cambiarEstadoCotizacion(

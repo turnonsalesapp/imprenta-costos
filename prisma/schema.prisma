@@ -388,6 +388,9 @@ model Cotizacion {
 
   validaHasta DateTime? @db.Timestamptz(3)
   notas       String?
+  /// Referencia a la cotización en el sistema PARALELO/externo (número o código).
+  /// Relaciona este registro con la cotización hecha por fuera del sistema.
+  refCotizacion String?
   creadaEn    DateTime @default(now()) @db.Timestamptz(3)
 
   cliente Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
