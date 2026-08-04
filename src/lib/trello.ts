@@ -40,6 +40,22 @@ export function limpiarNombre(raw?: string): string {
   return limpio || "(sin título)";
 }
 
+/**
+ * Limpia la descripción importada de Trello para mostrarla sin ruido: quita las
+ * imágenes markdown ![..](..), convierte enlaces [texto](url) en su texto, borra
+ * URLs sueltas y colapsa espacios. Devuelve null si no queda texto útil.
+ */
+export function limpiarDetalle(raw?: string | null): string | null {
+  if (!raw) return null;
+  let t = raw;
+  t = t.replace(/!\[[^\]]*\]\([^)]*\)/g, " ");   // ![alt](url) → fuera
+  t = t.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");  // [texto](url) → texto
+  t = t.replace(/https?:\/\/\S+/g, " ");          // URLs sueltas → fuera
+  t = t.replace(/["“”]smartCard-inline["“”]?/g, " ");
+  t = t.replace(/\s+/g, " ").trim();
+  return t || null;
+}
+
 export type FilaCrm = { nombre: string; detalle: string | null; estado: EstadoProspecto };
 
 export function planificarCrm(
@@ -59,7 +75,7 @@ export function planificarCrm(
     const info = porLista.get(nombreLista)!;
     info.total++;
     if (info.estado) {
-      plan.push({ nombre: limpiarNombre(c.name), detalle: (c.desc || "").trim().slice(0, 2000) || null, estado: info.estado });
+      plan.push({ nombre: limpiarNombre(c.name), detalle: limpiarDetalle(c.desc)?.slice(0, 1000) ?? null, estado: info.estado });
     }
   }
   return { plan, recon: recon(data, porLista, plan.length, enArchivadas, (i) => i.estado ? `Importa a ${i.estado}` : "Omitida (regla)") };

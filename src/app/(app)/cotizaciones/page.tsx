@@ -5,6 +5,7 @@ import {
   listarCotizaciones, ESTADOS, ETIQUETA_ESTADO,
 } from "@/lib/cotizaciones";
 import { listarProspectos } from "@/lib/crm";
+import { limpiarDetalle } from "@/lib/trello";
 import { fmtNum, usd } from "@/lib/calculo";
 import { tiposQuePuedeCotizar, puedeCotizar, puedeEliminarCotizaciones } from "@/lib/roles";
 import { EstadoBadge } from "./EstadoBadge";
@@ -45,7 +46,7 @@ export default async function CotizacionesPage({
           nombre: p.nombre,
           clienteNombre: p.clienteNombre,
           contacto: p.contacto,
-          detalle: p.detalle,
+          detalle: limpiarDetalle(p.detalle),
         }))
     : [];
 
@@ -134,14 +135,17 @@ export default async function CotizacionesPage({
             {q ? "Prueba con otro término." : "Calcula un trabajo y guárdalo para empezar tu histórico."}
           </EmptyState>
         ) : (
-          <TableroCotizaciones
-            filasIniciales={filas.map((c) => ({
-              id: c.id, numero: c.numero, titulo: c.titulo,
-              clienteNombre: c.clienteNombre, estado: c.estado, ventaTotal: c.ventaTotal,
-              tipos: c.tipos,
-            }))}
-            oportunidadesIniciales={oportunidades}
-          />
+          // Ancho completo (rompe el max-w del layout) para ver todas las columnas.
+          <div className="mx-[calc(50%-50vw)] w-screen px-4 sm:px-6">
+            <TableroCotizaciones
+              filasIniciales={filas.map((c) => ({
+                id: c.id, numero: c.numero, titulo: c.titulo,
+                clienteNombre: c.clienteNombre, estado: c.estado, ventaTotal: c.ventaTotal,
+                tipos: c.tipos,
+              }))}
+              oportunidadesIniciales={oportunidades}
+            />
+          </div>
         )
       ) : filas.length === 0 ? (
         <EmptyState title={q || estado ? "Ningún resultado" : "Todavía no hay cotizaciones"}>
