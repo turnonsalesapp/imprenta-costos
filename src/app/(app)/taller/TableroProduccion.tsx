@@ -168,7 +168,7 @@ function Carril({
                 <span className="ml-auto font-mono text-[11px] opacity-70">{cards.length}</span>
               </div>
 
-              <div className="flex min-h-[56px] flex-1 flex-col gap-2 p-2">
+              <div className="flex max-h-[70vh] min-h-[56px] flex-1 flex-col gap-2 overflow-y-auto p-2">
                 {cards.map((c) => (
                   <article
                     key={c.id}
@@ -181,16 +181,21 @@ function Carril({
                       <TipoBadges tipos={[c.tipo as TipoCotizacion]} />
                     </div>
                     <div className="mt-1 flex items-start justify-between gap-2">
-                      <span className="text-sm font-medium leading-snug">{c.titulo}</span>
+                      <span
+                        title={c.titulo}
+                        className="line-clamp-2 min-w-0 break-words text-sm font-medium leading-snug"
+                      >
+                        {c.titulo}
+                      </span>
                       <Link href={`/taller/${c.ordenId}`} className="shrink-0 font-mono text-[11px] text-kraft hover:text-cian">
                         N° {c.ordenNumero}
                       </Link>
                     </div>
                     {c.cliente && (
-                      <div className="mt-0.5 truncate text-[11px] text-kraft">{c.cliente}</div>
+                      <div title={c.cliente} className="mt-0.5 truncate text-[11px] text-kraft">{c.cliente}</div>
                     )}
                     {c.proveedorNombre && (
-                      <div className="mt-0.5 truncate text-[11px] text-kraft">Proveedor: {c.proveedorNombre}</div>
+                      <div title={c.proveedorNombre} className="mt-0.5 truncate text-[11px] text-kraft">Proveedor: {c.proveedorNombre}</div>
                     )}
 
                     <div className="mt-2 flex items-center justify-between gap-2 border-t border-suave pt-2">

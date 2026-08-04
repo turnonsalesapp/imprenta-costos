@@ -114,13 +114,18 @@ export function TableroCotizaciones({
             <span className="ml-auto font-mono text-[11px] opacity-70">{oportunidades.length}</span>
           </div>
 
-          <div className="flex min-h-[56px] flex-1 flex-col gap-2 p-2">
+          <div className="flex max-h-[70vh] min-h-[56px] flex-1 flex-col gap-2 overflow-y-auto p-2">
             {oportunidades.map((o) => (
               <article
                 key={o.id}
                 className="rounded-sm border border-regla bg-hoja p-2.5"
               >
-                <div className="text-sm font-medium leading-snug">{o.nombre}</div>
+                <div
+                  title={o.nombre}
+                  className="line-clamp-2 break-words text-sm font-medium leading-snug"
+                >
+                  {o.nombre}
+                </div>
                 {o.clienteNombre && (
                   <div className="mt-0.5 truncate text-[11px] text-kraft">{o.clienteNombre}</div>
                 )}
@@ -128,7 +133,7 @@ export function TableroCotizaciones({
                   <div className="mt-0.5 truncate font-mono text-[11px] text-kraft">{o.contacto}</div>
                 )}
                 {o.detalle && (
-                  <p className="mt-1 text-[11px] leading-relaxed text-kraft">{o.detalle}</p>
+                  <p title={o.detalle} className="mt-1 truncate text-[11px] text-kraft">{o.detalle}</p>
                 )}
 
                 <div className="mt-2 flex items-center justify-between gap-2 border-t border-suave pt-2">
@@ -175,7 +180,7 @@ export function TableroCotizaciones({
                 <span className="ml-auto font-mono text-[11px] opacity-70">{cards.length}</span>
               </div>
 
-              <div className="flex min-h-[56px] flex-1 flex-col gap-2 p-2">
+              <div className="flex max-h-[70vh] min-h-[56px] flex-1 flex-col gap-2 overflow-y-auto p-2">
                 {cards.map((c) => (
                   <article
                     key={c.id}
@@ -190,7 +195,11 @@ export function TableroCotizaciones({
                       </div>
                     )}
                     <div className="mt-1 flex items-start justify-between gap-2">
-                      <Link href={`/cotizaciones/${c.id}`} className="text-sm font-medium leading-snug hover:text-cian">
+                      <Link
+                        href={`/cotizaciones/${c.id}`}
+                        title={c.titulo}
+                        className="line-clamp-2 min-w-0 break-words text-sm font-medium leading-snug hover:text-cian"
+                      >
                         {c.titulo}
                       </Link>
                       <span className="shrink-0 font-mono text-[11px] text-kraft">N° {c.numero}</span>

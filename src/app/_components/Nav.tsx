@@ -2,41 +2,57 @@ import Link from "next/link";
 import type { Sesion } from "@/lib/auth";
 import { ETIQUETA_ROL, puedeAdministrar, puedeVerPrecios, puedeCotizar } from "@/lib/roles";
 import { logoutAction } from "@/app/actions/auth";
-import { MenuMovil, type Enlace } from "./MenuMovil";
+import { NavMenu, type NavGrupo, type NavEnlace } from "./NavMenu";
+import { MenuMovil } from "./MenuMovil";
 import { BotonGuia } from "./BotonGuia";
 
 /**
- * Barra de navegación. Los enlaces se arman según el rol, pero eso es solo
+ * Barra de navegación. Los grupos se arman según el rol, pero eso es solo
  * comodidad visual: el control real está en el servidor (cada página exige su
  * rol). Nunca dependemos de esconder un enlace para proteger nada.
  *
- * En escritorio los enlaces van en fila; en móvil se colapsan en un menú
- * (MenuMovil) para que no se desborden.
+ * La navegación se agrupa por proceso (Comercial, Producción, Catálogo,
+ * Administración). En escritorio cada grupo es un desplegable (NavMenu); en
+ * móvil se colapsan en secciones (MenuMovil).
  */
 export function Nav({ usuario }: { usuario: Sesion }) {
-  const enlaces: Enlace[] = [
-    { href: "/", label: "Inicio" },
-    { href: "/taller", label: "Producción" },
-  ];
-  if (puedeVerPrecios(usuario.rol)) {
-    if (puedeCotizar(usuario)) enlaces.push({ href: "/cotizacion-nueva", label: "Cotizar" });
-    enlaces.push(
+  const rol = usuario.rol;
+
+  // Ítems por grupo, filtrados por rol. El grupo se omite si queda vacío.
+  const comercial: NavEnlace[] = [];
+  if (puedeVerPrecios(rol)) {
+    comercial.push({ href: "/crm", label: "Oportunidades" });
+    if (puedeCotizar(usuario)) comercial.push({ href: "/cotizacion-nueva", label: "Cotizar" });
+    comercial.push(
       { href: "/cotizaciones", label: "Cotizaciones" },
-      { href: "/crm", label: "Oportunidades" },
       { href: "/clientes", label: "Clientes" },
     );
   }
-  if (puedeAdministrar(usuario.rol)) {
-    enlaces.push(
+
+  // Producción: Tablero es la pantalla del TALLER (todos los roles); Consumo solo admin.
+  const produccion: NavEnlace[] = [{ href: "/taller", label: "Tablero" }];
+  if (puedeAdministrar(rol)) produccion.push({ href: "/consumo", label: "Consumo" });
+
+  const catalogo: NavEnlace[] = [];
+  const administracion: NavEnlace[] = [];
+  if (puedeAdministrar(rol)) {
+    catalogo.push(
       { href: "/variables", label: "Variables" },
       { href: "/inventario", label: "Inventario" },
       { href: "/proveedores", label: "Proveedores" },
-      { href: "/consumo", label: "Consumo" },
+    );
+    administracion.push(
       { href: "/usuarios", label: "Usuarios" },
       { href: "/auditoria", label: "Auditoría" },
       { href: "/migracion", label: "Migración" },
     );
   }
+
+  const grupos: NavGrupo[] = [{ tipo: "enlace", href: "/", label: "Inicio" }];
+  if (comercial.length) grupos.push({ tipo: "grupo", label: "Comercial", items: comercial });
+  if (produccion.length) grupos.push({ tipo: "grupo", label: "Producción", items: produccion });
+  if (catalogo.length) grupos.push({ tipo: "grupo", label: "Catálogo", items: catalogo });
+  if (administracion.length) grupos.push({ tipo: "grupo", label: "Administración", items: administracion });
 
   return (
     <header className="no-print relative border-b border-regla bg-hoja">
@@ -51,15 +67,8 @@ export function Nav({ usuario }: { usuario: Sesion }) {
           <span className="text-sm font-bold tracking-tight">Imprenta</span>
         </Link>
 
-        {/* Escritorio: enlaces en fila. min-w-0 + overflow deslizante para que, si
-            no caben, se deslicen en vez de recortar el bloque de la derecha. */}
-        <nav className="no-scrollbar hidden min-w-0 flex-1 items-center gap-3 overflow-x-auto whitespace-nowrap text-sm lg:flex">
-          {enlaces.map((e) => (
-            <Link key={e.href} href={e.href} className="text-kraft hover:text-tinta">
-              {e.label}
-            </Link>
-          ))}
-        </nav>
+        {/* Escritorio: grupos con paneles desplegables. */}
+        <NavMenu grupos={grupos} />
 
         <div className="ml-auto flex shrink-0 items-center gap-3">
           <div className="text-right leading-tight">
@@ -77,8 +86,8 @@ export function Nav({ usuario }: { usuario: Sesion }) {
               Salir
             </button>
           </form>
-          {/* Móvil: menú colapsable */}
-          <MenuMovil enlaces={enlaces} />
+          {/* Móvil: menú colapsable con secciones. */}
+          <MenuMovil grupos={grupos} />
         </div>
       </div>
     </header>
