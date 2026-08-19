@@ -411,27 +411,33 @@ model Cotizacion {
 
 // ─────────────────── hilo del trabajo: comentarios + adjuntos ───────────────────
 
-/// Comentario en el hilo de un trabajo. Anclado a la cotización, lo comparten la
-/// cotización (ADMIN/VENDEDOR) y la orden (TALLER). Texto libre, SIN precios.
+/// Comentario en el hilo de un trabajo. Se ancla a UNA cotización (lo comparten
+/// la cotización y su orden) o a UNA oportunidad/prospecto (solo ADMIN/VENDEDOR).
+/// Siempre exactamente uno de los dos ids (XOR, validado en la app). SIN precios.
 model Comentario {
   id           String   @id @default(dbgenerated("gen_random_uuid()"))
-  cotizacionId String
+  cotizacionId String?
+  prospectoId  String?
   autorId      String? // usuario que lo escribió (null si se borra el usuario)
   autorNombre  String // nombre congelado, para que sobreviva
   texto        String
   creadoEn     DateTime @default(now()) @db.Timestamptz(3)
 
-  cotizacion Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+  cotizacion Cotizacion? @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+  prospecto  Prospecto?  @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
 
   @@index([cotizacionId])
+  @@index([prospectoId])
 }
 
-/// Adjunto del hilo de un trabajo (artes, referencias, pruebas). Anclado a la
-/// cotización; almacén "db" guarda los bytes en `datos`, "drive" referencia el
-/// archivo remoto. NO contiene dinero: seguro para el rol TALLER.
+/// Adjunto del hilo de un trabajo (artes, referencias, pruebas). Se ancla a UNA
+/// cotización o a UNA oportunidad/prospecto (XOR, validado en la app). Almacén
+/// "db" guarda los bytes en `datos`, "drive" referencia el archivo remoto. NO
+/// contiene dinero: seguro para el rol TALLER (solo llega por la orden).
 model Adjunto {
   id           String   @id @default(dbgenerated("gen_random_uuid()"))
-  cotizacionId String
+  cotizacionId String?
+  prospectoId  String?
   autorId      String?
   autorNombre  String
   nombre       String
@@ -443,9 +449,11 @@ model Adjunto {
   url          String?
   creadoEn     DateTime @default(now()) @db.Timestamptz(3)
 
-  cotizacion Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+  cotizacion Cotizacion? @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+  prospecto  Prospecto?  @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
 
   @@index([cotizacionId])
+  @@index([prospectoId])
 }
 
 // ─────────────────────────── orden de producción ───────────────────────────
@@ -619,6 +627,11 @@ model Prospecto {
   usuarioId     String?         // quién lo capturó
   creadoEn      DateTime        @default(now()) @db.Timestamptz(3)
   actualizadoEn DateTime        @updatedAt @db.Timestamptz(3)
+
+  // Hilo de la oportunidad (comentarios + adjuntos), como el de la cotización.
+  // Solo lo ven ADMIN/VENDEDOR. Se borra en cascada al eliminar el prospecto.
+  comentarios Comentario[]
+  adjuntos    Adjunto[]
 
   @@index([estado])
 }
