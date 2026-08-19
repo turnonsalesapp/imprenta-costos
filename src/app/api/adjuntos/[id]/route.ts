@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { getUsuario } from "@/lib/auth";
 import { obtenerAdjunto } from "@/lib/adjuntos";
-import { puedeVerTrabajo } from "@/lib/comentarios";
+import { puedeVerTrabajo, puedeVerOportunidad } from "@/lib/comentarios";
 import { esInline } from "@/lib/almacenamiento";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,12 @@ export async function GET(
   const a = await obtenerAdjunto(id);
   if (!a) return new Response("No encontrado", { status: 404 });
 
-  if (!(await puedeVerTrabajo(usuario, a.cotizacionId))) {
+  const autorizado = a.prospectoId
+    ? puedeVerOportunidad(usuario)
+    : a.cotizacionId
+      ? await puedeVerTrabajo(usuario, a.cotizacionId)
+      : false;
+  if (!autorizado) {
     return new Response("No autorizado", { status: 403 });
   }
 

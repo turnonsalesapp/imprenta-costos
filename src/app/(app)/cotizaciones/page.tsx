@@ -139,6 +139,7 @@ export default async function CotizacionesPage({
           // Ancho completo (rompe el max-w del layout) para ver todas las columnas.
           <div className="mx-[calc(50%-50vw)] w-screen px-4 sm:px-6">
             <TableroCotizaciones
+              usuario={{ id: usuario.id, rol: usuario.rol }}
               filasIniciales={filas.map((c) => ({
                 id: c.id, numero: c.numero, titulo: c.titulo,
                 clienteNombre: c.clienteNombre, estado: c.estado, ventaTotal: c.ventaTotal,

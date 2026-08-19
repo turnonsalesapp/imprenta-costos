@@ -6,6 +6,8 @@ import { X } from "lucide-react";
 import type { EstadoCotizacion, ProspectoEstado } from "@prisma/client";
 import { usd } from "@/lib/calculo";
 import { actualizarProspectoAction } from "@/app/actions/crm";
+import { cargarHiloProspectoAction } from "@/app/actions/comentarios";
+import { HiloTrabajo, type ComentarioUI, type AdjuntoUI } from "@/app/(app)/_hilo/HiloTrabajo";
 import { TipoBadges } from "./TipoBadges";
 import type { FilaTablero, FilaOportunidad } from "./TableroCotizaciones";
 
@@ -59,11 +61,13 @@ const ESTADOS_EDITABLES: { estado: ProspectoEstado; label: string }[] = [
 
 export function TarjetaPreview({
   sel,
+  usuario,
   onClose,
   onGuardado,
   onDescartar,
 }: {
   sel: PreviewSel;
+  usuario: { id: string; rol: string };
   onClose: () => void;
   onGuardado: (op: FilaOportunidad) => void;
   onDescartar: (id: string) => void;
@@ -79,6 +83,9 @@ export function TarjetaPreview({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // La oportunidad trae hilo (comentarios + adjuntos): necesita más ancho.
+  const ancho = sel.tipo === "oportunidad" ? "max-w-2xl" : "max-w-md";
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-tinta/40 p-4"
@@ -91,13 +98,14 @@ export function TarjetaPreview({
     >
       <div
         ref={panelRef}
-        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-sm border border-regla bg-hoja"
+        className={`flex max-h-[90vh] w-full ${ancho} flex-col overflow-hidden rounded-sm border border-regla bg-hoja`}
       >
         {sel.tipo === "cotizacion" ? (
           <VistaCotizacion fila={sel.fila} onClose={onClose} />
         ) : (
           <EditarOportunidad
             op={sel.op}
+            usuario={usuario}
             onClose={onClose}
             onGuardado={onGuardado}
             onDescartar={onDescartar}
@@ -175,11 +183,13 @@ function VistaCotizacion({ fila, onClose }: { fila: FilaTablero; onClose: () => 
 
 function EditarOportunidad({
   op,
+  usuario,
   onClose,
   onGuardado,
   onDescartar,
 }: {
   op: FilaOportunidad;
+  usuario: { id: string; rol: string };
   onClose: () => void;
   onGuardado: (op: FilaOportunidad) => void;
   onDescartar: (id: string) => void;
@@ -192,6 +202,23 @@ function EditarOportunidad({
   const [error, setError] = useState<string | null>(null);
   const [guardado, setGuardado] = useState(false);
   const [pendiente, startTransition] = useTransition();
+
+  // Hilo (comentarios + adjuntos) de la oportunidad: se carga bajo demanda al
+  // abrir la tarjeta. Se recarga cada vez que cambia la oportunidad mostrada.
+  const [hilo, setHilo] = useState<{ comentarios: ComentarioUI[]; adjuntos: AdjuntoUI[] } | null>(null);
+  const [hiloError, setHiloError] = useState<string | null>(null);
+  const [recarga, setRecarga] = useState(0); // se incrementa para volver a cargar
+  useEffect(() => {
+    let vivo = true;
+    setHilo(null);
+    setHiloError(null);
+    cargarHiloProspectoAction(op.id).then((r) => {
+      if (!vivo) return;
+      if ("error" in r) setHiloError(r.error);
+      else setHilo({ comentarios: r.comentarios, adjuntos: r.adjuntos });
+    });
+    return () => { vivo = false; };
+  }, [op.id, recarga]);
 
   function guardar() {
     setError(null);
@@ -311,6 +338,24 @@ function EditarOportunidad({
             Descartar
           </button>
         </div>
+
+        {/* Hilo de la oportunidad: comentarios y adjuntos, igual que en una
+            cotización. Se carga bajo demanda al abrir la tarjeta. */}
+        {hiloError ? (
+          <p className="mt-6 rounded-sm border border-[#E4B3B3] bg-[#FDECED] px-3 py-2 text-xs text-[#8A1C1C]">
+            {hiloError}
+          </p>
+        ) : hilo ? (
+          <HiloTrabajo
+            prospectoId={op.id}
+            usuario={usuario}
+            comentarios={hilo.comentarios}
+            adjuntos={hilo.adjuntos}
+            onCambio={() => setRecarga((n) => n + 1)}
+          />
+        ) : (
+          <p className="mt-6 text-center text-xs text-kraft">Cargando comentarios y adjuntos…</p>
+        )}
       </div>
 
       <div className="flex justify-end gap-2 border-t border-regla px-4 py-3">

@@ -62,9 +62,11 @@ const OPCIONES: { estado: EstadoCotizacion; label: string }[] = [
 ];
 
 export function TableroCotizaciones({
+  usuario,
   filasIniciales,
   oportunidadesIniciales = [],
 }: {
+  usuario: { id: string; rol: string };
   filasIniciales: FilaTablero[];
   oportunidadesIniciales?: FilaOportunidad[];
 }) {
@@ -282,6 +284,7 @@ export function TableroCotizaciones({
       {preview && (
         <TarjetaPreview
           sel={preview}
+          usuario={usuario}
           onClose={() => setPreview(null)}
           onGuardado={oportunidadActualizada}
           onDescartar={descartar}

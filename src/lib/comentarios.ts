@@ -53,10 +53,25 @@ export async function puedeVerTrabajo(
   return true; // ADMIN y VENDEDOR
 }
 
-/** Comentarios del trabajo, en orden cronológico (los más viejos primero). */
+/** El hilo de una OPORTUNIDAD (prospecto) lo ven ADMIN/VENDEDOR; el TALLER no
+ *  (las oportunidades son comerciales y no pasan por producción). */
+export function puedeVerOportunidad(usuario: Pick<Sesion, "rol">): boolean {
+  return usuario.rol !== "TALLER";
+}
+
+/** Comentarios del trabajo (cotización), en orden cronológico. */
 export async function listarComentarios(cotizacionId: string): Promise<ComentarioVista[]> {
   return db.comentario.findMany({
     where: { cotizacionId },
+    orderBy: { creadoEn: "asc" },
+    select: { id: true, autorId: true, autorNombre: true, texto: true, creadoEn: true },
+  });
+}
+
+/** Comentarios de una OPORTUNIDAD (prospecto), en orden cronológico. */
+export async function listarComentariosProspecto(prospectoId: string): Promise<ComentarioVista[]> {
+  return db.comentario.findMany({
+    where: { prospectoId },
     orderBy: { creadoEn: "asc" },
     select: { id: true, autorId: true, autorNombre: true, texto: true, creadoEn: true },
   });
@@ -67,7 +82,8 @@ export const MAX_TEXTO = 4000;
 
 /** Crea un comentario. El texto se recorta y valida (no vacío, dentro del límite). */
 export async function crearComentario(input: {
-  cotizacionId: string;
+  cotizacionId?: string | null;
+  prospectoId?: string | null;
   autorId: string | null;
   autorNombre: string;
   texto: string;
@@ -75,9 +91,13 @@ export async function crearComentario(input: {
   const texto = input.texto.trim();
   if (!texto) return { ok: false, error: "El comentario está vacío." };
   if (texto.length > MAX_TEXTO) return { ok: false, error: "El comentario es demasiado largo." };
+  if (!input.cotizacionId === !input.prospectoId) {
+    return { ok: false, error: "Destino del comentario inválido." }; // exactamente uno
+  }
   await db.comentario.create({
     data: {
-      cotizacionId: input.cotizacionId,
+      cotizacionId: input.cotizacionId ?? null,
+      prospectoId: input.prospectoId ?? null,
       autorId: input.autorId,
       autorNombre: input.autorNombre,
       texto,
@@ -93,15 +113,15 @@ export async function crearComentario(input: {
 export async function eliminarComentario(
   id: string,
   usuario: Pick<Sesion, "id" | "rol">,
-): Promise<{ ok: true; cotizacionId: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; cotizacionId: string | null; prospectoId: string | null } | { ok: false; error: string }> {
   const c = await db.comentario.findUnique({
     where: { id },
-    select: { id: true, autorId: true, cotizacionId: true },
+    select: { id: true, autorId: true, cotizacionId: true, prospectoId: true },
   });
   if (!c) return { ok: false, error: "El comentario no existe." };
   if (!puedeBorrarDelHilo(usuario, c.autorId)) {
     return { ok: false, error: "No puedes eliminar este comentario." };
   }
   await db.comentario.delete({ where: { id } });
-  return { ok: true, cotizacionId: c.cotizacionId };
+  return { ok: true, cotizacionId: c.cotizacionId, prospectoId: c.prospectoId };
 }

@@ -31,12 +31,25 @@ export type AdjuntoUI = {
   fecha: string;
 };
 
-type Props = {
-  cotizacionId: string;
+/** Destino del hilo: exactamente una cotización O una oportunidad (prospecto). */
+export type DestinoHilo =
+  | { cotizacionId: string; prospectoId?: undefined }
+  | { prospectoId: string; cotizacionId?: undefined };
+
+type Props = DestinoHilo & {
   usuario: { id: string; rol: string };
   comentarios: ComentarioUI[];
   adjuntos: AdjuntoUI[];
+  /** Se invoca tras crear/borrar en el hilo. Útil cuando el hilo se muestra en un
+   *  modal (que no re-renderiza por revalidatePath) y debe recargarse a mano. */
+  onCambio?: () => void;
 };
+
+/** Escribe en el FormData el campo del destino que corresponda. */
+function setDestino(fd: FormData, destino: DestinoHilo): void {
+  if (destino.cotizacionId) fd.set("cotizacionId", destino.cotizacionId);
+  else if (destino.prospectoId) fd.set("prospectoId", destino.prospectoId);
+}
 
 function puedeBorrar(usuario: { id: string; rol: string }, autorId: string | null): boolean {
   return usuario.rol === "ADMIN" || (autorId != null && autorId === usuario.id);
@@ -48,11 +61,11 @@ function fmtBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function HiloTrabajo({ cotizacionId, usuario, comentarios, adjuntos }: Props) {
+export function HiloTrabajo({ usuario, comentarios, adjuntos, onCambio, ...destino }: Props) {
   return (
     <div className="mt-8 space-y-6">
-      <Comentarios cotizacionId={cotizacionId} usuario={usuario} comentarios={comentarios} />
-      <Adjuntos cotizacionId={cotizacionId} usuario={usuario} adjuntos={adjuntos} />
+      <Comentarios destino={destino} usuario={usuario} comentarios={comentarios} onCambio={onCambio} />
+      <Adjuntos destino={destino} usuario={usuario} adjuntos={adjuntos} onCambio={onCambio} />
     </div>
   );
 }
@@ -60,11 +73,12 @@ export function HiloTrabajo({ cotizacionId, usuario, comentarios, adjuntos }: Pr
 /* ─────────────────────────── comentarios ─────────────────────────── */
 
 function Comentarios({
-  cotizacionId, usuario, comentarios,
+  destino, usuario, comentarios, onCambio,
 }: {
-  cotizacionId: string;
+  destino: DestinoHilo;
   usuario: { id: string; rol: string };
   comentarios: ComentarioUI[];
+  onCambio?: () => void;
 }) {
   const [texto, setTexto] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +88,7 @@ function Comentarios({
     const valor = texto.trim();
     if (!valor) return;
     const fd = new FormData();
-    fd.set("cotizacionId", cotizacionId);
+    setDestino(fd, destino);
     fd.set("texto", valor);
     iniciar(async () => {
       const r = await agregarComentarioAction(fd);
@@ -82,6 +96,7 @@ function Comentarios({
       else {
         setError(null);
         setTexto("");
+        onCambio?.();
       }
     });
   }
@@ -113,6 +128,7 @@ function Comentarios({
                   id={c.id}
                   confirmacion="¿Eliminar este comentario?"
                   etiqueta="Eliminar comentario"
+                  onCambio={onCambio}
                 />
               )}
             </li>
@@ -147,11 +163,12 @@ function Comentarios({
 /* ─────────────────────────── adjuntos ─────────────────────────── */
 
 function Adjuntos({
-  cotizacionId, usuario, adjuntos,
+  destino, usuario, adjuntos, onCambio,
 }: {
-  cotizacionId: string;
+  destino: DestinoHilo;
   usuario: { id: string; rol: string };
   adjuntos: AdjuntoUI[];
+  onCambio?: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -161,7 +178,7 @@ function Adjuntos({
   function subir(file: File) {
     setUltimo(file);
     const fd = new FormData();
-    fd.set("cotizacionId", cotizacionId);
+    setDestino(fd, destino);
     fd.set("archivo", file);
     iniciar(async () => {
       const r = await subirAdjuntoAction(fd);
@@ -170,6 +187,7 @@ function Adjuntos({
       } else {
         setError(null);
         setUltimo(null);
+        onCambio?.();
       }
       if (inputRef.current) inputRef.current.value = "";
     });
@@ -273,6 +291,7 @@ function Adjuntos({
                       id={a.id}
                       confirmacion={`¿Eliminar «${a.nombre}»?`}
                       etiqueta="Eliminar adjunto"
+                      onCambio={onCambio}
                     />
                   )}
                 </div>
@@ -288,12 +307,13 @@ function Adjuntos({
 /* ─────────────────────────── borrar (comentario/adjunto) ─────────────────────────── */
 
 function BotonBorrar({
-  accion, id, confirmacion, etiqueta,
+  accion, id, confirmacion, etiqueta, onCambio,
 }: {
   accion: (fd: FormData) => Promise<{ error: string | null }>;
   id: string;
   confirmacion: string;
   etiqueta: string;
+  onCambio?: () => void;
 }) {
   const [pendiente, iniciar] = useTransition();
   function borrar() {
@@ -303,6 +323,7 @@ function BotonBorrar({
     iniciar(async () => {
       const r = await accion(fd);
       if (r.error) window.alert(r.error);
+      else onCambio?.();
     });
   }
   return (
