@@ -28,30 +28,33 @@ const jugarte: Entrada = {
 describe("caso real Jugarte (3.000 stickers)", () => {
   const r = calcular(jugarte, cfg);
 
-  it("consume 772,5 cortes con 3% de merma", () => {
+  // Pliegos enteros (A1): el papel se consume en CORTES físicos completos, así
+  // que 750 × 1,03 = 772,5 se redondea hacia arriba a 773. Antes se cobraba el
+  // decimal (772,5) siguiendo la hoja original; ahora la regla es entero.
+  it("consume 773 cortes enteros con 3% de merma", () => {
     expect(r.pliegosBase).toBe(750);
-    expect(r.pliegos).toBeCloseTo(772.5, 4);
+    expect(r.pliegos).toBe(773);
   });
 
-  it("cobra cada línea como la hoja original", () => {
+  it("cobra cada línea con cortes enteros", () => {
     const m = Object.fromEntries(r.lineas.map((l) => [l.k, l.monto]));
-    expect(m.papel).toBeCloseTo(125.53, 2);
-    expect(m.impTiro).toBeCloseTo(203.94, 2);
-    expect(m.troquelado).toBeCloseTo(15, 2);   // 1 millar de cortes (772,5) × $15
+    expect(m.papel).toBeCloseTo(125.61, 2);
+    expect(m.impTiro).toBeCloseTo(204.07, 2);
+    expect(m.troquelado).toBeCloseTo(15, 2);   // 1 millar de cortes (773) × $15
     expect(m.pegado).toBeCloseTo(180, 2);      // 3.000 pzs × $0,03 × 2
     expect(m.acetato).toBeCloseTo(150, 2);     // 3.000 pzs × $0,05
     expect(m.guillotina).toBeCloseTo(5, 2);
   });
 
   it("llega al costo y al precio esperados", () => {
-    expect(r.costoTotal).toBeCloseTo(679.47, 2);
-    expect(r.costoUnit).toBeCloseTo(0.2265, 4);
+    expect(r.costoTotal).toBeCloseTo(679.68, 2);
+    expect(r.costoUnit).toBeCloseTo(0.2266, 4);
     expect(r.dif).toBeCloseTo(1.3929, 4);
-    expect(r.costoProt).toBeCloseTo(0.3155, 4);
-    expect(r.utilProt).toBeCloseTo(0.1883, 4);
-    expect(r.precioUnit).toBeCloseTo(0.5038, 4);
-    expect(r.ventaTotal).toBeCloseTo(1511.47, 1);
-    expect(r.precioML * 3000).toBeCloseTo(1692.85, 1);
+    expect(r.costoProt).toBeCloseTo(0.3156, 4);
+    expect(r.utilProt).toBeCloseTo(0.1884, 4);
+    expect(r.precioUnit).toBeCloseTo(0.5040, 4);
+    expect(r.ventaTotal).toBeCloseTo(1511.95, 1);
+    expect(r.precioML * 3000).toBeCloseTo(1693.38, 1);
   });
 });
 
@@ -124,7 +127,7 @@ describe("precio de venta a mano", () => {
 
   it("con precio a mano 0 o vacío calcula como siempre", () => {
     expect(calcular({ ...jugarte, precioManual: 0 }, cfg).manual).toBe(false);
-    expect(calcular({ ...jugarte, precioManual: "" }, cfg).precioUnit).toBeCloseTo(0.5038, 4);
+    expect(calcular({ ...jugarte, precioManual: "" }, cfg).precioUnit).toBeCloseTo(0.5040, 4);
   });
 });
 

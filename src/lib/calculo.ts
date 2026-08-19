@@ -239,7 +239,10 @@ export function calcular(f: Entrada, cfg: Config): Resultado {
   const merma = n(f.merma) / 100;
 
   const pliegosBase = cant > 0 ? Math.ceil(cant / cap) : 0;
-  const pliegos = pliegosBase * (1 + merma);
+  // Pliegos enteros (A1): el papel se consume en CORTES físicos completos; no se
+  // puede gastar medio corte. La merma se suma y el total se redondea hacia
+  // arriba a un número entero de cortes.
+  const pliegos = Math.ceil(pliegosBase * (1 + merma));
   const piezas = pliegos * cap;
   // La unidad "millar" (troquelado) se cobra por millar de CORTES de papel,
   // no de piezas: el troquel procesa el pliego, no cada pieza suelta.
