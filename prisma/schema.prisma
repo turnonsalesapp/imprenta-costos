@@ -16,9 +16,10 @@ datasource db {
 // ─────────────────────────── usuarios y acceso ───────────────────────────
 
 enum Rol {
-  ADMIN     // ve costos y márgenes, edita variables y papeles
-  VENDEDOR  // cotiza y ve precios; no edita las variables del negocio
-  TALLER    // solo ve órdenes de producción, sin precios ni costos
+  SUPERADMIN // superconjunto de ADMIN; además purga la bitácora por rango
+  ADMIN      // ve costos y márgenes, edita variables y papeles
+  VENDEDOR   // cotiza y ve precios; no edita las variables del negocio
+  TALLER     // solo ve órdenes de producción, sin precios ni costos
 }
 
 model Usuario {
@@ -587,9 +588,11 @@ model PiezaOrden {
 
 // ─────────────────────────── auditoría ───────────────────────────
 
-/// Bitácora de operaciones sensibles (cambios de estado de cotización, de rol,
-/// activación/desactivación de usuarios). Registra actor, acción y momento.
-/// No se borra ni edita; es solo-agregar.
+/// Registro de actividad / bitácora de operaciones sensibles (cambios de estado
+/// de cotización, de rol, activación de usuarios, hilo del trabajo…). Registra
+/// actor, acción y momento. Es solo-agregar: nadie la edita. La única forma de
+/// borrar es la purga por rango de fechas, reservada a SUPERADMIN, que además
+/// deja su propio rastro (acción "auditoria.purga").
 model RegistroAuditoria {
   id          String   @id @default(cuid())
   fecha       DateTime @default(now()) @db.Timestamptz(3)

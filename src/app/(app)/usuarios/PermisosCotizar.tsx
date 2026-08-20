@@ -28,7 +28,7 @@ export function PermisosCotizar({
 }) {
   const form = useRef<HTMLFormElement>(null);
 
-  if (rol === "ADMIN") return <span className="text-[11px] text-kraft">Todo · puede eliminar</span>;
+  if (rol === "ADMIN" || rol === "SUPERADMIN") return <span className="text-[11px] text-kraft">Todo · puede eliminar</span>;
   if (rol === "TALLER") return <span className="text-[11px] text-kraft">No cotiza</span>;
 
   // Vacío = todos (usuario recién creado). Con lista, solo esos. Sin permiso, ninguno.

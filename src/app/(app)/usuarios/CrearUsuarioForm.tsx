@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
+import type { Rol } from "@prisma/client";
 import { crearUsuario, type EstadoCrear } from "@/app/actions/usuarios";
-import { DESCRIPCION_ROL, ROLES, ETIQUETA_ROL } from "@/lib/roles";
+import { DESCRIPCION_ROL, ETIQUETA_ROL } from "@/lib/roles";
 
 const INICIAL: EstadoCrear = { error: null, ok: false };
 
-export function CrearUsuarioForm() {
+export function CrearUsuarioForm({ opciones }: { opciones: Rol[] }) {
   const [estado, action, pendiente] = useActionState(crearUsuario, INICIAL);
   const form = useRef<HTMLFormElement>(null);
 
@@ -60,7 +61,7 @@ export function CrearUsuarioForm() {
             defaultValue="VENDEDOR"
             className="mt-1 w-full rounded-sm border border-regla bg-white px-3 py-2 text-sm outline-none focus:border-cian"
           >
-            {ROLES.map((r) => (
+            {opciones.map((r) => (
               <option key={r} value={r}>
                 {ETIQUETA_ROL[r]} — {DESCRIPCION_ROL[r]}
               </option>

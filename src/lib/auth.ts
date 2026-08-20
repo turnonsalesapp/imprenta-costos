@@ -82,10 +82,17 @@ export async function requireUsuario(): Promise<Sesion> {
   return u;
 }
 
-/** Exige uno de los roles dados; si no, manda al inicio. Para páginas. */
+/**
+ * Exige uno de los roles dados; si no, manda al inicio. Para páginas y acciones.
+ * SUPERADMIN es superconjunto de ADMIN: satisface cualquier requisito que acepte
+ * a ADMIN, sin tener que enumerarlo en cada llamada. Para exigir SUPERADMIN de
+ * forma estricta, pásalo explícitamente (`requireRol("SUPERADMIN")`): ahí ADMIN
+ * no entra.
+ */
 export async function requireRol(...roles: Rol[]): Promise<Sesion> {
   const u = await requireUsuario();
-  if (!roles.includes(u.rol)) redirect("/");
+  const ok = roles.includes(u.rol) || (u.rol === "SUPERADMIN" && roles.includes("ADMIN"));
+  if (!ok) redirect("/");
   return u;
 }
 

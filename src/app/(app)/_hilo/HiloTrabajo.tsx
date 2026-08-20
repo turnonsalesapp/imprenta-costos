@@ -52,7 +52,8 @@ function setDestino(fd: FormData, destino: DestinoHilo): void {
 }
 
 function puedeBorrar(usuario: { id: string; rol: string }, autorId: string | null): boolean {
-  return usuario.rol === "ADMIN" || (autorId != null && autorId === usuario.id);
+  const esAdmin = usuario.rol === "ADMIN" || usuario.rol === "SUPERADMIN";
+  return esAdmin || (autorId != null && autorId === usuario.id);
 }
 
 function fmtBytes(n: number): string {

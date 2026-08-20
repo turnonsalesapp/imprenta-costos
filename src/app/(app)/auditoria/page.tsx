@@ -1,5 +1,7 @@
 import { requireRol } from "@/lib/auth";
 import { listarAuditoria } from "@/lib/auditoria";
+import { esSuperAdmin } from "@/lib/roles";
+import { PurgaBitacora } from "./PurgaBitacora";
 import { PageHeader } from "@/app/_components/ui";
 
 export const dynamic = "force-dynamic";
@@ -9,11 +11,12 @@ const ETIQUETA_ACCION: Record<string, string> = {
   "usuario.rol": "Cambio de rol",
   "usuario.activo": "Activación de usuario",
   "usuario.interpretarIA": "Interpretar IA (usuario)",
+  "auditoria.purga": "Purga de bitácora",
 };
 
-/** Bitácora de operaciones sensibles. Solo ADMIN. */
+/** Bitácora de operaciones sensibles. ADMIN la ve; solo SUPERADMIN puede purgar. */
 export default async function AuditoriaPage() {
-  await requireRol("ADMIN");
+  const usuario = await requireRol("ADMIN");
   const filas = await listarAuditoria(150);
 
   return (
@@ -70,8 +73,11 @@ export default async function AuditoriaPage() {
 
       <p className="mt-4 text-[11px] leading-relaxed text-kraft">
         Se registran cambios de estado de cotización, de rol y de activación de usuarios.
-        La bitácora es de solo-agregar: no se edita ni se borra.
+        La bitácora es de solo-agregar: no se edita. Solo un superadministrador puede
+        purgarla por rango de fechas, y esa purga también queda registrada.
       </p>
+
+      {esSuperAdmin(usuario.rol) && <PurgaBitacora />}
     </>
   );
 }

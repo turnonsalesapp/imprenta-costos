@@ -1,6 +1,7 @@
 import { requireRol } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { alternarActivo } from "@/app/actions/usuarios";
+import { rolesAsignables, esSuperAdmin } from "@/lib/roles";
 import { interpretarDisponible } from "@/lib/interpretar";
 import { CrearUsuarioForm } from "./CrearUsuarioForm";
 import { SelectorRol } from "./SelectorRol";
@@ -26,13 +27,18 @@ export default async function UsuariosPage() {
     },
   });
   const iaDisponible = interpretarDisponible();
+  // Roles que ESTE administrador puede asignar (solo SUPERADMIN ve SUPERADMIN).
+  const asignables = rolesAsignables(admin.rol);
+  // Un ADMIN no puede cambiar el rol de un SUPERADMIN; solo otro SUPERADMIN.
+  const rolBloqueado = (rol: (typeof usuarios)[number]["rol"], esYo: boolean) =>
+    esYo || (rol === "SUPERADMIN" && !esSuperAdmin(admin.rol));
 
   return (
     <>
       <PageHeader title="Usuarios" eyebrow="Acceso y roles" />
 
       <div className="mt-8">
-        <CrearUsuarioForm />
+        <CrearUsuarioForm opciones={asignables} />
       </div>
 
       {/* Móvil (< lg): cada usuario es una tarjeta con sus datos y controles
@@ -72,7 +78,7 @@ export default async function UsuariosPage() {
               <div className="mt-3 space-y-3 border-t border-suave pt-3">
                 <div>
                   <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-kraft">Rol</div>
-                  <SelectorRol id={u.id} rol={u.rol} disabled={esYo} />
+                  <SelectorRol id={u.id} rol={u.rol} opciones={asignables} disabled={rolBloqueado(u.rol, esYo)} />
                 </div>
                 <div>
                   <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-kraft">Cotizar / eliminar</div>
@@ -144,7 +150,7 @@ export default async function UsuariosPage() {
                   </td>
                   <td className="px-4 py-2.5 font-mono text-[13px] text-kraft">{u.email}</td>
                   <td className="px-4 py-2.5">
-                    <SelectorRol id={u.id} rol={u.rol} disabled={esYo} />
+                    <SelectorRol id={u.id} rol={u.rol} opciones={asignables} disabled={rolBloqueado(u.rol, esYo)} />
                   </td>
                   <td className="px-4 py-2.5">
                     <PermisosCotizar

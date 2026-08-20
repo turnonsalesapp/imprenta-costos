@@ -6,8 +6,8 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireRol } from "@/lib/auth";
-import { ROLES, TIPOS_COTIZACION } from "@/lib/roles";
-import { registrarAuditoria } from "@/lib/auditoria";
+import { ROLES, TIPOS_COTIZACION, esAdmin, esSuperAdmin, rolesAsignables } from "@/lib/roles";
+import { registrar } from "@/lib/auditoria";
 
 export type EstadoCrear = { error: string | null; ok: boolean };
 
@@ -15,14 +15,14 @@ const esquemaCrear = z.object({
   nombre: z.string().trim().min(1, "El nombre no puede ir vacío."),
   email: z.string().trim().toLowerCase().email("Ese correo no es válido."),
   clave: z.string().min(6, "La clave debe tener al menos 6 caracteres."),
-  rol: z.enum(["ADMIN", "VENDEDOR", "TALLER"]),
+  rol: z.enum(["SUPERADMIN", "ADMIN", "VENDEDOR", "TALLER"]),
 });
 
 export async function crearUsuario(
   _prev: EstadoCrear,
   formData: FormData,
 ): Promise<EstadoCrear> {
-  await requireRol("ADMIN");
+  const admin = await requireRol("ADMIN");
 
   const parsed = esquemaCrear.safeParse({
     nombre: formData.get("nombre"),
@@ -35,6 +35,10 @@ export async function crearUsuario(
   }
 
   const { nombre, email, clave, rol } = parsed.data;
+  // Solo un SUPERADMIN puede crear otro SUPERADMIN (evita escalada de un ADMIN).
+  if (!rolesAsignables(admin.rol).includes(rol)) {
+    return { ok: false, error: "No puedes asignar ese rol." };
+  }
   try {
     await db.usuario.create({
       data: { nombre, email, rol, passwordHash: await bcrypt.hash(clave, 12) },
@@ -54,16 +58,23 @@ export async function cambiarRol(formData: FormData): Promise<void> {
   const admin = await requireRol("ADMIN");
 
   const id = String(formData.get("id") ?? "");
-  const rol = String(formData.get("rol") ?? "");
-  if (!ROLES.includes(rol as Rol)) return;
+  const nuevo = String(formData.get("rol") ?? "") as Rol;
+  if (!ROLES.includes(nuevo)) return;
 
-  // Un admin no puede quitarse a sí mismo el rol de admin y quedar sin acceso.
-  if (id === admin.id && rol !== "ADMIN") return;
+  // Un admin no puede quitarse a sí mismo el poder de administrar y quedar sin
+  // acceso (vale para ADMIN y SUPERADMIN).
+  if (id === admin.id && !esAdmin(nuevo)) return;
 
-  await db.usuario.update({ where: { id }, data: { rol: rol as Rol } });
-  await registrarAuditoria({
+  // Solo un SUPERADMIN puede otorgar SUPERADMIN, o cambiarle el rol a alguien que
+  // ya es SUPERADMIN. Un ADMIN no toca superadministradores ni escala a ese nivel.
+  const objetivo = await db.usuario.findUnique({ where: { id }, select: { rol: true } });
+  if (!objetivo) return;
+  if (!esSuperAdmin(admin.rol) && (nuevo === "SUPERADMIN" || objetivo.rol === "SUPERADMIN")) return;
+
+  await db.usuario.update({ where: { id }, data: { rol: nuevo } });
+  await registrar({
     actorId: admin.id, actorNombre: admin.nombre,
-    accion: "usuario.rol", entidad: id, detalle: `Rol → ${rol}`,
+    accion: "usuario.rol", entidad: id, detalle: `Rol → ${nuevo}`,
   });
   revalidatePath("/usuarios");
 }
@@ -79,7 +90,7 @@ export async function cambiarInterpretar(formData: FormData): Promise<void> {
   if (!id) return;
   const interpretarIA = v === "si" ? true : v === "no" ? false : null;
   await db.usuario.update({ where: { id }, data: { interpretarIA } });
-  await registrarAuditoria({
+  await registrar({
     actorId: admin.id, actorNombre: admin.nombre,
     accion: "usuario.interpretarIA", entidad: id,
     detalle: `Interpretar IA → ${interpretarIA === null ? "según el sistema" : interpretarIA ? "activado" : "desactivado"}`,
@@ -98,7 +109,7 @@ export async function cambiarPermisos(formData: FormData): Promise<void> {
   if (!id) return;
 
   const u = await db.usuario.findUnique({ where: { id }, select: { rol: true } });
-  if (!u || u.rol === "ADMIN") return; // ADMIN siempre puede todo; no se configura
+  if (!u || esAdmin(u.rol)) return; // ADMIN/SUPERADMIN siempre pueden todo; no se configura
 
   const tipos = formData.getAll("tipos").map(String).filter((t) => TIPOS_COTIZACION.includes(t as never));
   const puedeEliminar = formData.get("eliminar") === "on";
@@ -108,7 +119,7 @@ export async function cambiarPermisos(formData: FormData): Promise<void> {
     where: { id },
     data: { puedeCotizar, tiposCotizar: tipos, puedeEliminar },
   });
-  await registrarAuditoria({
+  await registrar({
     actorId: admin.id, actorNombre: admin.nombre,
     accion: "usuario.permisos", entidad: id,
     detalle: `Cotizar: ${puedeCotizar ? (tipos.join(", ") || "todos") : "ninguno"} · Eliminar: ${puedeEliminar ? "sí" : "no"}`,
@@ -124,7 +135,7 @@ export async function cambiarEstructura(formData: FormData): Promise<void> {
   if (!id) return;
   const verEstructura = formData.get("ver") === "on";
   await db.usuario.update({ where: { id }, data: { verEstructura } });
-  await registrarAuditoria({
+  await registrar({
     actorId: admin.id, actorNombre: admin.nombre,
     accion: "usuario.estructura", entidad: id,
     detalle: `Ver estructura de costos: ${verEstructura ? "sí" : "no (solo precio)"}`,
@@ -139,15 +150,17 @@ export async function alternarActivo(formData: FormData): Promise<void> {
   // Nadie se desactiva a sí mismo (evita quedar fuera del sistema).
   if (id === admin.id) return;
 
-  const u = await db.usuario.findUnique({ where: { id }, select: { activo: true } });
+  const u = await db.usuario.findUnique({ where: { id }, select: { activo: true, rol: true } });
   if (!u) return;
+  // Un ADMIN no puede desactivar a un SUPERADMIN; solo otro SUPERADMIN.
+  if (esSuperAdmin(u.rol) && !esSuperAdmin(admin.rol)) return;
 
   await db.usuario.update({ where: { id }, data: { activo: !u.activo } });
 
   // Al desactivar, cortamos sus sesiones abiertas de una vez.
   if (u.activo) await db.sesion.deleteMany({ where: { usuarioId: id } });
 
-  await registrarAuditoria({
+  await registrar({
     actorId: admin.id, actorNombre: admin.nombre,
     accion: "usuario.activo", entidad: id, detalle: u.activo ? "Desactivado" : "Activado",
   });

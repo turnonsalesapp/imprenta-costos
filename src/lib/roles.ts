@@ -23,28 +23,46 @@ export function puedeVerEstructura(u: { rol: Rol; verEstructura?: boolean }): bo
   return puedeVerPrecios(u.rol) && u.verEstructura !== false;
 }
 
-export function esAdmin(rol: Rol): boolean {
-  return rol === "ADMIN";
+/** SUPERADMIN es el techo: además de administrar, purga la bitácora. */
+export function esSuperAdmin(rol: Rol): boolean {
+  return rol === "SUPERADMIN";
 }
 
-/** ADMIN edita variables, papeles y usuarios. VENDEDOR y TALLER no. */
+/** SUPERADMIN es superconjunto de ADMIN: todo lo que puede un ADMIN, lo puede
+ *  también un SUPERADMIN. Toda comprobación de «es administrador» pasa por aquí. */
+export function esAdmin(rol: Rol): boolean {
+  return rol === "ADMIN" || rol === "SUPERADMIN";
+}
+
+/** ADMIN (y SUPERADMIN) editan variables, papeles y usuarios. VENDEDOR y TALLER no. */
 export function puedeAdministrar(rol: Rol): boolean {
-  return rol === "ADMIN";
+  return esAdmin(rol);
 }
 
 export const ETIQUETA_ROL: Record<Rol, string> = {
+  SUPERADMIN: "Superadministrador",
   ADMIN: "Administrador",
   VENDEDOR: "Vendedor",
   TALLER: "Taller",
 };
 
 export const DESCRIPCION_ROL: Record<Rol, string> = {
+  SUPERADMIN: "Todo lo del administrador y, además, purga la bitácora por rango de fechas.",
   ADMIN: "Ve costos y márgenes, edita variables, papeles y usuarios.",
   VENDEDOR: "Cotiza y ve precios. No toca las variables del negocio.",
   TALLER: "Solo órdenes de producción. Sin precios ni costos.",
 };
 
-export const ROLES: Rol[] = ["ADMIN", "VENDEDOR", "TALLER"];
+export const ROLES: Rol[] = ["SUPERADMIN", "ADMIN", "VENDEDOR", "TALLER"];
+
+/**
+ * Roles que un usuario puede ASIGNAR a otros. Solo un SUPERADMIN puede otorgar o
+ * quitar el rol SUPERADMIN; un ADMIN gestiona ADMIN/VENDEDOR/TALLER pero no puede
+ * crear superadministradores ni escalar a ese nivel.
+ */
+export function rolesAsignables(actorRol: Rol): Rol[] {
+  return esSuperAdmin(actorRol) ? ROLES : ROLES.filter((r) => r !== "SUPERADMIN");
+}
 
 /* ─────────────────── permisos de cotización (por usuario) ─────────────────── */
 
@@ -74,7 +92,7 @@ export type PermisosUsuario = {
  */
 export function tiposQuePuedeCotizar(u: PermisosUsuario): TipoCotizacion[] {
   if (u.rol === "TALLER") return [];
-  if (u.rol === "ADMIN") return TIPOS_COTIZACION;
+  if (esAdmin(u.rol)) return TIPOS_COTIZACION;
   if (!u.puedeCotizar) return [];
   return u.tiposCotizar.length
     ? TIPOS_COTIZACION.filter((t) => u.tiposCotizar.includes(t))
@@ -90,9 +108,9 @@ export function puedeCotizar(u: PermisosUsuario): boolean {
   return tiposQuePuedeCotizar(u).length > 0;
 }
 
-/** ¿Puede eliminar cotizaciones? ADMIN siempre; VENDEDOR si tiene el permiso. */
+/** ¿Puede eliminar cotizaciones? ADMIN/SUPERADMIN siempre; VENDEDOR si tiene el permiso. */
 export function puedeEliminarCotizaciones(u: PermisosUsuario): boolean {
-  return u.rol === "ADMIN" || (u.rol !== "TALLER" && u.puedeEliminar);
+  return esAdmin(u.rol) || (u.rol !== "TALLER" && u.puedeEliminar);
 }
 
 /* ─────────────────── hilo del trabajo (comentarios/adjuntos) ─────────────────── */
@@ -106,5 +124,5 @@ export function puedeBorrarDelHilo(
   u: { id: string; rol: Rol },
   autorId: string | null,
 ): boolean {
-  return u.rol === "ADMIN" || (autorId != null && autorId === u.id);
+  return esAdmin(u.rol) || (autorId != null && autorId === u.id);
 }
