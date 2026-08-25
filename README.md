@@ -3,10 +3,13 @@
 Calcula el precio de cualquier trabajo a partir de la estructura de costos real
 del taller, guarda el histórico de cotizaciones y lleva las órdenes de producción.
 
-El motor de cálculo (`src/lib/calculo.ts`) está verificado contra la hoja de
-Excel original: reproduce exactamente el trabajo de Jugarte Venezuela
-(3.000 stickers → $679,47 de costo, $0,2265 unitario, $1.511,47 de venta).
-Las pruebas en `src/lib/calculo.test.ts` protegen ese resultado.
+El motor de cálculo (`src/lib/calculo.ts`) parte de la hoja de Excel original de
+Jugarte Venezuela (3.000 stickers). Sobre esa base se aplica la regla de
+**pliegos/cortes enteros**: el papel se consume en cortes físicos completos, así
+que la merma se redondea hacia arriba (750 × 1,03 = 772,5 → **773 cortes**), igual
+que ya lo hacía el motor offset. Con esa regla el caso Jugarte da **$679,68** de
+costo, **$0,2266** unitario y **$1.511,95** de venta. Las pruebas en
+`src/lib/calculo.test.ts` protegen ese resultado.
 
 Una cotización puede tener varios **ítems**; al **aprobarla** se convierte en
 **Orden de Venta** y de ahí se genera el **Trabajo de producción** para el taller.
@@ -35,7 +38,7 @@ La base de datos es **PostgreSQL en Railway**.
 >
 > Usar la interna desde tu computadora da `Can't reach database server`.
 
-`npm test` corre las 42 pruebas. Córrelas siempre antes de subir cambios.
+`npm test` corre las pruebas (108 al momento de escribir). Córrelas siempre antes de subir cambios.
 
 ## Publicarlo
 

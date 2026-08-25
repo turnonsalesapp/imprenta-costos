@@ -24,20 +24,22 @@ costo protegido → utilidad protegida → margen → comisión.
 
 ## 1) Digital — producción propia
 
-Los 10 trabajos más comunes (capacidad calculada por montaje real):
+Los 10 trabajos más comunes (capacidad calculada por montaje real). Los **cortes
+son enteros**: el papel se consume en cortes físicos completos, así que la merma
+se redondea hacia arriba (regla «pliegos enteros», igual que el offset).
 
 | Trabajo | Cant | Cap | Cortes | Costo tot | Costo u | Precio u | Venta tot |
 |---|--:|--:|--:|--:|--:|--:|--:|
-| Sticker troquelado 5×5 | 1.000 | 54 | 19,6 | $108,35 | $0,1083 | $0,2485 | $248,47 |
-| Tarjeta presentación 9×5 | 1.000 | 30 | 35,0 | $15,30 | $0,0153 | $0,0351 | $35,08 |
-| Volante media carta | 2.000 | 8 | 257,5 | $152,55 | $0,0763 | $0,1749 | $349,83 |
-| Volante carta full color | 1.000 | 8 | 128,8 | $156,41 | $0,1564 | $0,3587 | $358,69 |
-| Postal 10×15 | 500 | 9 | 57,7 | $21,96 | $0,0439 | $0,1007 | $50,36 |
-| Etiqueta producto 6×4 | 3.000 | 55 | 56,6 | $124,16 | $0,0414 | $0,0949 | $284,74 |
-| Invitación 12×12 | 200 | 6 | 35,0 | $15,30 | $0,0765 | $0,1754 | $35,08 |
-| Menú A4 laminado | 100 | 9 | 12,4 | $35,85 | $0,3585 | $0,8222 | $82,22 |
-| Separador libro 5×18 | 500 | 12 | 43,3 | $17,72 | $0,0354 | $0,0813 | $40,63 |
-| Flyer cuarto carta | 5.000 | 8 | 643,8 | $189,43 | $0,0379 | $0,0869 | $434,43 |
+| Sticker troquelado 5×5 | 1.000 | 54 | 20 | $108,53 | $0,1085 | $0,2489 | $248,89 |
+| Tarjeta presentación 9×5 | 1.000 | 30 | 36 | $15,58 | $0,0156 | $0,0357 | $35,74 |
+| Volante media carta | 2.000 | 8 | 258 | $152,83 | $0,0764 | $0,1752 | $350,49 |
+| Volante carta full color | 1.000 | 8 | 129 | $156,70 | $0,1567 | $0,3594 | $359,37 |
+| Postal 10×15 | 500 | 9 | 58 | $22,05 | $0,0441 | $0,1011 | $50,57 |
+| Etiqueta producto 6×4 | 3.000 | 55 | 57 | $124,31 | $0,0414 | $0,0950 | $285,08 |
+| Invitación 12×12 | 200 | 6 | 36 | $15,58 | $0,0779 | $0,1787 | $35,74 |
+| Menú A4 laminado | 100 | 9 | 13 | $37,45 | $0,3745 | $0,8588 | $85,88 |
+| Separador libro 5×18 | 500 | 12 | 44 | $17,94 | $0,0359 | $0,0823 | $41,13 |
+| Flyer cuarto carta | 5.000 | 8 | 644 | $189,51 | $0,0379 | $0,0869 | $434,59 |
 
 ## 2) Offset — producción propia
 
