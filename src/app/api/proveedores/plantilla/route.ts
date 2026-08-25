@@ -1,4 +1,5 @@
 import { getUsuario } from "@/lib/auth";
+import { esAdmin } from "@/lib/roles";
 import { generarPlantilla } from "@/lib/proveedores-excel";
 
 export const dynamic = "force-dynamic";
@@ -6,7 +7,7 @@ export const dynamic = "force-dynamic";
 /** Descarga la plantilla .xlsx de listas de precios, pre-rellenada con el catálogo. */
 export async function GET() {
   const usuario = await getUsuario();
-  if (!usuario || usuario.rol !== "ADMIN") {
+  if (!usuario || !esAdmin(usuario.rol)) {
     return new Response("No autorizado", { status: 403 });
   }
   const buf = await generarPlantilla();

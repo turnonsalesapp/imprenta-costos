@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { getUsuario } from "@/lib/auth";
+import { esAdmin } from "@/lib/roles";
 import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Diagnóstico de la fuente de tasas (solo ADMIN). Muestra la URL consultada, el
- * código HTTP y el cuerpo crudo que devuelve, para ver por qué no llegan las
- * tasas sin adivinar. Ábrelo en el navegador estando logueado como admin.
+ * Diagnóstico de la fuente de tasas (ADMIN/SUPERADMIN). Muestra la URL
+ * consultada, el código HTTP y el cuerpo crudo que devuelve, para ver por qué no
+ * llegan las tasas sin adivinar. Ábrelo en el navegador estando logueado.
  */
 export async function GET() {
   const usuario = await getUsuario();
-  if (!usuario || usuario.rol !== "ADMIN") {
+  if (!usuario || !esAdmin(usuario.rol)) {
     return new NextResponse("No autorizado", { status: 403 });
   }
 

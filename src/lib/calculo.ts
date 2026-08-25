@@ -4,9 +4,10 @@
  * Módulo puro: no depende de React, de la base de datos ni del navegador.
  * Toda la aplicación (UI, API, PDF, órdenes) debe calcular a través de aquí.
  *
- * Verificado contra el trabajo real de Jugarte Venezuela (3.000 stickers):
- * 772,5 cortes · $679,47 costo · $0,2265 unitario · diferencial 1,3929 ·
- * $0,5038 precio unitario · $1.511,47 venta. Ver calculo.test.ts.
+ * Verificado contra el trabajo real de Jugarte Venezuela (3.000 stickers), con
+ * la regla de CORTES ENTEROS (el papel se consume en cortes físicos completos):
+ * 773 cortes · $679,68 costo · $0,2266 unitario · diferencial 1,3929 ·
+ * $0,5040 precio unitario · $1.511,95 venta. Ver calculo.test.ts.
  * (El troquelado se cobra por millar de cortes, no de piezas.)
  */
 
