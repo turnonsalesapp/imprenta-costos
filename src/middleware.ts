@@ -8,6 +8,14 @@ import { COOKIE, verificarToken } from "@/lib/jwt";
  * `getUsuario()` en cada página o ruta con acceso a la base.
  *
  * Todo queda protegido salvo /login, el login mismo y el health check.
+ *
+ * IMPORTANTE — no redirigir /login → / desde aquí. El token firmado vive más que
+ * la sesión en la base (COOKIE_DIAS 30 vs SESION_DIAS 7). Si expira la sesión
+ * pero el token aún es válido, el middleware creería «logueado» y mandaría de
+ * /login a /, mientras que la página / (que sí consulta la base con getUsuario)
+ * rebota a /login: bucle de redirección infinito («sitio caído»). Por eso la
+ * decisión de «ya está logueado» la toma SOLO la página /login vía getUsuario,
+ * que es la fuente de verdad y sabe si la sesión sigue viva.
  */
 
 const PAGINAS_PUBLICAS = new Set(["/login"]);
@@ -24,11 +32,10 @@ export async function middleware(req: NextRequest) {
   const token = req.cookies.get(COOKIE)?.value;
   const payload = token ? await verificarToken(token) : null;
 
+  // Las públicas pasan siempre. Ojo: NO redirigir /login → / aquí (ver cabecera):
+  // eso provoca el bucle si el token vive más que la sesión. La página /login
+  // ya manda al inicio a quien tenga sesión REAL (getUsuario).
   if (esPublica(pathname)) {
-    // Ya autenticado entrando a /login: mándalo al inicio.
-    if (pathname === "/login" && payload) {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
     return NextResponse.next();
   }
 
