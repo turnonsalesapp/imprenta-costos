@@ -24,9 +24,9 @@ Una línea por término. Un mismo concepto se llama igual en código, base de da
 - **Snapshot** — copia congelada de papeles, acabados y variables que guarda cada cotización. Hace la cotización **inmutable**.
 - **Borrador** — único estado en que una cotización se puede editar.
 - **Pendiente de aprobación** — estado (`PENDIENTE`) intermedio entre Borrador y Enviada: la cotización espera el visto bueno interno antes de mandarla al cliente.
-- **Orden de Venta** — una cotización **Aprobada** (`APROBADA`): el cliente aceptó, el mismo documento vale como orden de venta.
-- **Handoff** — el paso automático de comercial a producción: al pasar una cotización a Aprobada, la **orden de producción se genera sola** (el botón "Generar orden" queda de respaldo).
-- **Orden de producción** — papel para el taller generado de una cotización aprobada. **No lleva precios.**
+- **Orden de Venta** — una cotización **Ganada** (`GANADA`): el cliente aceptó, el mismo documento vale como orden de venta. (No confundir con `APROBADA`, que es la aprobación interna previa a enviar.)
+- **Handoff** — el paso automático de comercial a producción: al pasar una cotización a Ganada, la **orden de producción se genera sola** (el botón "Generar orden" queda de respaldo).
+- **Orden de producción** — papel para el taller generado de una cotización ganada. **No lleva precios.**
 - **Pieza / PiezaOrden** — cada ítem de la cotización se sigue por separado en producción, con su propio estado. Modelo `PiezaOrden`.
 - **Carril interno** — pieza de producción propia (Digital/Offset): va al taller (en cola de diseño → en diseño → esperando arte → en impresión → en acabado → lista). Enum `CarrilPieza.INTERNO`.
 - **Carril tercerizado** — pieza que se compra a un proveedor (gran formato, proveedor, personalizado): por cotizar → comprado → recibido → entregado. Enum `CarrilPieza.TERCERIZADO`.
@@ -52,7 +52,7 @@ Una línea por término. Un mismo concepto se llama igual en código, base de da
 - **Visita guiada / tour** — tutorial interactivo por pasos con ilustraciones (`Tour.tsx`, contenido en `tours.ts`, dibujos en `mockups/index.tsx`). El de **inicio** se abre tras el login la primera vez y se reabre con «?»; el de **Variables** con "Ver tutorial". Flag por-tour en `localStorage`; "No volver a mostrar" no impide reabrirlo.
 
 ## Roles y seguridad
-- **ADMIN / VENDEDOR / TALLER** — roles del sistema. TALLER **nunca** ve precios.
+- **SUPERADMIN / ADMIN / VENDEDOR / TALLER** — roles del sistema. TALLER **nunca** ve precios. SUPERADMIN incluye todo lo de ADMIN (⊇ ADMIN) y además puede **purgar la bitácora de auditoría por rango**, dejando rastro de la propia purga.
 - **Invariante TALLER-sin-precios** — control estructural: el modelo `Orden` no tiene columnas de dinero y ni `SELECT_PROD` ni `SELECT_PIEZA_TABLERO` (tablero por pieza) seleccionan una columna monetaria; el `snapshot` de cada `PiezaOrden` tampoco lleva dinero. Probado en `seguridad.test.ts`.
 - **Sesión revocable** — la sesión vive en la tabla `Sesion`; desactivar un usuario la corta al instante.
 - **Rate limiting** — límite de intentos (login) y de uso (IA) para frenar fuerza bruta y abuso de costo.

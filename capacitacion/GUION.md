@@ -4,8 +4,12 @@ Video de introducción (~80 s, 1280×720) que recorre el circuito completo del
 sistema, en línea con la **visita guiada in-app** (botón «?» del menú). Se rinde a
 partir de `capacitacion.html` (presentación auto-reproducible, una escena cada 8 s).
 
+> **Estado:** el video **aún no está renderizado**. Por ahora solo existen la
+> presentación `capacitacion.html` y el script `record.js`; el `.webm`/`.mp4` se
+> genera corriendo el render (ver "Cómo regenerar el video").
+
 - **Fuente:** `capacitacion/capacitacion.html` (self-contained, sin dependencias).
-- **Render:** `capacitacion.webm` (VP8, 1280×720). Reproduce en navegadores y móviles.
+- **Render (pendiente):** `capacitacion.webm` (VP8, 1280×720). Reproduce en navegadores y móviles.
 - **Voz en off (narración):** el texto "Narración" de cada escena; grábalo con la
   voz del negocio si quieres una versión locutada.
 
@@ -48,4 +52,4 @@ ffmpeg -i capacitacion.webm -c:v libx264 -pix_fmt yuv420p -movflags +faststart c
 
 Para editar el contenido, cambia las escenas en `capacitacion.html` (array de
 `<section class="scene">`) y vuelve a grabar. Mantén la coherencia con la visita
-guiada (`src/app/_components/VisitaGuiada.tsx`).
+guiada (`src/app/_components/Tour.tsx`, con `BotonGuia.tsx`).

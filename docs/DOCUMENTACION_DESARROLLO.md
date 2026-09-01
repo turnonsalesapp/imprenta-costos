@@ -49,10 +49,10 @@ subsistemas de apoyo, despliegue, pruebas y **decisiones de diseño documentadas
 | ORM | **Prisma 6** | `binaryTargets = ["native","debian-openssl-3.0.x"]` para Railway |
 | Estilos | **Tailwind CSS** + CSS propio (`cotizar/calc.css`) | |
 | Autenticación | **jose** (JWT HS256) + tabla `Sesion` | cookie httpOnly; revocación en BD |
-| Hashing | **bcryptjs** | seed cost 10, señuelo de login cost 12 |
+| Hashing | **bcryptjs** | seed cost 10; login y `crearUsuario` cost 12 (también el señuelo anti-timing) |
 | Validación | **zod** | clientes, usuarios, inventario, salida IA |
 | IA (opcional) | **@anthropic-ai/sdk** (Claude) | intérprete de solicitudes |
-| Pruebas | **vitest** | **71 pruebas** en 8 archivos |
+| Pruebas | **vitest** | **108 pruebas** en 11 archivos |
 | Despliegue | Railway (`railway.json`) | build + migraciones (preDeploy) + healthcheck |
 
 **Principios rectores**
@@ -298,39 +298,39 @@ Todos: `lineas[] → costoTotal = Σ monto → precioDesdeCosto(costoTotal, cant
 `prisma/schema.prisma`. Datasource PostgreSQL; generator con `binaryTargets` para
 Railway. Todas las `DateTime` con `@db.Timestamptz(3)`; dinero en `Decimal`.
 
-**Enums:**
-- `Rol`: `ADMIN`, `VENDEDOR`, `TALLER`.
-- `EstadoCotizacion`: `BORRADOR`, `ENVIADA`, `APROBADA`, `RECHAZADA`, `VENCIDA`.
-- `TipoCotizacion`: `PROPIA`, `PROVEEDOR`, `GRAN_FORMATO`, `PERSONALIZADO`, `OFFSET`,
-  `MIXTA`.
-- `EstadoOrden`: `PENDIENTE`, `EN_PROCESO`, `TERMINADA`, `ENTREGADA`, `ANULADA`.
-- `EstadoEtapa`: `PENDIENTE`, `EN_PROCESO`, `LISTA`, `OMITIDA`.
-- `TipoMovimiento`: `ENTRADA`, `SALIDA`, `AJUSTE`.
+**El detalle campo por campo, las relaciones (FK duras vs enlaces suaves) y las
+máquinas de estado viven ahora en el documento autoritativo
+[MODELO_DATOS.md](MODELO_DATOS.md).** Aquí solo el mapa de conjunto.
 
-**Modelos (resumen de campos clave):**
+**24 modelos · 11 enums**, en cinco áreas:
 
-| Modelo | Puntos clave |
-|---|---|
-| **Usuario** | `email @unique`, `passwordHash`, `rol @default(VENDEDOR)`, `activo`, `interpretarIA Boolean?` (null = hereda), **permisos de cotización**: `puedeCotizar @default(true)`, `tiposCotizar String[] @default([])` (vacío = todos), `puedeEliminar @default(false)`; relaciones a cotizaciones/ordenes/sesiones |
-| **Sesion** | `token @unique`, `expiraEn`, `usuario` (onDelete Cascade); permite revocación |
-| **Cliente** | nombre/rif/contacto/telefono/email/direccion/notas, `activo` |
-| **Papel** | `clave @unique` (la usa el motor), `hojas Int`, `precio Decimal(12,4)`, `medida`, `categoria`, `activo`, `stock`/`stockMin Decimal(14,2)` |
-| **MovimientoInventario** | `tipo`, `cantidad`(±), `saldo`, `motivo`, `ordenId?`, `usuarioId?`, `fecha` |
-| **Acabado** | `clave @unique`, `costo Decimal(12,4)` (base 1/4 pliego), `unidad`, `escala`, `orden`, `modulo @default("digital")`, `grupo?` |
-| **MaterialGF** | `costoM2`, `modoCobro` (mancha/ancho_rollo/etiqueta), `anchosRollo`, `montaje`, `tablaEtq` |
-| **ProductoGF** | `categoria`, `medida`, `costoUnit` (fijo) |
-| **ProductoPop** | `modo` (escalas/lineal), `escalas`, `precioLineal`, `anchoCm`, `minCm`, `unidad` |
-| **Equipo** | prensa: `coloresPasada`, `costoMillar`, `costoArranque` |
-| **Config** | fila única `id="global"`; ver [§14](#14-config) para todos los campos y defaults |
-| **Tasa** | histórico: `bcv`, `binCompra`, `binVenta`, `fecha` |
-| **Trabajo** | receta repetible; `acabados Json`; **no guarda precio**; `archivado` |
-| **Cotizacion** | documento inmutable; `numero @unique autoincrement`, `estado`, `tipo`, `entrada Json`, `snapshot Json`, `lineas Json`, `items Json?`, columnas de dinero, `snapshot` congelado |
-| **Orden** | 1:1 con cotización; `items Json?` **sin dinero**; `inventarioAplicado`; `estado` |
-| **EtapaOrden** | una etapa por acabado; `clave`, `estado`, `responsable`, tiempos |
-| **RegistroAuditoria** | solo-agregar: `actorId/actorNombre`, `accion`, `entidad`, `detalle`, `fecha` |
+- **Acceso** — `Usuario`, `Sesion`.
+- **Catálogo** — `Papel`, `Proveedor`, `PrecioProveedorPapel`, `Acabado`,
+  `MaterialGF`, `ProductoGF`, `ProductoPop`, `Equipo`, `Config`.
+- **Comercial** — `Cliente`, `Prospecto`, `Actividad`, `Trabajo`, `Cotizacion`.
+- **Producción** — `Orden`, `EtapaOrden`, `PiezaOrden`, `MovimientoInventario`.
+- **Transversal** — `Comentario`, `Adjunto` (hilo del trabajo, sin precios),
+  `RegistroAuditoria`, `Tasa`.
 
-`Cotizacion` guarda tanto **columnas agregadas** de dinero (para el listado/CSV)
-como un array `items` con cada ítem congelado por separado (cada uno con su `tipo`).
+**Enums (11):** `Rol` (`SUPERADMIN`, `ADMIN`, `VENDEDOR`, `TALLER`),
+`EstadoCotizacion` (7: `BORRADOR`, `PENDIENTE`, `APROBADA`, `ENVIADA`, `GANADA`,
+`RECHAZADA`, `VENCIDA`), `TipoCotizacion` (`PROPIA`, `PROVEEDOR`, `GRAN_FORMATO`,
+`PERSONALIZADO`, `OFFSET`, `MIXTA`), `EstadoOrden`, `EstadoEtapa`, `TipoMovimiento`,
+`CarrilPieza` (`INTERNO`/`TERCERIZADO`), `EstadoPieza`, `EstadoCobro`,
+`ProspectoEstado`, `ActividadTipo`.
+
+**Invariantes que atraviesan el esquema:**
+
+- `Cotizacion` es el documento **inmutable con snapshot**: guarda `entrada`,
+  `snapshot`, `lineas` congelados, un array `items` con cada ítem por separado (cada
+  uno con su `tipo`) y columnas agregadas de dinero para el listado/CSV.
+- `Orden` es **1:1** con la cotización; su `items` (proyección de producción) va
+  **sin dinero**, y cada ítem se materializa además en una `PiezaOrden` (ver
+  [§12](#12-ordenes)).
+- El **hilo del trabajo** (`Comentario`/`Adjunto`, en cascada desde `Cotizacion` y
+  `Prospecto`) no lleva precios: es seguro para TALLER.
+- `RegistroAuditoria` es **solo-agregar**, salvo la purga por rango de fechas
+  reservada a SUPERADMIN, que deja su propio rastro (ver [§13](#13-seguridad)).
 
 ---
 
@@ -380,15 +380,16 @@ agrega "(copia)" y limpia `editarId`, "editar" fija `editarId=id`).
 `cargarDraft`, y el hook reactivo `useDraft()` (usado por `PanelBorrador` y
 `RevisarCotizacion`).
 
-**Semántica Orden de Venta:** `esOrdenVenta(estado)` = true si `APROBADA`;
+**Semántica Orden de Venta:** `esOrdenVenta(estado)` = true si `GANADA`;
 `etiquetaDocumento` devuelve "Orden de Venta" vs "Cotización" — una cotización
-aprobada *es* la orden de venta (mismo registro, mismo número).
+**ganada** *es* la orden de venta (mismo registro, mismo número). `APROBADA` es solo
+la aprobación **interna** previa a enviar; **no** dispara producción.
 
 **Ciclo de vida completo:** calculadora (vista previa) → carrito (opcional,
 `agregarItemDraft`) → guardar (`guardar*Action` o `guardarMixtaAction`, el servidor
 recomputa) → ver (`obtenerCotizacion`, nunca recalcula) → editar (solo BORRADOR) →
-estados (`BORRADOR→ENVIADA→APROBADA/…`) → generar orden de producción (solo APROBADA
-con ítems propios).
+estados (`BORRADOR→PENDIENTE→APROBADA→ENVIADA→GANADA`, con salidas `RECHAZADA`
+(="Perdida") / `VENCIDA`) → generar orden de producción (solo **GANADA**).
 
 ---
 
@@ -457,10 +458,24 @@ calculadora.
 - **`ORDEN_ETAPAS`** (clave → orden): `prueba:0, planchas:5, arranque:6, impTiro:10,
   impRetiro:11, impresion:12, lamTiro:20, lamRetiro:21, troqDig:30, troquel:31,
   troquelado:32, pegado:40, acetato:41, guillotina:50`.
-- **`generarOrden(cotizacionId)`** — exige `estado==="APROBADA"` y que no exista ya
-  orden; filtra producibles; deriva etapas de la unión de líneas de acabado
-  (dedup por `k`, ordenadas); guarda `proyeccionProd(producibles)` **sin dinero** en
-  `Orden.items`; crea las etapas.
+- **`generarOrden(cotizacionId)`** — exige `estado==="GANADA"` y que no exista ya
+  orden; crea **una `PiezaOrden` por cada ítem** de la cotización; deriva etapas de la
+  unión de líneas de acabado de los ítems producibles (dedup por `k`, ordenadas);
+  guarda `proyeccionProd(producibles)` **sin dinero** en `Orden.items`; crea las
+  etapas.
+- **Producción por pieza (Fase 2).** `carrilDe(tipo)` clasifica cada ítem en un
+  **carril**:
+  - **`INTERNO`** — `PROPIA`/`OFFSET` (lo producible): va al **taller**, nace
+    `EN_COLA` y avanza por etapas
+    (`EN_COLA→EN_DISENO→ESPERANDO_ARTE→EN_IMPRESION→EN_ACABADO→LISTA`).
+  - **`TERCERIZADO`** — `GRAN_FORMATO`/`PROVEEDOR`/`PERSONALIZADO`: va a **compras**,
+    nace `POR_COTIZAR` y avanza sin etapas
+    (`POR_COTIZAR→COMPRADO→RECIBIDO→ENTREGADO`).
+
+  Cada pieza guarda su `snapshot` de producción **sin precios** (`proyeccionProd`
+  del ítem) y su `estadoCobro` (`NO_FACTURADO`/`FACTURADO`/`COBRADO`). `cambiarEstadoPieza`
+  mueve la tarjeta en el tablero; para las órdenes **100 % tercerizadas** (sin etapas)
+  el estado de la orden lo recalcula `recomputarEstadoOrdenPorPiezas`.
 - **`proyeccionProd`** — proyecta cada ítem a `ItemProd` con solo campos de
   producción (`titulo, descripcion, cantidad, ancho, alto, tamano, papelNombre,
   capacidad, pliegos, acabados`); ninguna columna de dinero se copia.
@@ -495,7 +510,15 @@ descuenta su papel = `pliegos × frac(tamano)`.
   idéntico en todos los casos.
 
 **Autorización** (`src/lib/roles.ts`, módulo puro): `puedeVerPrecios(rol) = rol !==
-"TALLER"`, `puedeAdministrar(rol) = rol === "ADMIN"`.
+"TALLER"`; `puedeAdministrar(rol) = esAdmin(rol)`. Hay **cuatro roles**: `SUPERADMIN`,
+`ADMIN`, `VENDEDOR`, `TALLER`. **`SUPERADMIN` es superconjunto de `ADMIN`**: toda
+comprobación de "es administrador" pasa por `esAdmin(rol) = ADMIN || SUPERADMIN`, y
+además el SUPERADMIN **purga la bitácora de auditoría** (ver más abajo). `ROLES` y
+`rolesAsignables(actor)` gobiernan quién asigna qué: **solo un SUPERADMIN puede
+otorgar o quitar el rol SUPERADMIN**; un ADMIN gestiona ADMIN/VENDEDOR/TALLER. El
+primer SUPERADMIN se crea por fuera con `npm run db:promover-superadmin <correo>`
+(`scripts/promover-superadmin.ts`), porque desde la app solo un SUPERADMIN puede
+crear otro.
 
 **Permisos de cotización por usuario** (`src/lib/roles.ts`): `tiposQuePuedeCotizar(u)`
 (ADMIN → todos; TALLER → ninguno; VENDEDOR → `tiposCotizar`, vacío = todos, salvo que
@@ -507,11 +530,17 @@ ADMIN los edita en **Usuarios** vía `cambiarPermisos` (auditoría `"usuario.per
 **Invariante TALLER-sin-precios** (estructural, no cosmético) — vive en
 `src/lib/ordenes.ts` (**no hay `seguridad.ts`**, solo `seguridad.test.ts`):
 1. **`proyeccionProd`** copia solo campos en lista blanca; ninguna columna de dinero.
-2. **`SELECT_PROD`** (la única forma de consulta que usa el taller) nunca selecciona
-   una columna monetaria.
-3. **`seguridad.test.ts`** recorre `SELECT_PROD` y falla si aparece cualquier columna
-   de `COLUMNAS_PROHIBIDAS`; alimenta `proyeccionProd` con dinero y verifica que
-   nada sobrevive; afirma `puedeVerPrecios("TALLER") === false`.
+   Alimenta tanto `Orden.items` como el `snapshot` de cada **`PiezaOrden`**, que por
+   tanto también nace sin precios.
+2. **`SELECT_PROD`** (consulta de la orden que usa el taller) nunca selecciona una
+   columna monetaria; su equivalente para el tablero de piezas es
+   **`SELECT_PIEZA_TABLERO`**, que expone `carril/tipo/titulo/cantidad/estado/…` pero
+   **ninguna** columna de dinero de la pieza.
+3. El invariante se extiende al **hilo del trabajo** (`Comentario`/`Adjunto`) y a las
+   **piezas**: nada de lo que ve el taller lleva precio, costo ni margen.
+4. **`seguridad.test.ts`** recorre `SELECT_PROD` (y `SELECT_PIEZA_TABLERO`) y falla si
+   aparece cualquier columna de `COLUMNAS_PROHIBIDAS`; alimenta `proyeccionProd` con
+   dinero y verifica que nada sobrevive; afirma `puedeVerPrecios("TALLER") === false`.
 
 **Middleware Edge** (`src/middleware.ts`): barrera barata sin BD — verifica la firma
 del token; rutas públicas `/login`, `/api/health`, `/api/tasas/refresh`; API sin
@@ -521,8 +550,11 @@ sesión → `401 JSON`, páginas → redirect. No comprueba rol ni revocación (
 **Otras defensas** (ver `docs/02_ANALISIS_ESTANDARES_CODIGO.md` para el detalle):
 inmutabilidad + snapshot; secretos fuera del repo y leídos desde `src/lib/env.ts`;
 SQL parametrizado por Prisma; **rate limiting** (`src/lib/rate-limit.ts`: login por
-IP/correo, IA por usuario); **auditoría** solo-agregar (`RegistroAuditoria`); cron de
-tasas protegido por `CRON_SECRET`; CI con tipos + pruebas + build.
+IP/correo, IA por usuario); **auditoría** solo-agregar (`RegistroAuditoria`) — la única
+escritura destructiva es la **purga por rango de fechas** (`purgarAuditoria`,
+`src/lib/auditoria.ts`), reservada a **SUPERADMIN** y que deja su propio rastro
+(acción `"auditoria.purga"` con el rango y el total borrado); cron de tasas protegido
+por `CRON_SECRET`; CI con tipos + pruebas + build.
 
 ---
 
@@ -684,9 +716,8 @@ lanzar (para CI/arranque). Los módulos leen `env`, **no** `process.env`.
 - **Generadas offline** (el entorno de desarrollo no tiene salida a la BD de
   producción): `npx prisma migrate diff --from-schema-datamodel <anterior>
   --to-schema-datamodel prisma/schema.prisma --script`. **Nunca** se toca la BD a
-  mano. Hay **26 migraciones** en `prisma/migrations/` (de `20260721050809_init` a
-  `20260727120000_offset_tamano_tinta_acabados`); su nombre traza la evolución de
-  features.
+  mano. Hay **38 migraciones** en `prisma/migrations/` (de `20260721050809_init` a
+  `20260820150000_rol_superadmin`); su nombre traza la evolución de features.
 - **Railway** aplica las pendientes en `preDeployCommand: npx prisma migrate deploy`
   (`railway.json`) y valida `/api/health` antes de enrutar tráfico. Cada push a la
   rama principal republica.
@@ -699,16 +730,19 @@ Comandos: `npm run dev`, `npm run build` (`prisma generate && next build`),
 
 ## 21. Pruebas
 
-`vitest` — **71 pruebas** en 8 archivos:
+`vitest` — **108 pruebas** en 11 archivos:
 - `calculo.test.ts` — contrato del motor digital (caso real **Jugarte**: 3.000
-  stickers → $679,47 costo, $0,2265 unit, $1.511,47 venta). No se modifica sin
-  actualizar el test.
+  stickers, regla de cortes enteros → 773 cortes, $679,68 costo, $0,2266 unit,
+  $1.511,95 venta). No se modifica sin actualizar el test.
 - `calculo-offset.test.ts`, `calculo-granformato.test.ts`,
   `calculo-personalizado.test.ts` — los otros motores.
 - `datos-base.test.ts` — amarra los 43 papeles y los conteos de acabados
   (13 digital / 10 offset) a la hoja original.
 - `seguridad.test.ts` — invariante TALLER-sin-precios (ver [§13](#13-seguridad)).
+- `roles-superadmin.test.ts` — jerarquía de roles y `rolesAsignables` (SUPERADMIN).
 - `inventario.test.ts` — `planConsumo` y movimientos.
+- `proveedores.test.ts` — precios de proveedor de papel.
+- `almacenamiento.test.ts` — adjuntos del hilo del trabajo.
 - `auth.test.ts` — firma/verificación del token.
 
 `scripts/auditoria.ts` (`npx tsx scripts/auditoria.ts`) corre los motores reales
@@ -766,7 +800,7 @@ Decisiones estructurales adicionales:
 ---
 
 *Ver también:
-[01_ESPECIFICACION_TECNICA.md](01_ESPECIFICACION_TECNICA.md) ·
+[MODELO_DATOS.md](MODELO_DATOS.md) ·
 [02_ANALISIS_ESTANDARES_CODIGO.md](02_ANALISIS_ESTANDARES_CODIGO.md) ·
 [04_MANUAL_CONFIGURACION.md](04_MANUAL_CONFIGURACION.md) ·
 [05_AUDITORIA_MODULOS.md](05_AUDITORIA_MODULOS.md) ·

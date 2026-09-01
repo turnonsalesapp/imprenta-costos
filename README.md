@@ -23,7 +23,7 @@ trae el entorno de desarrollo en la nube configurado.
 npm install
 cp .env.example .env          # completa DATABASE_URL y AUTH_SECRET
 npm run db:migrate            # crea las tablas
-npm run db:seed               # carga 43 papeles, 11 acabados y el usuario admin
+npm run db:seed               # carga 43 papeles, 23 acabados (13 digital + 10 offset) y el usuario admin
 npm run dev                   # http://localhost:3000
 ```
 

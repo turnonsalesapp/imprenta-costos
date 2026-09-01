@@ -17,6 +17,10 @@ Se cargan como **secretos del servicio en Railway** (nunca en el repositorio). E
 | `ANTHROPIC_MODEL` | Opcional | Solo **respaldo**: el modelo se elige en Variables. |
 | `CRON_SECRET` | Opcional | Protege el endpoint de refresco automático de tasas. Sin ella, ese endpoint queda deshabilitado. |
 | `TASAS_API` | Opcional | URL de la fuente de tasas (por defecto `https://ve.dolarapi.com/v1/dolares`). |
+| `ALMACEN_ADJUNTOS` | Opcional | Dónde se guardan los adjuntos del hilo del trabajo: `db` (por defecto, bytes en la base) o `drive` (Google Drive). Un valor desconocido cae a `db`. |
+| `GDRIVE_FOLDER_ID` | Solo con `drive` | Carpeta de Google Drive destino de los adjuntos. |
+| `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` / `GOOGLE_OAUTH_REFRESH_TOKEN` | Solo con `drive` (recomendado) | Credenciales OAuth de usuario para subir a "Mi unidad"; con la pantalla de consentimiento **Interna** el refresh token no expira. |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Solo con `drive` (alternativa) | JSON de cuenta de servicio (JWT firmado); requiere una **Unidad Compartida** donde el SA sea Administrador de contenido. |
 
 **Generar `AUTH_SECRET`:**
 ```bash
@@ -115,7 +119,7 @@ Datos de la empresa (nombre, RIF, teléfono, dirección, email, web) que salen e
 
 Menú **Usuarios**:
 - **Crear usuario:** nombre, correo, clave (mín. 6), rol.
-- **Rol:** ADMIN / VENDEDOR / TALLER (no puedes quitarte a ti mismo el rol de admin).
+- **Rol:** SUPERADMIN / ADMIN / VENDEDOR / TALLER (no puedes quitarte a ti mismo el rol de admin). SUPERADMIN incluye todo lo de ADMIN y además puede purgar la bitácora de auditoría por rango (dejando rastro).
 - **Activar / Desactivar:** al desactivar, se cierran sus sesiones al instante.
 - **Interpretar IA (por usuario):** *Según el sistema* (sigue el interruptor general), *Activado* o *Desactivado* (fuerza el valor para esa persona). La columna solo aparece si hay `ANTHROPIC_API_KEY`.
 
@@ -137,7 +141,7 @@ Menú **Usuarios**:
 ## 8. Buenas prácticas operativas
 
 - **Respaldo:** la base vive en Railway (Postgres gestionado). Configura respaldos según tu plan de Railway.
-- **Antes de subir cambios:** corre `npm test` (35 pruebas). El motor de cálculo está amarrado por el caso Jugarte; si una prueba se rompe, el cambio está mal.
+- **Antes de subir cambios:** corre `npm test` (108 pruebas). El motor de cálculo está amarrado por el caso Jugarte; si una prueba se rompe, el cambio está mal.
 - **Nunca** calcules un precio fuera de `src/lib/calculo.ts`.
 - **Rotación de secretos:** si `AUTH_SECRET` cambia, todas las sesiones se invalidan (todos vuelven a entrar).
 - **Tasas:** revisa que estén "en verde" tras cada actualización; si la fuente cambia de formato, ajusta `TASAS_API` o el parser en `src/lib/tasas.ts`.
@@ -149,7 +153,7 @@ Menú **Usuarios**:
 ```bash
 npm install            # instalar dependencias
 npm run dev            # desarrollo en http://localhost:3000
-npm test               # las 35 pruebas
+npm test               # las 108 pruebas
 npm run build          # build de producción (prisma generate + next build)
 npm run db:seed        # carga inicial (papeles, acabados, admin) — una sola vez
 npx prisma generate    # regenerar el cliente tras cambiar el esquema

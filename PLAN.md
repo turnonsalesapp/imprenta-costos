@@ -1,5 +1,7 @@
 # Plan de trabajo
 
+> Nota: brief original de construcción (Fases 1–6). El sistema ya avanzó más allá (offset, gran formato, POP, CRM, producción por pieza, SUPERADMIN). Ver docs/DOCUMENTACION_DESARROLLO.md y docs/MODELO_DATOS.md para el estado actual.
+
 Este archivo es el brief para construir el sistema. Está ordenado por
 dependencias: cada fase se apoya en la anterior. Termina una, verifica que
 corre, y sigue.

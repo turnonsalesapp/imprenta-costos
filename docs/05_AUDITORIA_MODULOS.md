@@ -242,10 +242,13 @@ y afinar con los números del taller.
 Estas fases **no tocan la cola de precio** ni los seis motores de costo de arriba:
 son de **flujo** (comercial → producción) y de **origen de datos** (de dónde sale el
 precio del papel). Se documentan aquí porque cambian cómo se mueve un trabajo por el
-sistema y extienden el invariante TALLER-sin-precios.
+sistema y extienden el invariante TALLER-sin-precios. Una fase posterior añadió el
+rol **SUPERADMIN** (⊇ ADMIN), que además puede **purgar la bitácora de auditoría por
+rango** dejando rastro de la propia purga; el invariante TALLER-sin-precios se mantiene.
 
 ### Fase 1 — Comercial (`lib/crm.ts`, `lib/cotizaciones.ts`)
-- **Handoff automático.** Al pasar una cotización a **APROBADA** (= Orden de Venta),
+- **Handoff automático.** Al pasar una cotización a **GANADA** (el cliente acepta; = Orden de Venta.
+  APROBADA es la aprobación interna previa a enviar, no genera orden),
   `cambiarEstadoCotizacion` llama a `generarOrden` si la cotización aún no tiene orden.
   Es *best-effort*: si es 100 % tercerizada o hay una carrera de doble aprobación, el
   fallo se registra y **no** rompe el cambio de estado. El botón "Generar orden" del

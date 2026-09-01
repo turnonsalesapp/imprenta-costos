@@ -62,11 +62,12 @@ la cookie.
 
 ## 2. Roles
 
-Hay tres roles. La barra de navegación muestra solo lo que tu rol puede usar, pero
+Hay cuatro roles. La barra de navegación muestra solo lo que tu rol puede usar, pero
 la protección real está en el servidor (no depende de esconder botones).
 
 | Rol | Para qué | Qué ve / puede |
 |---|---|---|
+| **Superadministrador (SUPERADMIN)** | dueño / gerencia | **Todo lo del Administrador** y, además, puede **purgar la bitácora de auditoría** por rango de fechas (ver §21). En todo lo demás funciona igual que un Administrador |
 | **Administrador (ADMIN)** | dueño / gerencia | **Todo:** cotiza todos los tipos, ve precios y márgenes, edita variables, papeles, acabados, catálogos, inventario, usuarios y auditoría; siempre puede **eliminar** |
 | **Vendedor (VENDEDOR)** | cotizar y vender | Cotiza y **ve precios**; **no** edita las variables ni los catálogos del negocio. **Qué tipos puede cotizar y si puede eliminar lo define el ADMIN por usuario** (ver §20) |
 | **Taller (TALLER)** | producción | **Solo** las órdenes de producción. **Nunca** ve un precio, costo o margen |
@@ -78,8 +79,10 @@ la protección real está en el servidor (no depende de esconder botones).
 
 Solo el ADMIN puede: editar Variables, papeles, acabados, catálogos (gran formato,
 POP, equipos), gestionar **Proveedores** y sus listas de precios, crear/editar
-usuarios y ver Auditoría. El **estado de cobro** de las órdenes lo mueven ADMIN y
-VENDEDOR; el **CRM** (prospectos y actividades) es de ADMIN y VENDEDOR.
+usuarios y ver Auditoría. Solo el **SUPERADMIN** puede, además, **purgar** la
+bitácora de auditoría por rango de fechas (ver §21). El **estado de cobro** de las
+órdenes lo mueven ADMIN y VENDEDOR; el **CRM** (prospectos y actividades) es de
+ADMIN y VENDEDOR.
 
 **Permisos de cotización (por usuario).** El ADMIN puede afinar, para cada
 vendedor, **qué tipos de trabajo puede cotizar** (Digital, Offset, Proveedor, Gran
@@ -379,19 +382,20 @@ papel) y filtro por estado.
   **Lista** es la tabla de siempre (con filtro por estado y export); el **Tablero**
   muestra las cotizaciones en columnas por estado y puedes **arrastrar una tarjeta**
   de una columna a otra para cambiarle el estado (por ejemplo, de *Enviada* a
-  *Aprobada*). La búsqueda funciona en las dos vistas.
+  *Ganada*). La búsqueda funciona en las dos vistas.
 - **Tipos a la vista:** cada fila muestra una etiqueta por **cada tipo de trabajo
   que contiene** (Digital, Offset, Proveedor, Gran formato, Personalizado). Una
   cotización con varios tipos muestra varias etiquetas.
-- **Estados:** Borrador → **Pendiente de aprobación** → Enviada → Aprobada /
-  Rechazada / Vencida. El estado se cambia desde el detalle o arrastrando la tarjeta
-  en el Tablero. La *Pendiente de aprobación* es el paso opcional en que la cotización
-  espera el visto bueno interno antes de enviarla al cliente. Cada estado tiene su
-  **color**: gris (borrador), ámbar (pendiente), azul (enviada), verde (aprobada /
-  ganada), rojo (rechazada / perdida), naranja (vencida).
-- **Orden de Venta:** cuando una cotización pasa a **Aprobada**, el mismo documento
-  se presenta como **Orden de Venta** (mismo número, mismo registro) y **la orden de
-  producción se genera sola** (ver [§14](#14-taller)).
+- **Estados:** Borrador → **Pendiente de aprobación** → Aprobada → Enviada →
+  **Ganada**, más *Perdida* (rechazada) o *Vencida*. El estado se cambia desde el
+  detalle o arrastrando la tarjeta en el Tablero. La *Pendiente de aprobación* es el
+  paso en que la cotización espera el visto bueno interno; la *Aprobada* es esa
+  aprobación interna (aún **no** se le pasa al taller); se marca *Ganada* cuando el
+  cliente acepta. Cada estado tiene su **color**: gris (borrador), ámbar (pendiente),
+  azul (enviada), verde (ganada), rojo (perdida / rechazada), naranja (vencida).
+- **Orden de Venta:** cuando una cotización pasa a **Ganada** (el cliente acepta), el
+  mismo documento se presenta como **Orden de Venta** (mismo número, mismo registro) y
+  **la orden de producción se genera sola** (ver [§14](#14-taller)).
 - **Acciones por fila:** a la derecha de cada cotización, sin abrir el detalle:
   **Editar** (solo borradores), **Usar como base**, **Imprimir/PDF** y **Eliminar**.
   Cada acción aparece solo si tu rol y permisos la permiten.
@@ -419,10 +423,12 @@ papel) y filtro por estado.
 ## 14. Taller
 
 ### 14.1 La orden se genera sola (handoff automático)
-Cuando pasas una cotización a **Aprobada** (= Orden de Venta), **la orden de
-producción se crea sola**, sin recapturar nada: comercial le pasa el trabajo a
-producción de un solo movimiento. Antes había que pulsar "Generar orden" a mano; ese
-botón **queda en el detalle como respaldo** por si hiciera falta rehacerla.
+Cuando pasas una cotización a **Ganada** (el cliente acepta = Orden de Venta), **la
+orden de producción se crea sola**, sin recapturar nada: comercial le pasa el trabajo
+a producción de un solo movimiento. (Ojo: *Aprobada* es la aprobación interna previa
+y **no** genera la orden; la orden nace al marcar *Ganada*.) Antes había que pulsar
+"Generar orden" a mano; ese botón **queda en el detalle como respaldo** por si hiciera
+falta rehacerla.
 
 A diferencia de antes, **todos los ítems entran a producción**, no solo los de
 producción propia. Cada ítem se convierte en una **pieza** con su propio estado, en
@@ -482,10 +488,10 @@ Los papeles se agrupan por **categoría** de material.
 ## 16. Consumo
 
 Menú **Consumo** (solo ADMIN): reporte de **consumo de papel por mes**, a partir de
-las cotizaciones **aprobadas**, para planificar compras. Agrupa por mes y papel, y
-muestra cortes y pliegos completos.
+las cotizaciones **ganadas** (los trabajos que sí se hacen), para planificar compras.
+Agrupa por mes y papel, y muestra cortes y pliegos completos.
 
-> Nota: el reporte de Consumo cuenta cotizaciones **aprobadas** (proyección de
+> Nota: el reporte de Consumo cuenta cotizaciones **ganadas** (proyección de
 > compra); la **salida de inventario** ocurre cuando la orden se **termina**. Son
 > dos momentos distintos del ciclo.
 
@@ -563,14 +569,16 @@ cotización imprimible.
 
 Menú **Usuarios** (solo ADMIN):
 - **Crear usuario:** nombre, correo, clave (mín. 6), rol.
-- **Rol:** ADMIN / VENDEDOR / TALLER (no puedes quitarte a ti mismo el rol de
-  admin).
+- **Rol:** SUPERADMIN / ADMIN / VENDEDOR / TALLER (no puedes quitarte a ti mismo el
+  rol de administrador). El **SUPERADMIN** funciona igual que un ADMIN y además puede
+  **purgar** la auditoría (ver §21).
 - **Cotizar / eliminar (por usuario):** para cada vendedor, casillas por tipo de
   trabajo (Digital, Offset, Proveedor, Gran formato, Personalizado) y una casilla
   **Eliminar**. Marca los tipos que puede cotizar; si **no marcas ninguno**, ese
   vendedor no puede cotizar. Un vendedor nuevo empieza con **todos** los tipos y
-  **sin** eliminar. El ADMIN muestra "Todo · puede eliminar" (no se configura) y el
-  TALLER "No cotiza". Cada cambio queda en Auditoría y surte efecto de inmediato.
+  **sin** eliminar. El ADMIN y el SUPERADMIN muestran "Todo · puede eliminar" (no se
+  configura) y el TALLER "No cotiza". Cada cambio queda en Auditoría y surte efecto de
+  inmediato.
 - **Activar / Desactivar:** al desactivar, se cierran sus sesiones al instante.
 - **Interpretar IA (por usuario):** *Según el sistema* (sigue el interruptor
   general), *Activado* o *Desactivado*. Solo aparece si hay clave de API.
@@ -579,9 +587,14 @@ Menú **Usuarios** (solo ADMIN):
 
 ## 21. Auditoría
 
-Menú **Auditoría** (solo ADMIN): bitácora de **solo-agregar** de operaciones
-sensibles — cambios de estado de cotización, cambios de rol, activación/desactivación
-de usuarios y override de IA por usuario. Cada registro guarda quién, cuándo y qué.
+Menú **Auditoría** (la ven los administradores): bitácora de **solo-agregar** de
+operaciones sensibles — cambios de estado de cotización, cambios de rol,
+activación/desactivación de usuarios y override de IA por usuario. Cada registro
+guarda quién, cuándo y qué.
+
+> **Purga (solo SUPERADMIN).** Únicamente el **Superadministrador** puede **purgar**
+> la bitácora por **rango de fechas**. La propia purga **también queda registrada**
+> en la auditoría, así que borrarla igual deja rastro de que se hizo.
 
 ---
 
@@ -803,10 +816,12 @@ orden de producción.
 | **Precio a mano** | Precio unitario fijado manualmente que manda sobre el calculado. |
 | **Snapshot** | Copia congelada de papeles, acabados y variables que guarda cada cotización; la hace inmutable. |
 | **Borrador** | Único estado en que una cotización se puede editar. |
-| **Pendiente de aprobación** | Estado intermedio (entre Borrador y Enviada) en que la cotización espera el visto bueno interno. |
-| **Orden de Venta** | Una cotización Aprobada; mismo documento, listo para producir. |
-| **Handoff** | El paso automático de comercial a producción: al aprobar, la orden se genera sola. |
-| **Orden de producción** | Papel para el taller generado de una cotización aprobada. **No lleva precios.** |
+| **Pendiente de aprobación** | Estado en que la cotización espera el visto bueno interno (entre Borrador y Aprobada). |
+| **Aprobada** | Aprobación **interna**, previa a enviarla al cliente. **No** genera la orden de producción. |
+| **Ganada** | El cliente aceptó: la cotización se vuelve Orden de Venta y **se genera sola** la orden de producción. |
+| **Orden de Venta** | Una cotización Ganada (el cliente aceptó); mismo documento, listo para producir. |
+| **Handoff** | El paso automático de comercial a producción: al marcar Ganada, la orden se genera sola. |
+| **Orden de producción** | Papel para el taller generado de una cotización ganada. **No lleva precios.** |
 | **Pieza** | Cada ítem de la cotización se sigue por separado en producción, con su propio estado. |
 | **Carril interno / tercerizado** | Interno = ítems propios (Digital/Offset) que van al taller; tercerizado = ítems que se compran a un proveedor. |
 | **Estado de cobro** | Semáforo de cobro de la orden (No facturado → Facturado → Cobrado). No es factura fiscal. |
